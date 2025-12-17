@@ -578,7 +578,7 @@ function createInitialState(faction) {
         });
         islands[id] = { id, name: cfg.name, faction: cfg.faction, markets, activeEvent: null };
     });
-    return { player: { faction, gold: CONFIG.settings.startingGold, days: 1, supplies: CONFIG.settings.startingSupplies, cargo: {}, position: { x: 0, z: 0 }, reputation: { ...fc.startingRep }, visitedIslands: {} }, islands, isTraveling: false, destination: null, travelProgress: 0, travelDays: 0, currentIsland: 'portRoyal', isDocked: true };
+    return { player: { faction, gold: CONFIG.settings.startingGold, days: 1, supplies: CONFIG.settings.startingSupplies, cargo: {}, position: { x: 0, z: 35 }, reputation: { ...fc.startingRep }, visitedIslands: {} }, islands, isTraveling: false, destination: null, travelProgress: 0, travelDays: 0, currentIsland: 'portRoyal', isDocked: false };
 }
 
 // Scene Manager
@@ -941,7 +941,9 @@ class Game {
     }
     
     update(deltaTime) {
-        if (!this.gameState || this.gameState.isDocked) return;
+        if (!this.gameState) return;
+        this.checkIslandProximity();
+        if (this.gameState.isDocked) { this.ui.updateSpeedIndicator(0); return; }
         
         const gs = this.gameState;
         const speed = getShipSpeed(gs);
@@ -976,9 +978,6 @@ class Game {
         } else {
             this.ui.updateSpeedIndicator(0);
         }
-        
-        // Check nearby islands
-        this.checkIslandProximity();
     }
     
     checkIslandProximity() {
