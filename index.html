@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Merchant Seas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --parchment: #f4e4c1;
+            --parchment-dark: #d4c4a1;
+            --ink: #2c1810;
+            --ink-light: #5c4830;
+            --gold: #c9a227;
+            --gold-dark: #8b7019;
+            --sea-dark: #1a3a4a;
+            --sea-medium: #2d5a6a;
+            --sea-light: #4a8a9a;
+            --blood-red: #8b2500;
+            --wood: #6b4423;
+            --wood-dark: #3d2512;
+            --sail-white: #f5f0e1;
+            --english: #c41e3a;
+            --eitc: #1e4d2b;
+            --pirates: #2c2c2c;
+            --neutral: #5a5a5a;
+            --modal-bg: rgba(20, 15, 10, 0.95);
+            --card-bg: rgba(244, 228, 193, 0.95);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.3);
+            --font-display: 'Cinzel', serif;
+            --font-body: 'Crimson Text', Georgia, serif;
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --touch-min: 48px;
+            --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        body { font-family: var(--font-body); font-size: 16px; line-height: 1.5; color: var(--ink); background: var(--sea-dark); }
+        .hidden { display: none !important; }
+        
+        #loading-screen { position: fixed; inset: 0; background: linear-gradient(135deg, var(--sea-dark) 0%, #0d1f29 100%); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .loading-content { text-align: center; color: var(--parchment); }
+        .loading-content h1 { font-family: var(--font-display); font-size: 2rem; font-weight: 700; letter-spacing: 0.1em; margin-bottom: var(--space-lg); text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); }
+        .loading-ship { font-size: 3rem; animation: bob 2s ease-in-out infinite; margin-bottom: var(--space-lg); }
+        @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
+        .loading-content p { font-style: italic; opacity: 0.8; margin-bottom: var(--space-md); }
+        .loading-bar { width: 200px; height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 3px; margin: 0 auto; overflow: hidden; }
+        .loading-progress { height: 100%; width: 0%; background: linear-gradient(90deg, var(--gold), var(--gold-dark)); border-radius: 3px; transition: width 0.3s var(--ease-out); }
+
+        .screen { position: fixed; inset: 0; background: linear-gradient(180deg, var(--sea-dark) 0%, #0d1f29 100%); overflow-y: auto; z-index: 900; }
+        .screen-content { min-height: 100%; padding: var(--space-xl) var(--space-md); display: flex; flex-direction: column; align-items: center; }
+        .screen-content h1 { font-family: var(--font-display); font-size: 1.5rem; color: var(--parchment); text-align: center; margin-bottom: var(--space-sm); letter-spacing: 0.05em; }
+        .subtitle { color: var(--parchment-dark); text-align: center; max-width: 300px; margin-bottom: var(--space-xl); font-style: italic; font-size: 0.9rem; }
+        .faction-cards { display: flex; flex-direction: column; gap: var(--space-md); width: 100%; max-width: 400px; }
+        .faction-card { background: var(--card-bg); border: 3px solid transparent; border-radius: 12px; padding: var(--space-md); text-align: center; cursor: pointer; transition: all 0.3s var(--ease-out); }
+        .faction-card:hover, .faction-card:active { transform: translateY(-2px); box-shadow: var(--shadow); }
+        .faction-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(201, 162, 39, 0.4); }
+        .faction-icon { font-size: 2.5rem; margin-bottom: var(--space-xs); }
+        .faction-card h2 { font-family: var(--font-display); font-size: 1.1rem; color: var(--ink); margin-bottom: var(--space-xs); }
+        .faction-desc { color: var(--ink-light); font-style: italic; margin-bottom: var(--space-sm); font-size: 0.85rem; }
+        .faction-perks { list-style: none; text-align: left; font-size: 0.8rem; }
+        .faction-perks li { padding: 2px 0; color: var(--ink-light); }
+        #continue-btn { margin-top: var(--space-xl); }
+
+        .btn-primary, .btn-secondary, .btn-danger, .btn-action { font-family: var(--font-display); font-size: 0.95rem; padding: var(--space-md) var(--space-xl); border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s var(--ease-out); min-height: var(--touch-min); display: inline-flex; align-items: center; justify-content: center; gap: var(--space-sm); }
+        .btn-primary { background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%); color: var(--ink); box-shadow: 0 3px 0 var(--wood-dark), var(--shadow-light); }
+        .btn-primary:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--wood-dark); }
+        .btn-secondary { background: var(--parchment); color: var(--ink); border: 2px solid var(--ink-light); }
+        .btn-danger { background: linear-gradient(180deg, var(--blood-red) 0%, #5c1700 100%); color: var(--parchment); }
+        .btn-icon { width: var(--touch-min); height: var(--touch-min); border-radius: 50%; background: var(--card-bg); border: 2px solid var(--ink-light); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-action { background: linear-gradient(180deg, var(--sea-light) 0%, var(--sea-medium) 100%); color: var(--sail-white); font-size: 1rem; padding: var(--space-md) var(--space-lg); box-shadow: var(--shadow); }
+
+        #game-container { position: fixed; inset: 0; overflow: hidden; }
+        #game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+
+        #hud-top { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: center; gap: var(--space-sm); padding: var(--space-sm); background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, transparent 100%); pointer-events: none; z-index: 10; }
+        .hud-item { display: flex; align-items: center; gap: var(--space-xs); background: var(--card-bg); padding: 6px 12px; border-radius: 20px; font-family: var(--font-display); font-size: 0.8rem; box-shadow: var(--shadow-light); }
+        .hud-icon { font-size: 1rem; }
+        .hud-value { font-weight: 600; color: var(--ink); }
+
+        #faction-badge { position: fixed; top: 50px; left: var(--space-sm); display: flex; align-items: center; gap: var(--space-xs); background: var(--card-bg); padding: 4px 10px; border-radius: 15px; font-family: var(--font-display); font-size: 0.7rem; box-shadow: var(--shadow-light); z-index: 10; }
+        #faction-badge.english { border-left: 3px solid var(--english); }
+        #faction-badge.eitc { border-left: 3px solid var(--eitc); }
+        #faction-badge.pirates { border-left: 3px solid var(--pirates); }
+
+        #cargo-summary { position: fixed; top: 80px; left: var(--space-sm); background: var(--card-bg); padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; max-width: 120px; box-shadow: var(--shadow-light); z-index: 10; }
+        .cargo-header { display: flex; justify-content: space-between; font-family: var(--font-display); font-size: 0.7rem; margin-bottom: 2px; color: var(--ink-light); }
+        #cargo-preview { display: flex; flex-wrap: wrap; gap: 2px; }
+        .cargo-dot { width: 6px; height: 6px; border-radius: 2px; background: var(--gold); }
+
+        #compass { position: fixed; top: 50px; right: var(--space-sm); display: flex; flex-direction: column; align-items: center; gap: var(--space-xs); z-index: 10; }
+        .compass-ring { width: 60px; height: 60px; border-radius: 50%; background: var(--card-bg); border: 3px solid var(--wood); position: relative; box-shadow: var(--shadow-light); }
+        .compass-needle { position: absolute; top: 50%; left: 50%; width: 3px; height: 24px; background: linear-gradient(180deg, var(--blood-red) 50%, var(--ink) 50%); transform-origin: center bottom; transform: translate(-50%, -100%); border-radius: 2px; transition: transform 0.3s var(--ease-out); }
+        .compass-n, .compass-e, .compass-s, .compass-w { position: absolute; font-family: var(--font-display); font-size: 0.6rem; font-weight: 700; color: var(--ink-light); }
+        .compass-n { top: 3px; left: 50%; transform: translateX(-50%); color: var(--blood-red); }
+        .compass-s { bottom: 3px; left: 50%; transform: translateX(-50%); }
+        .compass-e { right: 5px; top: 50%; transform: translateY(-50%); }
+        .compass-w { left: 5px; top: 50%; transform: translateY(-50%); }
+        #destination-info { background: var(--card-bg); padding: 3px 8px; border-radius: 4px; text-align: center; font-size: 0.65rem; box-shadow: var(--shadow-light); }
+        #dest-name { display: block; font-family: var(--font-display); font-weight: 600; }
+        #dest-distance { color: var(--ink-light); }
+
+        /* ===== MOBILE CONTROLS ===== */
+        #mobile-controls { position: fixed; bottom: 0; left: 0; right: 0; height: 180px; pointer-events: none; z-index: 20; }
+        
+        /* Joystick */
+        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; pointer-events: auto; }
+        #joystick-base { position: absolute; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(244,228,193,0.3) 0%, rgba(244,228,193,0.1) 70%, transparent 100%); border: 3px solid rgba(244,228,193,0.5); box-shadow: inset 0 0 20px rgba(0,0,0,0.3); }
+        #joystick-stick { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, var(--parchment) 0%, var(--gold-dark) 100%); border: 3px solid var(--wood); box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.3); left: 50%; top: 50%; transform: translate(-50%, -50%); transition: transform 0.1s ease-out; }
+        #joystick-stick.active { box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.3), 0 0 15px rgba(201,162,39,0.5); }
+        
+        /* Action buttons */
+        #action-buttons { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+        .action-btn { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--wood); font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
+        .action-btn:active { transform: scale(0.95); box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        #btn-dock { background: linear-gradient(180deg, var(--sea-light) 0%, var(--sea-medium) 100%); color: white; }
+        #btn-dock.available { animation: pulse-dock 1.5s ease-in-out infinite; }
+        @keyframes pulse-dock { 0%, 100% { box-shadow: 0 4px 8px rgba(0,0,0,0.4), 0 0 0 0 rgba(74,138,154,0.4); } 50% { box-shadow: 0 4px 8px rgba(0,0,0,0.4), 0 0 0 10px rgba(74,138,154,0); } }
+        #btn-map { background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%); color: var(--ink); }
+        #btn-menu { background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%); color: var(--ink); }
+        
+        /* Speed indicator */
+        #speed-indicator { position: absolute; bottom: 150px; left: 30px; background: var(--card-bg); padding: 4px 10px; border-radius: 12px; font-family: var(--font-display); font-size: 0.7rem; box-shadow: var(--shadow-light); display: flex; align-items: center; gap: 5px; pointer-events: none; }
+        #speed-indicator .bar { width: 40px; height: 6px; background: var(--parchment-dark); border-radius: 3px; overflow: hidden; }
+        #speed-indicator .bar-fill { height: 100%; background: var(--gold); width: 0%; transition: width 0.2s; }
+        
+        /* Island indicator */
+        #island-indicator { position: absolute; bottom: 150px; right: 20px; background: var(--card-bg); padding: 6px 12px; border-radius: 8px; font-family: var(--font-display); font-size: 0.75rem; box-shadow: var(--shadow-light); text-align: right; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+        #island-indicator.visible { opacity: 1; }
+        #island-indicator .name { font-weight: 600; color: var(--ink); }
+        #island-indicator .faction { font-size: 0.65rem; color: var(--ink-light); }
+        #island-indicator .distance { font-size: 0.65rem; color: var(--gold-dark); }
+
+        #event-toast { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: var(--card-bg); padding: var(--space-sm) var(--space-md); border-radius: 8px; display: flex; align-items: center; gap: var(--space-sm); box-shadow: var(--shadow); z-index: 20; animation: slideDown 0.3s var(--ease-out); max-width: calc(100% - 40px); }
+        @keyframes slideDown { from { transform: translateX(-50%) translateY(-20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        .event-icon { font-size: 1.3rem; }
+        .event-text { display: flex; flex-direction: column; }
+        #event-title { font-family: var(--font-display); font-size: 0.85rem; }
+        #event-desc { font-size: 0.75rem; color: var(--ink-light); }
+
+        #travel-bar { position: fixed; bottom: 190px; left: 20px; right: 20px; height: 8px; background: rgba(0, 0, 0, 0.5); border-radius: 4px; overflow: hidden; z-index: 15; }
+        .travel-progress { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-dark)); width: 0%; transition: width 0.3s var(--ease-out); }
+        #travel-text { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 4px; font-size: 0.75rem; color: var(--parchment); font-style: italic; white-space: nowrap; }
+
+        .modal { position: fixed; inset: 0; background: var(--modal-bg); display: flex; align-items: center; justify-content: center; padding: var(--space-sm); z-index: 100; animation: fadeIn 0.2s var(--ease-out); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content { background: var(--parchment); border-radius: 12px; width: 100%; max-width: 380px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: var(--shadow); animation: slideUp 0.3s var(--ease-out); }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .modal-header { padding: var(--space-md); border-bottom: 2px solid var(--parchment-dark); position: relative; }
+        .modal-header h2 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: var(--space-xs); padding-right: 30px; }
+        .island-info { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+        .faction-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: var(--ink-light); color: var(--parchment); }
+        .faction-tag.english { background: var(--english); }
+        .faction-tag.eitc { background: var(--eitc); }
+        .faction-tag.pirates { background: var(--pirates); }
+        .faction-tag.neutral { background: var(--neutral); }
+        .tariff-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: var(--gold-dark); color: var(--parchment); }
+        .modal-close { position: absolute; top: var(--space-sm); right: var(--space-sm); width: 32px; height: 32px; border: none; background: transparent; font-size: 1.3rem; cursor: pointer; color: var(--ink-light); border-radius: 50%; }
+
+        .trade-tabs { display: flex; border-bottom: 2px solid var(--parchment-dark); }
+        .trade-tab { flex: 1; padding: var(--space-sm); background: transparent; border: none; font-family: var(--font-display); font-size: 0.9rem; cursor: pointer; color: var(--ink-light); position: relative; }
+        .trade-tab.active { color: var(--ink); }
+        .trade-tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--gold); }
+
+        .trade-panel { padding: var(--space-sm); max-height: 45vh; overflow-y: auto; }
+        .goods-list { display: flex; flex-direction: column; gap: var(--space-xs); }
+        .good-item { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 2px var(--space-sm); padding: var(--space-sm); background: rgba(255, 255, 255, 0.5); border-radius: 6px; border: 1px solid var(--parchment-dark); }
+        .good-info { display: flex; align-items: center; gap: var(--space-xs); }
+        .good-icon { font-size: 1.2rem; }
+        .good-name { font-family: var(--font-display); font-size: 0.85rem; }
+        .good-price { font-weight: 600; color: var(--gold-dark); font-size: 0.85rem; }
+        .price-trend { font-size: 0.75rem; margin-left: 2px; }
+        .price-trend.up { color: #c41e3a; }
+        .price-trend.down { color: #1e7d34; }
+        .good-details { grid-column: 1; font-size: 0.7rem; color: var(--ink-light); }
+        .good-actions { grid-column: 2; grid-row: 1 / 3; display: flex; align-items: center; gap: 4px; }
+        .qty-btn { width: 36px; height: 36px; border: 2px solid var(--ink-light); border-radius: 6px; background: var(--parchment); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .qty-btn:active { background: var(--parchment-dark); }
+        .qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .qty-btn.sell { background: linear-gradient(180deg, #ffcccc 0%, #ffaaaa 100%); }
+        .qty-btn.buy { background: linear-gradient(180deg, #ccffcc 0%, #aaffaa 100%); }
+
+        .trade-footer { padding: var(--space-sm) var(--space-md); border-top: 2px solid var(--parchment-dark); display: flex; justify-content: space-between; align-items: center; }
+        .player-stats { display: flex; gap: var(--space-md); font-size: 0.8rem; }
+
+        .menu-content { padding: var(--space-md); }
+        .menu-content h2 { font-family: var(--font-display); text-align: center; margin-bottom: var(--space-md); font-size: 1.2rem; }
+        .menu-section { margin-bottom: var(--space-md); }
+        .menu-section h3 { font-family: var(--font-display); font-size: 0.9rem; margin-bottom: var(--space-sm); color: var(--ink-light); }
+        .reputation-bars { display: flex; flex-direction: column; gap: var(--space-sm); }
+        .rep-item { display: grid; grid-template-columns: 1fr 1fr auto; align-items: center; gap: var(--space-xs); font-size: 0.75rem; }
+        .rep-bar { height: 6px; background: var(--parchment-dark); border-radius: 3px; overflow: hidden; }
+        .rep-fill { height: 100%; background: var(--gold); width: 50%; }
+        .rep-fill.hostile { background: var(--blood-red); }
+        .rep-fill.friendly { background: #1e7d34; }
+        .rep-value { font-weight: 600; min-width: 35px; text-align: right; font-size: 0.7rem; }
+        .ship-stats { background: rgba(255, 255, 255, 0.5); border-radius: 6px; padding: var(--space-sm); }
+        .stat-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--parchment-dark); font-size: 0.8rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .menu-buttons { display: flex; flex-direction: column; gap: var(--space-xs); margin-bottom: var(--space-md); }
+        .menu-buttons button { font-size: 0.85rem; padding: var(--space-sm); }
+
+        .pirate-content { padding: var(--space-lg); text-align: center; }
+        .pirate-header { margin-bottom: var(--space-md); }
+        .pirate-icon { font-size: 3rem; animation: shake 0.5s ease-in-out infinite; }
+        @keyframes shake { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+        .pirate-content h2 { font-family: var(--font-display); color: var(--blood-red); font-size: 1.2rem; }
+        .pirate-content > p { margin-bottom: var(--space-lg); color: var(--ink-light); font-size: 0.9rem; }
+        .pirate-options { display: flex; flex-direction: column; gap: var(--space-sm); }
+        .pirate-options button { display: flex; flex-direction: column; font-size: 0.9rem; }
+        .pirate-options small { font-size: 0.7rem; opacity: 0.8; }
+
+        .warning-content { padding: var(--space-lg); text-align: center; }
+        .warning-icon { font-size: 3rem; margin-bottom: var(--space-sm); }
+        .warning-content h2 { font-family: var(--font-display); margin-bottom: var(--space-sm); font-size: 1.2rem; }
+        .warning-content > p { margin-bottom: var(--space-lg); color: var(--ink-light); font-size: 0.9rem; }
+
+        /* Map modal */
+        .map-content { padding: var(--space-md); }
+        .map-content h2 { font-family: var(--font-display); text-align: center; margin-bottom: var(--space-md); font-size: 1.1rem; }
+        #map-container { width: 100%; height: 250px; background: var(--sea-dark); border-radius: 8px; position: relative; overflow: hidden; }
+        .map-island { position: absolute; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--parchment); transform: translate(-50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; }
+        .map-island.english { background: var(--english); }
+        .map-island.eitc { background: var(--eitc); }
+        .map-island.pirates { background: var(--pirates); }
+        .map-island.neutral { background: var(--neutral); }
+        .map-player { position: absolute; width: 12px; height: 12px; background: var(--gold); border-radius: 50%; border: 2px solid white; transform: translate(-50%, -50%); box-shadow: 0 0 10px var(--gold); z-index: 5; }
+        .map-legend { display: flex; justify-content: center; gap: var(--space-md); margin-top: var(--space-sm); font-size: 0.7rem; flex-wrap: wrap; }
+        .map-legend span { display: flex; align-items: center; gap: 4px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--parchment-dark); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--wood); border-radius: 3px; }
+
+        /* Landscape adjustments */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #mobile-controls { height: 140px; }
+            #joystick-zone { width: 100px; height: 100px; bottom: 10px; left: 10px; }
+            #joystick-base { width: 100px; height: 100px; }
+            #joystick-stick { width: 40px; height: 40px; }
+            .action-btn { width: 50px; height: 50px; font-size: 1.2rem; }
+            #action-buttons { bottom: 10px; right: 10px; gap: 8px; }
+            #speed-indicator { bottom: 120px; }
+            #island-indicator { bottom: 120px; }
+            #travel-bar { bottom: 150px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-content">
+            <h1>Merchant Seas</h1>
+            <div class="loading-ship">⛵</div>
+            <p>Charting the waters...</p>
+            <div class="loading-bar"><div class="loading-progress"></div></div>
+        </div>
+    </div>
+
+    <div id="faction-screen" class="screen hidden">
+        <div class="screen-content">
+            <h1>Choose Your Allegiance</h1>
+            <p class="subtitle">Your faction determines your advantages on the high seas</p>
+            <div class="faction-cards">
+                <button class="faction-card" data-faction="english">
+                    <div class="faction-icon">🏴󠁧󠁢󠁥󠁮󠁧󠁿</div>
+                    <h2>Royal Navy</h2>
+                    <p class="faction-desc">Servants of the Crown</p>
+                    <ul class="faction-perks"><li>✦ +25 Starting Reputation</li><li>✦ Protected from Pirates</li></ul>
+                </button>
+                <button class="faction-card" data-faction="eitc">
+                    <div class="faction-icon">⚓</div>
+                    <h2>Trading Company</h2>
+                    <p class="faction-desc">Profit Above All</p>
+                    <ul class="faction-perks"><li>✦ +20% Cargo Capacity</li><li>✦ Better Trade Prices</li></ul>
+                </button>
+                <button class="faction-card" data-faction="pirates">
+                    <div class="faction-icon">🏴‍☠️</div>
+                    <h2>Brethren Court</h2>
+                    <p class="faction-desc">Freedom of the Seas</p>
+                    <ul class="faction-perks"><li>✦ Contraband Bonus +50%</li><li>✦ Faster Ship Speed</li></ul>
+                </button>
+            </div>
+            <button id="continue-btn" class="btn-primary hidden">Set Sail</button>
+        </div>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="hud-top">
+            <div class="hud-item"><span class="hud-icon">🪙</span><span class="hud-value" id="gold-value">1000</span></div>
+            <div class="hud-item"><span class="hud-icon">📅</span><span class="hud-value">Day <span id="day-value">1</span></span></div>
+            <div class="hud-item"><span class="hud-icon">🍖</span><span class="hud-value" id="supplies-value">30</span></div>
+        </div>
+        
+        <div id="faction-badge"><span id="faction-icon">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span><span id="faction-name">Royal Navy</span></div>
+        
+        <div id="cargo-summary">
+            <div class="cargo-header"><span>📦 Cargo</span><span id="cargo-count">0/50</span></div>
+            <div id="cargo-preview"></div>
+        </div>
+        
+        <div id="compass">
+            <div class="compass-ring">
+                <div class="compass-needle" id="compass-needle"></div>
+                <span class="compass-n">N</span><span class="compass-e">E</span><span class="compass-s">S</span><span class="compass-w">W</span>
+            </div>
+            <div id="destination-info" class="hidden"><span id="dest-name">--</span><span id="dest-distance">-- days</span></div>
+        </div>
+        
+        <div id="event-toast" class="hidden">
+            <div class="event-icon">⚡</div>
+            <div class="event-text"><strong id="event-title">Event</strong><span id="event-desc">Description</span></div>
+        </div>
+        
+        <div id="travel-bar" class="hidden"><div class="travel-progress" id="travel-progress"></div><span id="travel-text">Sailing...</span></div>
+        
+        <!-- Mobile Controls -->
+        <div id="mobile-controls">
+            <div id="joystick-zone">
+                <div id="joystick-base"></div>
+                <div id="joystick-stick"></div>
+            </div>
+            
+            <div id="speed-indicator">
+                <span>⛵</span>
+                <div class="bar"><div class="bar-fill" id="speed-fill"></div></div>
+            </div>
+            
+            <div id="island-indicator">
+                <div class="name" id="nearby-island-name">Port Royal</div>
+                <div class="faction" id="nearby-island-faction">English</div>
+                <div class="distance" id="nearby-island-dist">Nearby</div>
+            </div>
+            
+            <div id="action-buttons">
+                <button class="action-btn" id="btn-dock" title="Dock">⚓</button>
+                <button class="action-btn" id="btn-map" title="Map">🗺️</button>
+                <button class="action-btn" id="btn-menu" title="Menu">☰</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="trade-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="trade-island-name">Port Royal Market</h2>
+                <div class="island-info">
+                    <span id="trade-island-faction" class="faction-tag">English</span>
+                    <span id="trade-tariff" class="tariff-tag">5% Tax</span>
+                </div>
+                <button class="modal-close" id="close-trade">✕</button>
+            </div>
+            <div class="trade-tabs">
+                <button class="trade-tab active" data-tab="buy">Buy Goods</button>
+                <button class="trade-tab" data-tab="sell">Sell Cargo</button>
+            </div>
+            <div class="trade-panel" id="buy-panel"><div class="goods-list" id="buy-goods-list"></div></div>
+            <div class="trade-panel hidden" id="sell-panel"><div class="goods-list" id="sell-goods-list"></div></div>
+            <div class="trade-footer">
+                <div class="player-stats"><span>🪙 <span id="trade-gold">1000</span></span><span>📦 <span id="trade-cargo">0/50</span></span></div>
+                <button class="btn-primary" id="leave-port-btn">Set Sail</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="map-modal" class="modal hidden">
+        <div class="modal-content map-content">
+            <h2>Navigation Chart</h2>
+            <div id="map-container"></div>
+            <div class="map-legend">
+                <span><div class="legend-dot" style="background:var(--english)"></div> English</span>
+                <span><div class="legend-dot" style="background:var(--eitc)"></div> EITC</span>
+                <span><div class="legend-dot" style="background:var(--pirates)"></div> Pirates</span>
+                <span><div class="legend-dot" style="background:var(--neutral)"></div> Neutral</span>
+                <span><div class="legend-dot" style="background:var(--gold)"></div> You</span>
+            </div>
+            <button class="btn-primary" id="close-map" style="margin-top:var(--space-md);width:100%">Close</button>
+        </div>
+    </div>
+
+    <div id="menu-modal" class="modal hidden">
+        <div class="modal-content menu-content">
+            <h2>Captain's Log</h2>
+            <div class="menu-section">
+                <h3>Reputation</h3>
+                <div class="reputation-bars">
+                    <div class="rep-item"><span>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Navy</span><div class="rep-bar"><div class="rep-fill" id="rep-english"></div></div><span class="rep-value" id="rep-english-val">0</span></div>
+                    <div class="rep-item"><span>⚓ EITC</span><div class="rep-bar"><div class="rep-fill" id="rep-eitc"></div></div><span class="rep-value" id="rep-eitc-val">0</span></div>
+                    <div class="rep-item"><span>🏴‍☠️ Pirates</span><div class="rep-bar"><div class="rep-fill" id="rep-pirates"></div></div><span class="rep-value" id="rep-pirates-val">0</span></div>
+                </div>
+            </div>
+            <div class="menu-section">
+                <h3>Ship Status</h3>
+                <div class="ship-stats">
+                    <div class="stat-row"><span>Speed</span><span id="ship-speed">1.0x</span></div>
+                    <div class="stat-row"><span>Cargo Capacity</span><span id="ship-cargo-cap">50</span></div>
+                </div>
+            </div>
+            <div class="menu-section">
+                <h3>Controls</h3>
+                <div class="ship-stats">
+                    <div class="stat-row"><span>🕹️ Joystick</span><span>Move ship</span></div>
+                    <div class="stat-row"><span>⚓ Dock</span><span>Enter port</span></div>
+                    <div class="stat-row"><span>🗺️ Map</span><span>View chart</span></div>
+                </div>
+            </div>
+            <div class="menu-buttons">
+                <button class="btn-secondary" id="save-btn">💾 Save Game</button>
+                <button class="btn-secondary" id="new-game-btn">🔄 New Game</button>
+            </div>
+            <button class="btn-primary" id="close-menu">Continue Voyage</button>
+        </div>
+    </div>
+
+    <div id="pirate-modal" class="modal hidden">
+        <div class="modal-content pirate-content">
+            <div class="pirate-header"><div class="pirate-icon">🏴‍☠️</div><h2>Pirates Ahead!</h2></div>
+            <p>A pirate vessel approaches! They demand tribute.</p>
+            <div class="pirate-options">
+                <button class="btn-danger" id="pay-tribute"><span>💰 Pay Tribute</span><small id="tribute-cost">100 gold</small></button>
+                <button class="btn-secondary" id="fight-pirates"><span>⚔️ Fight</span><small>Risk cargo loss</small></button>
+                <button class="btn-primary hidden" id="pirate-pass"><span>🏴‍☠️ Parley</span><small>Pirates only</small></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="warning-modal" class="modal hidden">
+        <div class="modal-content warning-content">
+            <div class="warning-icon" id="warning-icon">⚠️</div>
+            <h2 id="warning-title">Warning</h2>
+            <p id="warning-text">Your supplies are running low!</p>
+            <button class="btn-primary" id="warning-dismiss">Continue</button>
+        </div>
+    </div>
+
+    <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+    <script type="module">
+import * as THREE from 'three';
+
+const CONFIG = {
+    goods: {
+        rum: { name: 'Rum', basePrice: 25, category: 'commodity', weight: 1, icon: '🍺' },
+        sugar: { name: 'Sugar', basePrice: 15, category: 'commodity', weight: 2, icon: '🧂' },
+        tobacco: { name: 'Tobacco', basePrice: 30, category: 'commodity', weight: 1, icon: '🌿' },
+        spices: { name: 'Spices', basePrice: 60, category: 'luxury', weight: 1, icon: '🌶️' },
+        tea: { name: 'Tea', basePrice: 45, category: 'luxury', weight: 1, icon: '🍵' },
+        silk: { name: 'Silk', basePrice: 80, category: 'luxury', weight: 1, icon: '🧵' },
+        gunpowder: { name: 'Gunpowder', basePrice: 50, category: 'contraband', weight: 2, icon: '💥' },
+        timber: { name: 'Timber', basePrice: 20, category: 'commodity', weight: 3, icon: '🪵' },
+        iron: { name: 'Iron', basePrice: 35, category: 'commodity', weight: 3, icon: '⚙️' },
+        gold: { name: 'Gold', basePrice: 150, category: 'luxury', weight: 1, icon: '🪙' }
+    },
+    islands: {
+        portRoyal: { name: 'Port Royal', position: { x: 0, z: 0 }, faction: 'english', color: 0x2d5016,
+            markets: { rum: { preference: 'exports', targetSupply: 80, targetDemand: 30 }, sugar: { preference: 'exports', targetSupply: 100, targetDemand: 20 }, tobacco: { preference: 'neutral', targetSupply: 50, targetDemand: 50 }, spices: { preference: 'imports', targetSupply: 20, targetDemand: 60 }, tea: { preference: 'imports', targetSupply: 30, targetDemand: 70 }, silk: { preference: 'imports', targetSupply: 15, targetDemand: 50 }, gunpowder: { preference: 'neutral', targetSupply: 40, targetDemand: 40 }, timber: { preference: 'exports', targetSupply: 70, targetDemand: 30 }, iron: { preference: 'imports', targetSupply: 25, targetDemand: 55 }, gold: { preference: 'imports', targetSupply: 10, targetDemand: 40 } } },
+        tortuga: { name: 'Tortuga', position: { x: 150, z: -80 }, faction: 'pirates', color: 0x4a3728,
+            markets: { rum: { preference: 'imports', targetSupply: 30, targetDemand: 90 }, sugar: { preference: 'neutral', targetSupply: 40, targetDemand: 40 }, tobacco: { preference: 'imports', targetSupply: 20, targetDemand: 70 }, spices: { preference: 'neutral', targetSupply: 30, targetDemand: 30 }, tea: { preference: 'neutral', targetSupply: 20, targetDemand: 20 }, silk: { preference: 'imports', targetSupply: 10, targetDemand: 50 }, gunpowder: { preference: 'exports', targetSupply: 90, targetDemand: 20 }, timber: { preference: 'imports', targetSupply: 25, targetDemand: 60 }, iron: { preference: 'imports', targetSupply: 20, targetDemand: 55 }, gold: { preference: 'exports', targetSupply: 60, targetDemand: 30 } } },
+        nassau: { name: 'Nassau', position: { x: -120, z: -150 }, faction: 'pirates', color: 0x5c4a32,
+            markets: { rum: { preference: 'exports', targetSupply: 70, targetDemand: 30 }, sugar: { preference: 'exports', targetSupply: 60, targetDemand: 25 }, tobacco: { preference: 'exports', targetSupply: 80, targetDemand: 20 }, spices: { preference: 'imports', targetSupply: 15, targetDemand: 55 }, tea: { preference: 'imports', targetSupply: 10, targetDemand: 45 }, silk: { preference: 'imports', targetSupply: 10, targetDemand: 40 }, gunpowder: { preference: 'exports', targetSupply: 75, targetDemand: 30 }, timber: { preference: 'exports', targetSupply: 90, targetDemand: 20 }, iron: { preference: 'imports', targetSupply: 20, targetDemand: 60 }, gold: { preference: 'neutral', targetSupply: 25, targetDemand: 25 } } },
+        havana: { name: 'Havana', position: { x: -80, z: 100 }, faction: 'neutral', color: 0x3d6b2e,
+            markets: { rum: { preference: 'exports', targetSupply: 85, targetDemand: 25 }, sugar: { preference: 'exports', targetSupply: 95, targetDemand: 15 }, tobacco: { preference: 'exports', targetSupply: 90, targetDemand: 20 }, spices: { preference: 'neutral', targetSupply: 40, targetDemand: 40 }, tea: { preference: 'imports', targetSupply: 15, targetDemand: 60 }, silk: { preference: 'imports', targetSupply: 10, targetDemand: 55 }, gunpowder: { preference: 'imports', targetSupply: 20, targetDemand: 70 }, timber: { preference: 'neutral', targetSupply: 50, targetDemand: 50 }, iron: { preference: 'imports', targetSupply: 25, targetDemand: 65 }, gold: { preference: 'exports', targetSupply: 45, targetDemand: 35 } } },
+        kingston: { name: 'Kingston', position: { x: 100, z: 120 }, faction: 'english', color: 0x4a7a3a,
+            markets: { rum: { preference: 'neutral', targetSupply: 50, targetDemand: 50 }, sugar: { preference: 'exports', targetSupply: 75, targetDemand: 30 }, tobacco: { preference: 'exports', targetSupply: 65, targetDemand: 35 }, spices: { preference: 'exports', targetSupply: 70, targetDemand: 25 }, tea: { preference: 'imports', targetSupply: 20, targetDemand: 65 }, silk: { preference: 'imports', targetSupply: 15, targetDemand: 50 }, gunpowder: { preference: 'neutral', targetSupply: 35, targetDemand: 35 }, timber: { preference: 'imports', targetSupply: 30, targetDemand: 60 }, iron: { preference: 'imports', targetSupply: 25, targetDemand: 55 }, gold: { preference: 'imports', targetSupply: 15, targetDemand: 45 } } },
+        barbados: { name: 'Barbados', position: { x: 200, z: 50 }, faction: 'eitc', color: 0x5a8a4a,
+            markets: { rum: { preference: 'exports', targetSupply: 90, targetDemand: 20 }, sugar: { preference: 'exports', targetSupply: 95, targetDemand: 15 }, tobacco: { preference: 'neutral', targetSupply: 45, targetDemand: 45 }, spices: { preference: 'neutral', targetSupply: 40, targetDemand: 40 }, tea: { preference: 'imports', targetSupply: 20, targetDemand: 70 }, silk: { preference: 'imports', targetSupply: 15, targetDemand: 60 }, gunpowder: { preference: 'imports', targetSupply: 25, targetDemand: 55 }, timber: { preference: 'imports', targetSupply: 30, targetDemand: 55 }, iron: { preference: 'imports', targetSupply: 20, targetDemand: 60 }, gold: { preference: 'imports', targetSupply: 10, targetDemand: 50 } } },
+        cartagena: { name: 'Cartagena', position: { x: -180, z: -50 }, faction: 'neutral', color: 0x6a5a3a,
+            markets: { rum: { preference: 'imports', targetSupply: 30, targetDemand: 60 }, sugar: { preference: 'neutral', targetSupply: 45, targetDemand: 45 }, tobacco: { preference: 'imports', targetSupply: 25, targetDemand: 55 }, spices: { preference: 'exports', targetSupply: 65, targetDemand: 30 }, tea: { preference: 'neutral', targetSupply: 35, targetDemand: 35 }, silk: { preference: 'exports', targetSupply: 55, targetDemand: 30 }, gunpowder: { preference: 'imports', targetSupply: 20, targetDemand: 70 }, timber: { preference: 'neutral', targetSupply: 50, targetDemand: 50 }, iron: { preference: 'exports', targetSupply: 60, targetDemand: 35 }, gold: { preference: 'exports', targetSupply: 70, targetDemand: 20 } } }
+    },
+    factions: {
+        english: { name: 'Royal Navy', icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', taxRate: 0.05, startingRep: { english: 25, eitc: 0, pirates: -25 }, enemyFaction: 'pirates' },
+        eitc: { name: 'Trading Company', icon: '⚓', taxRate: 0, startingRep: { english: 0, eitc: 25, pirates: -15 }, cargoBonus: 0.2, priceBonus: 0.05, enemyFaction: 'pirates' },
+        pirates: { name: 'Brethren Court', icon: '🏴‍☠️', taxRate: 0, startingRep: { english: -30, eitc: -20, pirates: 50 }, contrabandBonus: 0.5, speedBonus: 0.2, enemyFaction: 'english' }
+    },
+    events: [
+        { id: 'festival', name: 'Festival', desc: 'Luxury demand up!', duration: 3, affects: ['luxury'], multiplier: 1.5 },
+        { id: 'shortage', name: 'Shortage', desc: 'Prices up!', duration: 4, affects: ['commodity'], multiplier: 1.4 },
+        { id: 'surplus', name: 'Surplus', desc: 'Prices down!', duration: 3, affects: ['commodity'], multiplier: 0.7 }
+    ],
+    settings: { startingGold: 1000, startingSupplies: 30, baseCargoCapacity: 50, baseShipSpeed: 1.0, supplyConsumptionPerDay: 1, dockDistance: 30, pirateEncounterChance: 0.08, eventSpawnChance: 0.08, supplyDriftRate: 0.05, demandDriftRate: 0.03 }
+};
+
+// Economy functions
+function calculatePrice(goodId, islandId, gs) {
+    const good = CONFIG.goods[goodId], island = gs.islands[islandId], market = island.markets[goodId];
+    if (!good || !market) return 0;
+    const scarcity = Math.max(0.5, Math.min(2.0, 1 + (market.targetSupply - market.supply) / market.targetSupply));
+    const demandFactor = Math.max(0.5, Math.min(2.0, 1 + (market.demand - market.targetDemand) / market.targetDemand));
+    let islandBias = market.preference === 'exports' ? 0.8 : market.preference === 'imports' ? 1.2 : 1.0;
+    const factionTariff = calculateTariff(gs.player.faction, island.faction, gs);
+    let eventMult = 1.0;
+    if (island.activeEvent) { const ev = CONFIG.events.find(e => e.id === island.activeEvent.id); if (ev && (ev.affects.includes('all') || ev.affects.includes(good.category))) eventMult = ev.multiplier; }
+    let factionBonus = 1.0;
+    if (gs.player.faction === 'eitc') factionBonus = 0.95;
+    if (gs.player.faction === 'pirates' && good.category === 'contraband') factionBonus *= 0.5;
+    return Math.max(1, Math.round(good.basePrice * scarcity * demandFactor * islandBias * factionTariff * eventMult * factionBonus));
+}
+
+function calculateTariff(playerFaction, islandFaction, gs) {
+    if (islandFaction === 'neutral' || playerFaction === islandFaction) return 1.0;
+    const rep = gs.player.reputation[islandFaction] || 0;
+    let tariff = 1 + (CONFIG.factions[islandFaction]?.taxRate || 0);
+    if (rep < -50) tariff += 0.3; else if (rep < -20) tariff += 0.15; else if (rep > 50) tariff -= 0.1;
+    if (CONFIG.factions[playerFaction]?.enemyFaction === islandFaction) tariff += 0.2;
+    return Math.max(0.9, Math.min(2.0, tariff));
+}
+
+function buyGood(goodId, qty, islandId, gs) {
+    const market = gs.islands[islandId].markets[goodId], good = CONFIG.goods[goodId], price = calculatePrice(goodId, islandId, gs);
+    const cost = price * qty, weight = good.weight * qty;
+    if (qty > market.supply || cost > gs.player.gold || getCargoUsed(gs) + weight > getCargoCapacity(gs)) return { success: false };
+    gs.player.gold -= cost; gs.player.cargo[goodId] = (gs.player.cargo[goodId] || 0) + qty;
+    market.supply = Math.max(0, market.supply - qty); market.demand = Math.min(market.targetDemand * 2, market.demand + Math.ceil(qty * 0.1));
+    recordPrice(goodId, islandId, price, gs);
+    return { success: true, cost };
+}
+
+function sellGood(goodId, qty, islandId, gs) {
+    const market = gs.islands[islandId].markets[goodId], price = calculatePrice(goodId, islandId, gs), stock = gs.player.cargo[goodId] || 0;
+    if (qty > stock) return { success: false };
+    gs.player.gold += price * qty; gs.player.cargo[goodId] = stock - qty;
+    if (gs.player.cargo[goodId] <= 0) delete gs.player.cargo[goodId];
+    market.supply = Math.min(market.targetSupply * 2, market.supply + qty); market.demand = Math.max(0, market.demand - Math.ceil(qty * 0.1));
+    recordPrice(goodId, islandId, price, gs);
+    return { success: true, revenue: price * qty };
+}
+
+function recordPrice(goodId, islandId, price, gs) {
+    if (!gs.player.visitedIslands[islandId]) gs.player.visitedIslands[islandId] = { lastPrices: {}, lastVisitDay: 0 };
+    gs.player.visitedIslands[islandId].lastPrices[goodId] = price;
+    gs.player.visitedIslands[islandId].lastVisitDay = gs.player.days;
+}
+
+function getPriceTrend(goodId, islandId, currentPrice, gs) {
+    const v = gs.player.visitedIslands[islandId];
+    if (!v || !v.lastPrices[goodId]) return 'none';
+    const last = v.lastPrices[goodId];
+    return currentPrice > last * 1.05 ? 'up' : currentPrice < last * 0.95 ? 'down' : 'stable';
+}
+
+function simulateMarketDay(gs) {
+    Object.keys(gs.islands).forEach(id => {
+        const island = gs.islands[id];
+        Object.keys(island.markets).forEach(gid => {
+            const m = island.markets[gid];
+            m.supply += (m.targetSupply - m.supply) * 0.05 + (Math.random() - 0.5) * 4;
+            m.supply = Math.max(0, Math.min(m.targetSupply * 2, Math.round(m.supply)));
+            m.demand += (m.targetDemand - m.demand) * 0.03 + (Math.random() - 0.5) * 2;
+            m.demand = Math.max(0, Math.min(m.targetDemand * 2, Math.round(m.demand)));
+        });
+        if (island.activeEvent) { island.activeEvent.daysRemaining--; if (island.activeEvent.daysRemaining <= 0) island.activeEvent = null; }
+        if (!island.activeEvent && Math.random() < CONFIG.settings.eventSpawnChance) {
+            const ev = CONFIG.events[Math.floor(Math.random() * CONFIG.events.length)];
+            island.activeEvent = { id: ev.id, daysRemaining: ev.duration };
+        }
+    });
+}
+
+function getCargoUsed(gs) { let t = 0; Object.entries(gs.player.cargo).forEach(([gid, q]) => t += (CONFIG.goods[gid]?.weight || 1) * q); return t; }
+function getCargoCapacity(gs) { let c = CONFIG.settings.baseCargoCapacity; if (gs.player.faction === 'eitc') c *= 1.2; return Math.floor(c); }
+function getShipSpeed(gs) { let s = CONFIG.settings.baseShipSpeed; if (gs.player.faction === 'pirates') s *= 1.2; return s; }
+
+function createInitialState(faction) {
+    const fc = CONFIG.factions[faction], islands = {};
+    Object.entries(CONFIG.islands).forEach(([id, cfg]) => {
+        const markets = {};
+        Object.entries(cfg.markets).forEach(([gid, mc]) => {
+            markets[gid] = { supply: mc.targetSupply + Math.floor((Math.random() - 0.5) * 20), demand: mc.targetDemand + Math.floor((Math.random() - 0.5) * 10), targetSupply: mc.targetSupply, targetDemand: mc.targetDemand, preference: mc.preference };
+        });
+        islands[id] = { id, name: cfg.name, faction: cfg.faction, markets, activeEvent: null };
+    });
+    return { player: { faction, gold: CONFIG.settings.startingGold, days: 1, supplies: CONFIG.settings.startingSupplies, cargo: {}, position: { x: 0, z: 0 }, reputation: { ...fc.startingRep }, visitedIslands: {} }, islands, isTraveling: false, destination: null, travelProgress: 0, travelDays: 0, currentIsland: 'portRoyal', isDocked: true };
+}
+
+// Scene Manager
+class SceneManager {
+    constructor(canvas) {
+        this.canvas = canvas; this.scene = new THREE.Scene(); this.clock = new THREE.Clock();
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); this.renderer.setClearColor(0x1a3a4a);
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        this.camera.position.set(0, 80, 100); this.camera.lookAt(0, 0, 0);
+        this.scene.add(new THREE.AmbientLight(0xffeedd, 0.6));
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(50, 100, 50); this.scene.add(sun);
+        this.createOcean(); this.islandMeshes = {}; this.createIslands();
+        this.ship = this.createShip(); this.scene.add(this.ship);
+        this.shipHeading = 0;
+        window.addEventListener('resize', () => this.onResize()); this.onResize();
+    }
+    createOcean() {
+        const geo = new THREE.PlaneGeometry(2000, 2000, 50, 50);
+        this.oceanPositions = geo.getAttribute('position').array.slice();
+        const mat = new THREE.MeshPhongMaterial({ color: 0x2d5a6a, shininess: 100, side: THREE.DoubleSide });
+        this.ocean = new THREE.Mesh(geo, mat); this.ocean.rotation.x = -Math.PI / 2; this.ocean.position.y = -2; this.scene.add(this.ocean);
+    }
+    updateOcean(t) {
+        const pos = this.ocean.geometry.getAttribute('position').array;
+        for (let i = 0; i < pos.length; i += 3) { pos[i + 2] = Math.sin(this.oceanPositions[i] * 0.02 + t) * 1.5 + Math.sin(this.oceanPositions[i + 1] * 0.03 + t * 0.8) * 1; }
+        this.ocean.geometry.getAttribute('position').needsUpdate = true;
+    }
+    createIslands() {
+        const factionColors = { english: 0xc41e3a, eitc: 0x1e4d2b, pirates: 0x2c2c2c, neutral: 0x808080 };
+        Object.entries(CONFIG.islands).forEach(([id, cfg]) => {
+            const g = new THREE.Group(); g.position.set(cfg.position.x, 0, cfg.position.z); g.userData = { islandId: id, name: cfg.name };
+            const r = 15 + Math.random() * 5;
+            g.add(new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.2, 8, 8), new THREE.MeshLambertMaterial({ color: cfg.color }))); g.children[0].position.y = 2;
+            const beach = new THREE.Mesh(new THREE.TorusGeometry(r * 1.1, 2, 8, 16), new THREE.MeshLambertMaterial({ color: 0xf4e4c1 })); beach.rotation.x = Math.PI / 2; beach.position.y = -0.5; g.add(beach);
+            for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
+                const tree = new THREE.Group(), a = (i / 5) * Math.PI * 2 + Math.random() * 0.5, d = 5 + Math.random() * 5;
+                tree.position.set(Math.cos(a) * d, 6, Math.sin(a) * d);
+                tree.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 3, 6), new THREE.MeshLambertMaterial({ color: 0x8b4513 })));
+                const leaves = new THREE.Mesh(new THREE.ConeGeometry(3, 6, 6), new THREE.MeshLambertMaterial({ color: 0x228b22 })); leaves.position.y = 5; tree.add(leaves);
+                g.add(tree);
+            }
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 12, 6), new THREE.MeshLambertMaterial({ color: 0x8b4513 })); pole.position.y = 12; g.add(pole);
+            const flag = new THREE.Mesh(new THREE.PlaneGeometry(4, 2.5), new THREE.MeshLambertMaterial({ color: factionColors[cfg.faction], side: THREE.DoubleSide })); flag.position.set(2.5, 16, 0); g.add(flag);
+            g.add(new THREE.Mesh(new THREE.BoxGeometry(8, 1, 3), new THREE.MeshLambertMaterial({ color: 0x6b4423 }))); g.children[g.children.length - 1].position.set(r + 4, 0, 0);
+            this.scene.add(g); this.islandMeshes[id] = g;
+        });
+    }
+    createShip() {
+        const s = new THREE.Group();
+        s.add(new THREE.Mesh(new THREE.BoxGeometry(4, 2, 10), new THREE.MeshLambertMaterial({ color: 0x8b4513 }))); s.children[0].position.y = 1;
+        s.add(new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.5, 9), new THREE.MeshLambertMaterial({ color: 0xdeb887 }))); s.children[1].position.y = 2.5;
+        s.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 12, 8), new THREE.MeshLambertMaterial({ color: 0x4a3728 }))); s.children[2].position.y = 8;
+        const sail = new THREE.Mesh(new THREE.PlaneGeometry(6, 8), new THREE.MeshLambertMaterial({ color: 0xf5f0e1, side: THREE.DoubleSide })); sail.position.set(0, 9, 1); sail.rotation.y = Math.PI / 2; s.add(sail);
+        const bow = new THREE.Mesh(new THREE.ConeGeometry(1, 3, 6), new THREE.MeshLambertMaterial({ color: 0xc9a227 })); bow.position.set(0, 1, 6); bow.rotation.x = Math.PI / 2; s.add(bow);
+        return s;
+    }
+    updateShipPosition(pos, heading) {
+        this.ship.position.set(pos.x, 0, pos.z);
+        const t = this.clock.getElapsedTime(); 
+        this.ship.position.y = Math.sin(t * 2) * 0.5; 
+        this.ship.rotation.z = Math.sin(t * 1.5) * 0.05;
+        // Smooth heading rotation
+        const targetHeading = heading || this.shipHeading;
+        this.shipHeading += (targetHeading - this.shipHeading) * 0.1;
+        this.ship.rotation.y = this.shipHeading;
+    }
+    updateCamera(sp) { 
+        this.camera.position.x += (sp.x - this.camera.position.x) * 0.05; 
+        this.camera.position.z += (sp.z + 80 - this.camera.position.z) * 0.05; 
+        this.camera.lookAt(sp.x, 0, sp.z); 
+    }
+    onResize() { this.camera.aspect = window.innerWidth / window.innerHeight; this.camera.updateProjectionMatrix(); this.renderer.setSize(window.innerWidth, window.innerHeight); }
+    render() {
+        const t = this.clock.getElapsedTime(); this.updateOcean(t);
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+
+// Joystick Controller
+class JoystickController {
+    constructor(game) {
+        this.game = game;
+        this.base = document.getElementById('joystick-base');
+        this.stick = document.getElementById('joystick-stick');
+        this.zone = document.getElementById('joystick-zone');
+        this.active = false;
+        this.value = { x: 0, y: 0 };
+        this.magnitude = 0;
+        this.angle = 0;
+        this.baseRect = null;
+        this.maxDistance = 35;
+        
+        this.bindEvents();
+    }
+    
+    bindEvents() {
+        // Touch events
+        this.zone.addEventListener('touchstart', (e) => this.onStart(e.touches[0]), { passive: false });
+        document.addEventListener('touchmove', (e) => { if (this.active) { e.preventDefault(); this.onMove(e.touches[0]); } }, { passive: false });
+        document.addEventListener('touchend', () => this.onEnd());
+        document.addEventListener('touchcancel', () => this.onEnd());
+        
+        // Mouse events for desktop testing
+        this.zone.addEventListener('mousedown', (e) => this.onStart(e));
+        document.addEventListener('mousemove', (e) => { if (this.active) this.onMove(e); });
+        document.addEventListener('mouseup', () => this.onEnd());
+    }
+    
+    onStart(e) {
+        this.active = true;
+        this.stick.classList.add('active');
+        this.baseRect = this.base.getBoundingClientRect();
+        this.onMove(e);
+    }
+    
+    onMove(e) {
+        if (!this.active || !this.baseRect) return;
+        
+        const centerX = this.baseRect.left + this.baseRect.width / 2;
+        const centerY = this.baseRect.top + this.baseRect.height / 2;
+        
+        let dx = e.clientX - centerX;
+        let dy = e.clientY - centerY;
+        
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const clampedDist = Math.min(distance, this.maxDistance);
+        
+        if (distance > 0) {
+            dx = (dx / distance) * clampedDist;
+            dy = (dy / distance) * clampedDist;
+        }
+        
+        this.stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        
+        // Normalize values
+        this.value.x = dx / this.maxDistance;
+        this.value.y = dy / this.maxDistance;
+        this.magnitude = clampedDist / this.maxDistance;
+        this.angle = Math.atan2(-dx, -dy); // Ship heading (forward is -Z)
+    }
+    
+    onEnd() {
+        this.active = false;
+        this.stick.classList.remove('active');
+        this.stick.style.transform = 'translate(-50%, -50%)';
+        this.value = { x: 0, y: 0 };
+        this.magnitude = 0;
+    }
+}
+
+// UI Manager
+class UIManager {
+    constructor(game) { 
+        this.game = game; 
+        this.elements = {}; 
+        this.cacheElements(); 
+        this.bindEvents(); 
+    }
+    
+    cacheElements() {
+        ['loading-screen', 'faction-screen', 'game-container', 'gold-value', 'day-value', 'supplies-value', 'faction-badge', 'faction-icon', 'faction-name', 'cargo-count', 'cargo-preview', 'compass-needle', 'destination-info', 'dest-name', 'dest-distance', 'event-toast', 'event-title', 'event-desc', 'travel-bar', 'travel-progress', 'travel-text', 'trade-modal', 'trade-island-name', 'trade-island-faction', 'trade-tariff', 'buy-panel', 'sell-panel', 'buy-goods-list', 'sell-goods-list', 'trade-gold', 'trade-cargo', 'close-trade', 'leave-port-btn', 'menu-modal', 'close-menu', 'save-btn', 'new-game-btn', 'rep-english', 'rep-eitc', 'rep-pirates', 'rep-english-val', 'rep-eitc-val', 'rep-pirates-val', 'ship-speed', 'ship-cargo-cap', 'pirate-modal', 'pay-tribute', 'fight-pirates', 'pirate-pass', 'tribute-cost', 'warning-modal', 'warning-icon', 'warning-title', 'warning-text', 'warning-dismiss', 'continue-btn', 'btn-dock', 'btn-map', 'btn-menu', 'speed-fill', 'island-indicator', 'nearby-island-name', 'nearby-island-faction', 'nearby-island-dist', 'map-modal', 'map-container', 'close-map'].forEach(id => this.elements[id] = document.getElementById(id));
+        this.elements.tradeTabs = document.querySelectorAll('.trade-tab');
+        this.elements.factionCards = document.querySelectorAll('.faction-card');
+    }
+    
+    bindEvents() {
+        this.elements.factionCards.forEach(c => c.addEventListener('click', () => { this.elements.factionCards.forEach(x => x.classList.remove('selected')); c.classList.add('selected'); this.elements['continue-btn'].classList.remove('hidden'); this.game.selectedFaction = c.dataset.faction; }));
+        this.elements['continue-btn']?.addEventListener('click', () => { if (this.game.selectedFaction) this.game.startGame(this.game.selectedFaction); });
+        this.elements.tradeTabs.forEach(tab => tab.addEventListener('click', () => { this.elements.tradeTabs.forEach(t => t.classList.remove('active')); tab.classList.add('active'); this.elements['buy-panel'].classList.toggle('hidden', tab.dataset.tab !== 'buy'); this.elements['sell-panel'].classList.toggle('hidden', tab.dataset.tab !== 'sell'); }));
+        this.elements['close-trade']?.addEventListener('click', () => this.closeTradeModal());
+        this.elements['leave-port-btn']?.addEventListener('click', () => { this.closeTradeModal(); this.game.undock(); });
+        this.elements['btn-dock']?.addEventListener('click', () => this.game.dock());
+        this.elements['btn-menu']?.addEventListener('click', () => this.showMenuModal());
+        this.elements['btn-map']?.addEventListener('click', () => this.showMapModal());
+        this.elements['close-menu']?.addEventListener('click', () => this.closeMenuModal());
+        this.elements['close-map']?.addEventListener('click', () => this.closeMapModal());
+        this.elements['save-btn']?.addEventListener('click', () => { this.game.saveGame(); this.showToast('Game Saved', 'Progress saved.'); });
+        this.elements['new-game-btn']?.addEventListener('click', () => { if (confirm('Start new game?')) { localStorage.removeItem('merchantSeasSave'); location.reload(); } });
+        this.elements['pay-tribute']?.addEventListener('click', () => this.game.payPirateTribute());
+        this.elements['fight-pirates']?.addEventListener('click', () => this.game.fightPirates());
+        this.elements['pirate-pass']?.addEventListener('click', () => this.game.pirateParley());
+        this.elements['warning-dismiss']?.addEventListener('click', () => this.closeWarningModal());
+    }
+    
+    showLoadingProgress(p) { document.querySelector('.loading-progress').style.width = `${p}%`; }
+    hideLoading() { this.elements['loading-screen'].classList.add('hidden'); }
+    showFactionSelect() { this.elements['faction-screen'].classList.remove('hidden'); }
+    hideFactionSelect() { this.elements['faction-screen'].classList.add('hidden'); }
+    showGame() { this.elements['game-container'].classList.remove('hidden'); }
+    
+    updateHUD(gs) {
+        this.elements['gold-value'].textContent = gs.player.gold.toLocaleString();
+        this.elements['day-value'].textContent = gs.player.days;
+        this.elements['supplies-value'].textContent = gs.player.supplies;
+        const f = CONFIG.factions[gs.player.faction];
+        this.elements['faction-icon'].textContent = f.icon; 
+        this.elements['faction-name'].textContent = f.name; 
+        this.elements['faction-badge'].className = gs.player.faction;
+        this.elements['cargo-count'].textContent = `${getCargoUsed(gs)}/${getCargoCapacity(gs)}`;
+        const preview = this.elements['cargo-preview']; preview.innerHTML = '';
+        Object.entries(gs.player.cargo).forEach(([gid, qty]) => { for (let i = 0; i < Math.min(qty, 8); i++) { const d = document.createElement('span'); d.className = 'cargo-dot'; d.title = CONFIG.goods[gid].name; preview.appendChild(d); } });
+    }
+    
+    updateCompass(h) { 
+        this.elements['compass-needle'].style.transform = `translate(-50%, -100%) rotate(${h * 180 / Math.PI}deg)`; 
+    }
+    
+    updateSpeedIndicator(speed) {
+        this.elements['speed-fill'].style.width = `${speed * 100}%`;
+    }
+    
+    updateNearbyIsland(island, distance) {
+        if (island) {
+            this.elements['island-indicator'].classList.add('visible');
+            this.elements['nearby-island-name'].textContent = island.name;
+            this.elements['nearby-island-faction'].textContent = CONFIG.factions[island.faction]?.name || 'Neutral';
+            this.elements['nearby-island-dist'].textContent = distance < CONFIG.settings.dockDistance ? '⚓ Can Dock' : `${Math.round(distance)}m`;
+            this.elements['btn-dock'].classList.toggle('available', distance < CONFIG.settings.dockDistance);
+        } else {
+            this.elements['island-indicator'].classList.remove('visible');
+            this.elements['btn-dock'].classList.remove('available');
+        }
+    }
+    
+    showTravelBar(p, text) { this.elements['travel-bar'].classList.remove('hidden'); this.elements['travel-progress'].style.width = `${p}%`; this.elements['travel-text'].textContent = text; }
+    hideTravelBar() { this.elements['travel-bar'].classList.add('hidden'); }
+    
+    showTradeModal(islandId, gs) {
+        const island = gs.islands[islandId];
+        this.elements['trade-island-name'].textContent = `${island.name} Market`;
+        this.elements['trade-island-faction'].textContent = CONFIG.factions[island.faction]?.name || 'Neutral';
+        this.elements['trade-island-faction'].className = `faction-tag ${island.faction}`;
+        const tariff = calculateTariff(gs.player.faction, island.faction, gs), tp = Math.round((tariff - 1) * 100);
+        this.elements['trade-tariff'].textContent = tp > 0 ? `+${tp}% Tariff` : 'No Tariff';
+        this.renderBuyPanel(islandId, gs); this.renderSellPanel(islandId, gs); this.updateTradeFooter(gs);
+        this.elements.tradeTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'buy'));
+        this.elements['buy-panel'].classList.remove('hidden'); this.elements['sell-panel'].classList.add('hidden');
+        this.elements['trade-modal'].classList.remove('hidden');
+    }
+    
+    renderBuyPanel(islandId, gs) {
+        const list = this.elements['buy-goods-list']; list.innerHTML = '';
+        Object.entries(CONFIG.goods).forEach(([gid, good]) => {
+            const m = gs.islands[islandId].markets[gid], price = calculatePrice(gid, islandId, gs), trend = getPriceTrend(gid, islandId, price, gs);
+            const item = document.createElement('div'); item.className = 'good-item';
+            item.innerHTML = `<div class="good-info"><span class="good-icon">${good.icon}</span><span class="good-name">${good.name}</span><span class="good-price">${price}g<span class="price-trend ${trend}">${trend === 'up' ? '↑' : trend === 'down' ? '↓' : ''}</span></span></div><div class="good-details">Supply: ${m.supply} | Wt: ${good.weight}</div><div class="good-actions"><button class="qty-btn buy" ${m.supply <= 0 || price > gs.player.gold ? 'disabled' : ''}>+</button></div>`;
+            item.querySelector('.qty-btn').addEventListener('click', () => { if (buyGood(gid, 1, islandId, gs).success) { this.renderBuyPanel(islandId, gs); this.renderSellPanel(islandId, gs); this.updateTradeFooter(gs); this.game.saveGame(); } });
+            list.appendChild(item);
+        });
+    }
+    
+    renderSellPanel(islandId, gs) {
+        const list = this.elements['sell-goods-list']; list.innerHTML = '';
+        if (Object.keys(gs.player.cargo).length === 0) { list.innerHTML = '<p style="text-align:center;color:var(--ink-light);padding:20px">Cargo empty</p>'; return; }
+        Object.entries(gs.player.cargo).forEach(([gid, qty]) => {
+            const good = CONFIG.goods[gid], price = calculatePrice(gid, islandId, gs), trend = getPriceTrend(gid, islandId, price, gs);
+            const item = document.createElement('div'); item.className = 'good-item';
+            item.innerHTML = `<div class="good-info"><span class="good-icon">${good.icon}</span><span class="good-name">${good.name}</span><span class="good-price">${price}g<span class="price-trend ${trend}">${trend === 'up' ? '↑' : trend === 'down' ? '↓' : ''}</span></span></div><div class="good-details">You have: ${qty}</div><div class="good-actions"><button class="qty-btn sell">−</button></div>`;
+            item.querySelector('.qty-btn').addEventListener('click', () => { if (sellGood(gid, 1, islandId, gs).success) { this.renderBuyPanel(islandId, gs); this.renderSellPanel(islandId, gs); this.updateTradeFooter(gs); this.game.saveGame(); } });
+            list.appendChild(item);
+        });
+    }
+    
+    updateTradeFooter(gs) { this.elements['trade-gold'].textContent = gs.player.gold.toLocaleString(); this.elements['trade-cargo'].textContent = `${getCargoUsed(gs)}/${getCargoCapacity(gs)}`; }
+    closeTradeModal() { this.elements['trade-modal'].classList.add('hidden'); }
+    
+    showMenuModal() {
+        const gs = this.game.gameState;
+        ['english', 'eitc', 'pirates'].forEach(f => { const rep = gs.player.reputation[f] || 0, pct = (rep + 100) / 200 * 100, bar = this.elements[`rep-${f}`]; bar.style.width = `${pct}%`; bar.classList.remove('hostile', 'friendly'); if (rep < -30) bar.classList.add('hostile'); else if (rep > 30) bar.classList.add('friendly'); this.elements[`rep-${f}-val`].textContent = rep; });
+        this.elements['ship-speed'].textContent = `${getShipSpeed(gs).toFixed(1)}x`; 
+        this.elements['ship-cargo-cap'].textContent = getCargoCapacity(gs);
+        this.elements['menu-modal'].classList.remove('hidden');
+    }
+    closeMenuModal() { this.elements['menu-modal'].classList.add('hidden'); }
+    
+    showMapModal() {
+        const container = this.elements['map-container'];
+        container.innerHTML = '';
+        const gs = this.game.gameState;
+        
+        // Scale positions to fit in container
+        const minX = -220, maxX = 240, minZ = -180, maxZ = 160;
+        const toPercent = (val, min, max) => ((val - min) / (max - min)) * 100;
+        
+        // Add islands
+        Object.entries(CONFIG.islands).forEach(([id, island]) => {
+            const dot = document.createElement('div');
+            dot.className = `map-island ${island.faction}`;
+            dot.style.left = `${toPercent(island.position.x, minX, maxX)}%`;
+            dot.style.top = `${toPercent(island.position.z, minZ, maxZ)}%`;
+            dot.title = island.name;
+            dot.textContent = island.name.charAt(0);
+            dot.addEventListener('click', () => {
+                this.closeMapModal();
+                // Set as destination
+                this.showToast('Course Set', `Heading to ${island.name}`);
+            });
+            container.appendChild(dot);
+        });
+        
+        // Add player
+        const player = document.createElement('div');
+        player.className = 'map-player';
+        player.style.left = `${toPercent(gs.player.position.x, minX, maxX)}%`;
+        player.style.top = `${toPercent(gs.player.position.z, minZ, maxZ)}%`;
+        container.appendChild(player);
+        
+        this.elements['map-modal'].classList.remove('hidden');
+    }
+    closeMapModal() { this.elements['map-modal'].classList.add('hidden'); }
+    
+    showPirateModal(cost, canParley) { this.elements['tribute-cost'].textContent = `${cost} gold`; this.elements['pirate-pass'].classList.toggle('hidden', !canParley); this.elements['pirate-modal'].classList.remove('hidden'); }
+    closePirateModal() { this.elements['pirate-modal'].classList.add('hidden'); }
+    showWarning(icon, title, text) { this.elements['warning-icon'].textContent = icon; this.elements['warning-title'].textContent = title; this.elements['warning-text'].textContent = text; this.elements['warning-modal'].classList.remove('hidden'); }
+    closeWarningModal() { this.elements['warning-modal'].classList.add('hidden'); }
+    showToast(title, desc) { this.elements['event-title'].textContent = title; this.elements['event-desc'].textContent = desc; this.elements['event-toast'].classList.remove('hidden'); setTimeout(() => this.elements['event-toast'].classList.add('hidden'), 3000); }
+}
+
+// Main Game Class
+class Game {
+    constructor() { 
+        this.gameState = null; 
+        this.scene = null; 
+        this.ui = null; 
+        this.joystick = null;
+        this.selectedFaction = null; 
+        this.nearbyIsland = null; 
+        this.isAnimating = false;
+        this.lastDayTick = 0;
+        this.dayTickInterval = 5000; // 5 seconds per day when moving
+        this.init(); 
+    }
+    
+    async init() {
+        this.ui = new UIManager(this);
+        for (let i = 0; i <= 100; i += 20) { this.ui.showLoadingProgress(i); await new Promise(r => setTimeout(r, 80)); }
+        const hasSave = localStorage.getItem('merchantSeasSave');
+        setTimeout(() => { 
+            this.ui.hideLoading(); 
+            if (hasSave && confirm('Continue previous voyage?')) { 
+                this.loadGame(); 
+                this.startRendering(); 
+            } else {
+                this.ui.showFactionSelect(); 
+            }
+        }, 300);
+    }
+    
+    startGame(faction) {
+        this.gameState = createInitialState(faction); 
+        this.ui.hideFactionSelect(); 
+        this.ui.showGame();
+        this.scene = new SceneManager(document.getElementById('game-canvas')); 
+        this.joystick = new JoystickController(this);
+        this.ui.updateHUD(this.gameState); 
+        this.saveGame(); 
+        this.startRendering();
+        this.ui.showToast('Welcome, Captain!', `Use the joystick to sail!`);
+    }
+    
+    update(deltaTime) {
+        if (!this.gameState || this.gameState.isDocked) return;
+        
+        const gs = this.gameState;
+        const speed = getShipSpeed(gs);
+        
+        // Joystick movement
+        if (this.joystick && this.joystick.magnitude > 0.1) {
+            const moveSpeed = speed * this.joystick.magnitude * 0.8;
+            
+            // Move in joystick direction
+            gs.player.position.x -= this.joystick.value.x * moveSpeed;
+            gs.player.position.z -= this.joystick.value.y * moveSpeed;
+            
+            // Clamp to world bounds
+            gs.player.position.x = Math.max(-250, Math.min(250, gs.player.position.x));
+            gs.player.position.z = Math.max(-200, Math.min(200, gs.player.position.z));
+            
+            // Update UI
+            this.ui.updateSpeedIndicator(this.joystick.magnitude);
+            this.ui.updateCompass(this.joystick.angle);
+            
+            // Day tick while moving
+            this.lastDayTick += deltaTime * 1000;
+            if (this.lastDayTick > this.dayTickInterval) {
+                this.advanceDay();
+                this.lastDayTick = 0;
+                
+                // Pirate encounter chance
+                if (Math.random() < CONFIG.settings.pirateEncounterChance) {
+                    this.triggerPirateEncounter();
+                }
+            }
+        } else {
+            this.ui.updateSpeedIndicator(0);
+        }
+        
+        // Check nearby islands
+        this.checkIslandProximity();
+    }
+    
+    checkIslandProximity() {
+        const pp = this.gameState.player.position;
+        let closest = null, closestDist = Infinity;
+        
+        Object.entries(CONFIG.islands).forEach(([id, isl]) => {
+            const d = Math.sqrt((isl.position.x - pp.x) ** 2 + (isl.position.z - pp.z) ** 2);
+            if (d < 80 && d < closestDist) { closestDist = d; closest = { id, ...isl, distance: d }; }
+        });
+        
+        if (closest) {
+            this.nearbyIsland = closest.id;
+            this.ui.updateNearbyIsland(closest, closestDist);
+        } else {
+            this.nearbyIsland = null;
+            this.ui.updateNearbyIsland(null, 0);
+        }
+    }
+    
+    advanceDay() {
+        this.gameState.player.days++;
+        this.gameState.player.supplies -= CONFIG.settings.supplyConsumptionPerDay;
+        simulateMarketDay(this.gameState);
+        this.ui.updateHUD(this.gameState);
+        
+        if (this.gameState.player.supplies <= 5 && this.gameState.player.supplies > 0) {
+            this.ui.showWarning('🍖', 'Low Supplies!', 'Dock soon!');
+        } else if (this.gameState.player.supplies <= 0) {
+            this.gameState.player.supplies = 0;
+            this.ui.showWarning('💀', 'Game Over', 'Crew mutinied!');
+        }
+    }
+    
+    triggerPirateEncounter() {
+        this.ui.showPirateModal(Math.floor(this.gameState.player.gold * 0.1) + 50, this.gameState.player.faction === 'pirates');
+    }
+    
+    payPirateTribute() {
+        const cost = Math.floor(this.gameState.player.gold * 0.1) + 50;
+        if (this.gameState.player.gold >= cost) { 
+            this.gameState.player.gold -= cost; 
+            this.ui.closePirateModal(); 
+            this.ui.showToast('Paid Off', `Lost ${cost} gold.`); 
+        } else { 
+            this.loseCargo(0.3); 
+            this.ui.closePirateModal(); 
+            this.ui.showToast('Plundered!', 'Lost cargo!'); 
+        }
+        this.ui.updateHUD(this.gameState);
+    }
+    
+    fightPirates() {
+        this.ui.closePirateModal();
+        if (Math.random() < 0.5) { 
+            const reward = 50 + Math.floor(Math.random() * 100); 
+            this.gameState.player.gold += reward; 
+            this.ui.showToast('Victory!', `Found ${reward} gold!`); 
+        } else { 
+            this.loseCargo(0.5); 
+            this.ui.showToast('Defeated', 'Lost half cargo!'); 
+        }
+        this.ui.updateHUD(this.gameState);
+    }
+    
+    pirateParley() { 
+        this.ui.closePirateModal(); 
+        this.ui.showToast('Parley', 'Safe passage.'); 
+    }
+    
+    loseCargo(frac) { 
+        Object.keys(this.gameState.player.cargo).forEach(gid => { 
+            this.gameState.player.cargo[gid] -= Math.ceil(this.gameState.player.cargo[gid] * frac); 
+            if (this.gameState.player.cargo[gid] <= 0) delete this.gameState.player.cargo[gid]; 
+        }); 
+    }
+    
+    dock() {
+        if (!this.nearbyIsland) {
+            this.ui.showToast('Too Far', 'Get closer to dock!');
+            return;
+        }
+        
+        const pp = this.gameState.player.position;
+        const island = CONFIG.islands[this.nearbyIsland];
+        const dist = Math.sqrt((island.position.x - pp.x) ** 2 + (island.position.z - pp.z) ** 2);
+        
+        if (dist > CONFIG.settings.dockDistance) {
+            this.ui.showToast('Too Far', 'Get closer to dock!');
+            return;
+        }
+        
+        this.gameState.isDocked = true; 
+        this.gameState.currentIsland = this.nearbyIsland;
+        
+        // Resupply
+        const cost = 2, maxBuy = Math.min(30 - this.gameState.player.supplies, Math.floor(this.gameState.player.gold / cost));
+        if (maxBuy > 0 && this.gameState.player.supplies < 15) { 
+            const bought = Math.min(maxBuy, 15); 
+            this.gameState.player.gold -= bought * cost; 
+            this.gameState.player.supplies += bought; 
+            this.ui.showToast('Resupplied', `+${bought} supplies`); 
+        }
+        
+        this.ui.updateHUD(this.gameState); 
+        this.ui.showTradeModal(this.nearbyIsland, this.gameState); 
+        this.saveGame();
+    }
+    
+    undock() { 
+        this.gameState.isDocked = false; 
+        this.ui.closeTradeModal(); 
+    }
+    
+    saveGame() { localStorage.setItem('merchantSeasSave', JSON.stringify(this.gameState)); }
+    
+    loadGame() {
+        const data = localStorage.getItem('merchantSeasSave'); 
+        if (!data) return false;
+        try { 
+            this.gameState = JSON.parse(data); 
+            if (!this.scene) { 
+                this.ui.hideFactionSelect(); 
+                this.ui.showGame(); 
+                this.scene = new SceneManager(document.getElementById('game-canvas')); 
+                this.joystick = new JoystickController(this);
+            } 
+            this.ui.updateHUD(this.gameState); 
+            return true; 
+        } catch (e) { return false; }
+    }
+    
+    startRendering() { 
+        this.isAnimating = true; 
+        this.lastTime = performance.now();
+        this.animate(); 
+    }
+    
+    animate() {
+        if (!this.isAnimating) return; 
+        requestAnimationFrame(() => this.animate());
+        if (!this.scene || !this.gameState) return;
+        
+        const now = performance.now();
+        const deltaTime = (now - this.lastTime) / 1000;
+        this.lastTime = now;
+        
+        // Update game logic
+        this.update(deltaTime);
+        
+        // Update ship in scene
+        this.scene.updateShipPosition(
+            this.gameState.player.position, 
+            this.joystick?.active ? this.joystick.angle : null
+        );
+        this.scene.updateCamera(this.gameState.player.position);
+        this.scene.render();
+    }
+}
+
+// Initialize
+window.addEventListener('DOMContentLoaded', () => { window.game = new Game(); });
+    </script>
+</body>
+</html>
