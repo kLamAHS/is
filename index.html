@@ -91,8 +91,16 @@
     #heat-indicator.med .heat-fill { background: var(--gold-dark); }
     #heat-indicator.high .heat-fill { background: var(--blood-red); }
 
+    /* Bounty indicator - Living Sea Update */
+    #bounty-indicator { position: fixed; top: 185px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; }
+    #bounty-indicator.clean { opacity: 0.5; }
+    #bounty-indicator.wanted { border-left: 3px solid #da4; }
+    #bounty-indicator.hunted { border-left: 3px solid #e83; animation: bounty-pulse 2s ease-in-out infinite; }
+    #bounty-indicator.infamous { border-left: 3px solid #c33; animation: bounty-pulse 1s ease-in-out infinite; }
+    @keyframes bounty-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
     /* Contract tracker chip */
-    #contract-tracker { position: fixed; top: 190px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; cursor: pointer; pointer-events: auto; max-width: 130px; border-left: 3px solid var(--gold); }
+    #contract-tracker { position: fixed; top: 215px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; cursor: pointer; pointer-events: auto; max-width: 130px; border-left: 3px solid var(--gold); }
     #contract-tracker.hidden { display: none; }
     #contract-tracker .contract-title { font-family: var(--font-display); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
     #contract-tracker .contract-meta { color: var(--ink-light); font-size: 0.6rem; }
@@ -239,6 +247,23 @@
     .contract-actions button { flex: 1; }
     .contract-empty { text-align: center; color: var(--ink-light); padding: var(--space-lg); font-style: italic; }
 
+    /* Questline Cards - Living Sea Update */
+    .questline-card { background: linear-gradient(135deg, rgba(74, 108, 124, 0.15) 0%, rgba(44, 78, 94, 0.1) 100%); border: 2px solid var(--sea-medium); border-radius: 8px; padding: var(--space-sm); margin-bottom: var(--space-sm); }
+    .questline-card.active { border-color: var(--gold); background: linear-gradient(135deg, rgba(201, 162, 39, 0.2) 0%, rgba(201, 162, 39, 0.1) 100%); }
+    .questline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs); }
+    .questline-title { font-family: var(--font-display); font-size: 0.9rem; display: flex; align-items: center; gap: var(--space-xs); }
+    .questline-deadline { font-size: 0.7rem; color: var(--blood-red); font-weight: 600; }
+    .questline-desc { font-size: 0.75rem; color: var(--ink-light); margin-bottom: var(--space-sm); }
+    .questline-steps { margin-bottom: var(--space-sm); }
+    .questline-step { display: flex; align-items: flex-start; gap: var(--space-xs); font-size: 0.75rem; padding: var(--space-xs) 0; }
+    .questline-step.completed { color: #1e7d34; text-decoration: line-through; opacity: 0.7; }
+    .questline-step.current { font-weight: 600; color: var(--sea-dark); }
+    .questline-step.pending { color: var(--ink-light); }
+    .step-icon { width: 16px; text-align: center; }
+    .questline-rewards { display: flex; flex-wrap: wrap; gap: var(--space-sm); font-size: 0.7rem; margin-bottom: var(--space-sm); background: rgba(201, 162, 39, 0.1); padding: var(--space-xs); border-radius: 4px; }
+    .questline-actions { display: flex; gap: var(--space-xs); }
+    .questline-empty { text-align: center; color: var(--ink-light); padding: var(--space-md); font-style: italic; }
+
     .logbook-section { margin-bottom: var(--space-md); }
     .logbook-section h4 { font-family: var(--font-display); font-size: 0.85rem; margin-bottom: var(--space-xs); color: var(--ink-light); }
     .island-select { width: 100%; padding: var(--space-sm); border: 2px solid var(--parchment-dark); border-radius: 6px; font-family: var(--font-body); background: white; margin-bottom: var(--space-sm); }
@@ -281,6 +306,14 @@
     .repair-fill.morale { background: #4682B4; }
     .repair-full { font-size: 0.7rem; color: #1e7d34; font-style: italic; }
 
+    /* Pardon Card - Living Sea Update */
+    .pardon-card { background: rgba(139, 0, 0, 0.1); border: 2px solid var(--blood-red); border-radius: 8px; padding: var(--space-sm); text-align: center; }
+    .pardon-status { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); margin-bottom: var(--space-sm); font-size: 1rem; }
+    .bounty-icon { font-size: 1.2rem; }
+    .bounty-level { font-weight: bold; font-family: var(--font-display); }
+    .bounty-amount { font-size: 0.8rem; color: var(--ink-light); }
+    .pardon-desc { font-size: 0.75rem; color: var(--ink-light); margin-bottom: var(--space-sm); }
+
     /* Officer Cards - Living Sea Update */
     .officer-card { background: rgba(255,255,255,0.6); border: 2px solid var(--parchment-dark); border-radius: 8px; padding: var(--space-sm); margin-bottom: var(--space-sm); }
     .officer-card.hired { border-color: var(--gold); background: rgba(201,162,39,0.15); }
@@ -294,6 +327,19 @@
     .officer-trait.negative { background: rgba(139,37,0,0.2); color: var(--blood-red); }
     .officer-actions { display: flex; gap: var(--space-xs); margin-top: var(--space-xs); }
     .officers-empty { text-align: center; color: var(--ink-light); padding: var(--space-md); font-style: italic; }
+
+    /* Ship Cards - Living Sea Update */
+    .ship-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-sm); margin-bottom: var(--space-md); }
+    .ship-card { background: rgba(255,255,255,0.6); border: 2px solid var(--parchment-dark); border-radius: 8px; padding: var(--space-sm); }
+    .ship-card.owned { border-color: var(--gold); background: rgba(201,162,39,0.15); }
+    .ship-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs); }
+    .ship-name { font-family: var(--font-display); font-size: 0.9rem; }
+    .ship-cost { color: var(--gold-dark); font-weight: 600; font-size: 0.8rem; }
+    .ship-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 0.7rem; margin-bottom: var(--space-xs); }
+    .ship-stat { display: flex; justify-content: space-between; padding: 2px 4px; background: rgba(0,0,0,0.05); border-radius: 3px; }
+    .ship-stat span:first-child { color: var(--ink-light); }
+    .ship-stat span:last-child { font-weight: 600; }
+    .ship-desc { font-size: 0.65rem; color: var(--ink-light); margin: var(--space-xs) 0; font-style: italic; }
 
     .menu-content { padding: var(--space-md); }
     .menu-content h2 { font-family: var(--font-display); text-align: center; margin-bottom: var(--space-md); }
@@ -380,6 +426,42 @@
     .map-buttons button { flex: 1; }
     .map-info { text-align: center; margin-top: var(--space-sm); font-size: 0.75rem; color: var(--ink-light); }
 
+    /* Faction Influence Zones - Living Sea Update */
+    .map-influence-zone { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.2; pointer-events: none; z-index: 1; transition: all 0.5s ease; }
+    .map-influence-zone.english { background: radial-gradient(circle, var(--english) 0%, transparent 70%); }
+    .map-influence-zone.eitc { background: radial-gradient(circle, var(--eitc) 0%, transparent 70%); }
+    .map-influence-zone.pirates { background: radial-gradient(circle, var(--pirates) 0%, transparent 70%); }
+    .map-influence-zone.contested { background: radial-gradient(circle, #8b4513 0%, transparent 70%); animation: contested-pulse 2s ease-in-out infinite; }
+    @keyframes contested-pulse { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.3; } }
+    .map-island.blockaded { box-shadow: 0 0 0 4px var(--blood-red), 0 0 12px var(--blood-red); animation: blockade-pulse 1.5s ease-in-out infinite; }
+    .map-island.warzone { box-shadow: 0 0 0 4px #ff6600, 0 0 15px #ff6600; animation: warzone-pulse 1s ease-in-out infinite; }
+    @keyframes blockade-pulse { 0%, 100% { box-shadow: 0 0 0 4px var(--blood-red), 0 0 8px var(--blood-red); } 50% { box-shadow: 0 0 0 6px var(--blood-red), 0 0 16px var(--blood-red); } }
+    @keyframes warzone-pulse { 0%, 100% { box-shadow: 0 0 0 4px #ff6600, 0 0 10px #ff6600; } 50% { box-shadow: 0 0 0 6px #ff8800, 0 0 20px #ff8800; } }
+    .map-blockade-line { position: absolute; height: 3px; background: repeating-linear-gradient(90deg, var(--blood-red) 0px, var(--blood-red) 5px, transparent 5px, transparent 10px); transform-origin: left center; opacity: 0.8; z-index: 2; pointer-events: none; }
+    .map-legend .legend-contested { background: linear-gradient(90deg, var(--english), var(--pirates)); }
+    .map-overlay-toggle { position: absolute; top: 5px; right: 5px; background: var(--card-bg); border: 1px solid var(--parchment-dark); border-radius: 4px; padding: 2px 6px; font-size: 0.6rem; cursor: pointer; z-index: 10; }
+    .map-overlay-toggle.active { background: var(--gold); }
+    .influence-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 2px; }
+    .influence-bar .influence-segment { height: 100%; transition: width 0.3s; }
+    .influence-bar .english { background: var(--english); }
+    .influence-bar .eitc { background: var(--eitc); }
+    .influence-bar .pirates { background: var(--pirates); }
+
+    /* Hidden Coves - Living Sea Update */
+    .map-cove { position: absolute; width: 20px; height: 20px; border-radius: 4px; border: 2px dashed var(--gold); transform: translate(-50%, -50%); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; background: rgba(201, 162, 39, 0.3); z-index: 4; animation: cove-shimmer 3s ease-in-out infinite; }
+    .map-cove:hover { transform: translate(-50%, -50%) scale(1.2); box-shadow: 0 0 10px var(--gold); }
+    .map-cove.selected { box-shadow: 0 0 0 3px var(--gold), 0 0 15px var(--gold); }
+    @keyframes cove-shimmer { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; border-color: #ffd700; } }
+    .cove-modal-content { padding: var(--space-lg); text-align: center; }
+    .cove-icon { font-size: 3rem; margin-bottom: var(--space-sm); }
+    .cove-modal-content h2 { font-family: var(--font-display); margin-bottom: var(--space-xs); }
+    .cove-modal-content .cove-desc { color: var(--ink-light); margin-bottom: var(--space-md); font-style: italic; }
+    .cove-services { display: flex; flex-direction: column; gap: var(--space-sm); margin-top: var(--space-md); }
+    .cove-service-btn { padding: var(--space-sm) var(--space-md); }
+    .chart-fragment-indicator { position: fixed; top: 280px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; border-left: 3px solid var(--gold); }
+    .chart-fragment-indicator.can-reveal { animation: fragment-glow 1.5s ease-in-out infinite; }
+    @keyframes fragment-glow { 0%, 100% { box-shadow: var(--shadow-light); } 50% { box-shadow: 0 0 10px var(--gold); } }
+
     @media (max-height: 500px) and (orientation: landscape) {
         :root { --action-stack-h: 160px; --action-stack-bottom: 10px; }
         #mobile-controls { height: 140px; }
@@ -425,6 +507,7 @@
     <div id="cargo-summary"><div class="cargo-header"><span>📦 Cargo</span><span id="cargo-count">0/50</span></div><div id="cargo-preview"></div></div>
     <div id="wind-indicator"><span id="wind-arrow">💨</span><span id="wind-strength">Calm</span></div>
     <div id="heat-indicator" class="low"><span>🔥</span><div class="heat-bar"><div class="heat-fill" id="heat-fill"></div></div><span id="heat-label">0</span></div>
+    <div id="bounty-indicator" class="clean"><span>⚖️</span><span id="bounty-level">Clean</span></div>
     <div id="contract-tracker" class="hidden"><span>📜</span><span class="contract-title" id="tracker-title">--</span><span class="contract-meta" id="tracker-meta">--</span></div>
     <div id="world-indicator"><span id="world-icon">🌤️</span><span id="world-status">Fair Winds</span></div>
     <div id="ship-condition">
@@ -433,6 +516,7 @@
         <div class="condition-row"><span class="condition-icon" title="Rigging condition">🪢</span><div class="condition-bar"><div class="condition-fill rigging" id="rigging-fill"></div></div><span class="condition-value" id="rigging-value">100</span></div>
         <div class="condition-row"><span class="condition-icon" title="Crew morale">👥</span><div class="condition-bar"><div class="condition-fill morale" id="morale-fill"></div></div><span class="condition-value" id="morale-value">100</span></div>
     </div>
+    <div id="chart-fragments" class="chart-fragment-indicator hidden"><span>🗺️</span><span id="fragments-count">0</span>/3</div>
     <div id="compass">
         <div class="compass-ring">
             <div class="compass-needle" id="compass-needle"></div>
@@ -467,7 +551,7 @@
         </div>
         <div class="trade-panel" id="buy-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="buy-best-btn">💰 Buy Best</button></div><div class="goods-list" id="buy-goods-list"></div></div>
         <div class="trade-panel hidden" id="sell-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="sell-best-btn">💰 Sell Best</button></div><div class="goods-list" id="sell-goods-list"></div></div>
-        <div class="trade-panel hidden" id="contracts-panel"><div class="logbook-section"><h4>📋 Available Contracts</h4><div id="available-contracts"></div></div><div class="logbook-section"><h4>📌 Active Contracts (<span id="active-count">0</span>/3)</h4><div id="active-contracts"></div></div></div>
+        <div class="trade-panel hidden" id="contracts-panel"><div class="logbook-section" id="questline-section"><h4>📜 Questlines</h4><div id="questline-content"></div></div><div class="logbook-section"><h4>📋 Available Contracts</h4><div id="available-contracts"></div></div><div class="logbook-section"><h4>📌 Active Contracts (<span id="active-count">0</span>/3)</h4><div id="active-contracts"></div></div></div>
         <div class="trade-panel hidden" id="tavern-panel"><div class="logbook-section"><h4>👥 Your Officers (<span id="officer-count">0</span>/3)</h4><div id="current-officers"></div></div><div class="logbook-section"><h4>🍻 Available for Hire</h4><div id="available-officers"></div></div></div>
         <div class="trade-panel hidden" id="logbook-panel"><div class="logbook-section"><h4>💡 Deal Spotlight</h4><div id="spotlight-list"></div></div><div class="logbook-section"><h4>📜 Price History</h4><select class="island-select" id="logbook-island-select"></select><div id="logbook-prices"></div></div></div>
         <div class="trade-panel hidden" id="shipyard-panel"><div id="upgrades-list"></div></div>
@@ -482,6 +566,16 @@
         <div class="map-info" id="map-info">Click island to set course</div>
         <div class="map-legend"><span><div class="legend-dot" style="background:var(--english)"></div>English</span><span><div class="legend-dot" style="background:var(--eitc)"></div>EITC</span><span><div class="legend-dot" style="background:var(--pirates)"></div>Pirates</span><span><div class="legend-dot" style="background:var(--neutral)"></div>Neutral</span></div>
         <div class="map-buttons"><button class="btn-secondary" id="clear-course-btn">Clear Course</button><button class="btn-primary" id="close-map">Close</button></div>
+    </div>
+</div>
+
+<div id="cove-modal" class="modal hidden">
+    <div class="modal-content cove-modal-content">
+        <div class="cove-icon" id="cove-icon">🏴‍☠️</div>
+        <h2 id="cove-name">Hidden Cove</h2>
+        <p class="cove-desc" id="cove-desc">A hidden location known only to a few...</p>
+        <div class="cove-services" id="cove-services"></div>
+        <button class="btn-secondary" id="close-cove" style="margin-top: var(--space-md);">Leave</button>
     </div>
 </div>
 
@@ -779,7 +873,8 @@ rumorTemplates: [
     { template: '{island} is paying triple for {good}.', type: 'price', accuracy: 0.65 },
     { template: 'The {faction} are cracking down on smugglers.', type: 'crackdown', accuracy: 0.8 },
     { template: 'Heard there\'s a blockade forming around {island}.', type: 'blockade', accuracy: 0.75 },
-    { template: 'Plague ship spotted near {island}. Stay clear.', type: 'danger', accuracy: 0.85 }
+    { template: 'Plague ship spotted near {island}. Stay clear.', type: 'danger', accuracy: 0.85 },
+    { template: '{cove_hint}', type: 'cove', accuracy: 0.9 }
 ],
 // SEASONAL EVENTS - 10 major events
 seasonalEvents: [
@@ -2045,6 +2140,9 @@ function tickWorldStatePerDay(gs) {
     // Update port states
     updatePortStates(gs);
 
+    // Update faction influence, blockades, and war zones
+    updateFactionInfluence(gs);
+
     // Seasonal event management
     if (gs.world.seasonalEvent) {
         gs.world.seasonalEvent.daysRemaining--;
@@ -2191,6 +2289,347 @@ function determinePortState(gs, iid, island) {
     return roll < 0.6 ? 'prosperous' : 'struggling';
 }
 
+// ==================== LIVING SEA - FACTION INFLUENCE & WAR FRONTS ====================
+function initIslandInfluence(gs) {
+    if (!gs.world.islandInfluence) gs.world.islandInfluence = {};
+
+    // Initialize influence for each island based on base faction
+    for (const [iid, island] of Object.entries(CONFIG.islands)) {
+        if (!gs.world.islandInfluence[iid]) {
+            gs.world.islandInfluence[iid] = {
+                english: island.faction === 'english' ? 60 : (island.faction === 'neutral' ? 30 : 15),
+                eitc: island.faction === 'eitc' ? 60 : (island.faction === 'neutral' ? 30 : 15),
+                pirates: island.faction === 'pirates' ? 60 : (island.faction === 'neutral' ? 30 : 15),
+                stability: 100
+            };
+        }
+    }
+}
+
+function getIslandInfluence(gs, iid) {
+    initIslandInfluence(gs);
+    return gs.world.islandInfluence[iid] || { english: 33, eitc: 33, pirates: 33, stability: 100 };
+}
+
+function getDominantFaction(gs, iid) {
+    const inf = getIslandInfluence(gs, iid);
+    const threshold = CONFIG.warFronts.controlThreshold;
+
+    // Check if any faction has control
+    if (inf.english >= threshold) return 'english';
+    if (inf.eitc >= threshold) return 'eitc';
+    if (inf.pirates >= threshold) return 'pirates';
+
+    // No clear control - contested
+    return 'contested';
+}
+
+function isIslandContested(gs, iid) {
+    return getDominantFaction(gs, iid) === 'contested';
+}
+
+function modifyInfluence(gs, iid, faction, amount) {
+    initIslandInfluence(gs);
+    const inf = gs.world.islandInfluence[iid];
+    if (!inf) return;
+
+    // Add to the specified faction
+    inf[faction] = Math.max(0, Math.min(100, (inf[faction] || 0) + amount));
+
+    // Proportionally reduce others to keep total around 100
+    const total = inf.english + inf.eitc + inf.pirates;
+    if (total > 100) {
+        const excess = total - 100;
+        const others = ['english', 'eitc', 'pirates'].filter(f => f !== faction);
+        const otherTotal = others.reduce((sum, f) => sum + inf[f], 0);
+        if (otherTotal > 0) {
+            for (const f of others) {
+                inf[f] = Math.max(0, inf[f] - (inf[f] / otherTotal) * excess);
+            }
+        }
+    }
+
+    // Reduce stability when influence changes rapidly
+    if (Math.abs(amount) > 2) {
+        inf.stability = Math.max(0, inf.stability - Math.abs(amount) * 0.5);
+    }
+}
+
+function applyTradeInfluence(gs, iid, playerFaction) {
+    const wf = CONFIG.warFronts;
+    modifyInfluence(gs, iid, playerFaction, wf.influencePerTrade);
+}
+
+function applyQuestInfluence(gs, iid, faction) {
+    const wf = CONFIG.warFronts;
+    modifyInfluence(gs, iid, faction, wf.influencePerQuest);
+}
+
+function applySmuggleInfluence(gs, iid) {
+    const wf = CONFIG.warFronts;
+    // Smuggling destabilizes all factions
+    const inf = getIslandInfluence(gs, iid);
+    modifyInfluence(gs, iid, 'pirates', Math.abs(wf.influencePerSmuggle));
+    inf.stability = Math.max(0, inf.stability - 5);
+}
+
+function updateFactionInfluence(gs) {
+    initIslandInfluence(gs);
+    const wf = CONFIG.warFronts;
+
+    // Daily stability recovery
+    for (const [iid, inf] of Object.entries(gs.world.islandInfluence)) {
+        inf.stability = Math.min(100, inf.stability + wf.stabilityRecoveryPerDay);
+
+        // Natural drift toward base faction
+        const baseFaction = CONFIG.islands[iid]?.faction;
+        if (baseFaction && baseFaction !== 'neutral') {
+            modifyInfluence(gs, iid, baseFaction, 0.2);
+        }
+    }
+
+    // Update blockades
+    updateBlockades(gs);
+
+    // Update war zones
+    updateWarZones(gs);
+}
+
+// ==================== LIVING SEA - BLOCKADES ====================
+function getActiveBlockades(gs) {
+    return gs.world.activeBlockades || [];
+}
+
+function isIslandBlockaded(gs, iid) {
+    return getActiveBlockades(gs).some(b => b.islandId === iid && b.daysRemaining > 0);
+}
+
+function getBlockadeInfo(gs, iid) {
+    return getActiveBlockades(gs).find(b => b.islandId === iid && b.daysRemaining > 0);
+}
+
+function startBlockade(gs, iid, blockadingFaction) {
+    if (!gs.world.activeBlockades) gs.world.activeBlockades = [];
+
+    // Check if already blockaded
+    if (isIslandBlockaded(gs, iid)) return null;
+
+    const blockade = {
+        id: 'blockade_' + Date.now(),
+        islandId: iid,
+        blockadingFaction,
+        daysRemaining: CONFIG.warFronts.blockadeDuration,
+        startDay: gs.player.days,
+        strength: 50 + Math.floor(Math.random() * 50) // 50-100%
+    };
+
+    gs.world.activeBlockades.push(blockade);
+
+    // Set port state to blockaded
+    if (!gs.world.portStates) gs.world.portStates = {};
+    gs.world.portStates[iid] = 'blockaded';
+
+    return blockade;
+}
+
+function updateBlockades(gs) {
+    if (!gs.world.activeBlockades) gs.world.activeBlockades = [];
+
+    // Decrement days and remove expired blockades
+    gs.world.activeBlockades = gs.world.activeBlockades.filter(b => {
+        b.daysRemaining--;
+        if (b.daysRemaining <= 0) {
+            // Remove blockaded port state
+            if (gs.world.portStates?.[b.islandId] === 'blockaded') {
+                gs.world.portStates[b.islandId] = 'struggling';
+            }
+            return false;
+        }
+        return true;
+    });
+
+    // Random chance to spawn new blockade during unstable periods
+    if (Math.random() < 0.02) {
+        // Pick a contested or low-stability island
+        const candidates = Object.entries(gs.world.islandInfluence || {})
+            .filter(([iid, inf]) => inf.stability < 50 || isIslandContested(gs, iid))
+            .filter(([iid]) => !isIslandBlockaded(gs, iid));
+
+        if (candidates.length > 0) {
+            const [targetId] = candidates[Math.floor(Math.random() * candidates.length)];
+            const island = CONFIG.islands[targetId];
+
+            // Opposing faction blockades
+            const blockader = island.faction === 'english' ? 'pirates' :
+                             island.faction === 'pirates' ? 'english' :
+                             (Math.random() < 0.5 ? 'english' : 'pirates');
+
+            startBlockade(gs, targetId, blockader);
+        }
+    }
+}
+
+// ==================== LIVING SEA - WAR ZONES ====================
+function getActiveWarZones(gs) {
+    return gs.world.activeWarZones || [];
+}
+
+function isIslandWarZone(gs, iid) {
+    return getActiveWarZones(gs).some(w => w.islandId === iid && w.daysRemaining > 0);
+}
+
+function getWarZoneInfo(gs, iid) {
+    return getActiveWarZones(gs).find(w => w.islandId === iid && w.daysRemaining > 0);
+}
+
+function startWarZone(gs, iid, factions) {
+    if (!gs.world.activeWarZones) gs.world.activeWarZones = [];
+
+    if (isIslandWarZone(gs, iid)) return null;
+
+    const warZone = {
+        id: 'warzone_' + Date.now(),
+        islandId: iid,
+        factions,
+        daysRemaining: CONFIG.warFronts.warZoneDuration,
+        startDay: gs.player.days,
+        intensity: 50 + Math.floor(Math.random() * 50)
+    };
+
+    gs.world.activeWarZones.push(warZone);
+    return warZone;
+}
+
+function updateWarZones(gs) {
+    if (!gs.world.activeWarZones) gs.world.activeWarZones = [];
+
+    // Decrement days and remove expired war zones
+    gs.world.activeWarZones = gs.world.activeWarZones.filter(w => {
+        w.daysRemaining--;
+        if (w.daysRemaining <= 0) {
+            // War resolution affects influence
+            const winner = Math.random() < 0.5 ? w.factions[0] : w.factions[1];
+            modifyInfluence(gs, w.islandId, winner, 15);
+            return false;
+        }
+        return true;
+    });
+
+    // Random chance to spawn war zone in contested areas
+    if (Math.random() < 0.01) {
+        const contested = Object.keys(gs.world.islandInfluence || {})
+            .filter(iid => isIslandContested(gs, iid) && !isIslandWarZone(gs, iid));
+
+        if (contested.length > 0) {
+            const targetId = contested[Math.floor(Math.random() * contested.length)];
+            const inf = getIslandInfluence(gs, targetId);
+
+            // Two highest factions fight
+            const sorted = ['english', 'eitc', 'pirates'].sort((a, b) => inf[b] - inf[a]);
+            startWarZone(gs, targetId, [sorted[0], sorted[1]]);
+        }
+    }
+}
+
+// Get risk modifier for traveling near blockaded/warzone islands
+function getBlockadeRisk(gs, iid) {
+    let risk = 0;
+    if (isIslandBlockaded(gs, iid)) risk += 0.3;
+    if (isIslandWarZone(gs, iid)) risk += 0.2;
+    return risk;
+}
+
+// ==================== LIVING SEA - HIDDEN COVES & EXPLORATION ====================
+function getDiscoveredCoves(gs) {
+    return gs.player.discoveredCoves || [];
+}
+
+function isCoveDiscovered(gs, coveId) {
+    return getDiscoveredCoves(gs).includes(coveId);
+}
+
+function discoverCove(gs, coveId) {
+    if (!gs.player.discoveredCoves) gs.player.discoveredCoves = [];
+    if (!isCoveDiscovered(gs, coveId)) {
+        gs.player.discoveredCoves.push(coveId);
+        return true;
+    }
+    return false;
+}
+
+function getChartFragments(gs) {
+    return gs.player.chartFragments || 0;
+}
+
+function addChartFragment(gs) {
+    if (!gs.player.chartFragments) gs.player.chartFragments = 0;
+    gs.player.chartFragments++;
+    return gs.player.chartFragments;
+}
+
+function canRevealCove(gs) {
+    // 3 chart fragments reveal a random undiscovered cove
+    return getChartFragments(gs) >= 3;
+}
+
+function useChartFragments(gs) {
+    if (!canRevealCove(gs)) return null;
+    gs.player.chartFragments -= 3;
+
+    // Find undiscovered coves
+    const undiscovered = Object.keys(CONFIG.hiddenCoves).filter(id => !isCoveDiscovered(gs, id));
+    if (undiscovered.length === 0) return null;
+
+    // Reveal random cove
+    const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+    discoverCove(gs, coveId);
+    return CONFIG.hiddenCoves[coveId];
+}
+
+function getCoveByPosition(gs, radius = 40) {
+    const pp = gs.player.position;
+    for (const [coveId, cove] of Object.entries(CONFIG.hiddenCoves)) {
+        if (!isCoveDiscovered(gs, coveId)) continue;
+        const dist = Math.sqrt((cove.position.x - pp.x) ** 2 + (cove.position.z - pp.z) ** 2);
+        if (dist < radius) {
+            return { coveId, cove, distance: dist };
+        }
+    }
+    return null;
+}
+
+function exploreForCove(gs) {
+    // Exploration has a chance to discover nearby coves
+    const pp = gs.player.position;
+    for (const [coveId, cove] of Object.entries(CONFIG.hiddenCoves)) {
+        if (isCoveDiscovered(gs, coveId)) continue;
+        const dist = Math.sqrt((cove.position.x - pp.x) ** 2 + (cove.position.z - pp.z) ** 2);
+        // Within 100 units, chance scales with proximity
+        if (dist < 100) {
+            const chance = 0.1 * (1 - dist / 100); // 10% at close range
+            if (Math.random() < chance) {
+                discoverCove(gs, coveId);
+                return { coveId, cove };
+            }
+        }
+    }
+    return null;
+}
+
+function getCoveHint(gs, iid) {
+    // Port rumors may reveal cove hints
+    const rumors = getRumorsForPort(gs, iid);
+    const hintRumor = rumors.find(r => r.type === 'cove' && r.isTrue);
+    if (hintRumor) {
+        const undiscovered = Object.keys(CONFIG.hiddenCoves).filter(id => !isCoveDiscovered(gs, id));
+        if (undiscovered.length > 0) {
+            const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+            return CONFIG.hiddenCoves[coveId];
+        }
+    }
+    return null;
+}
+
 // ==================== LIVING SEA - DRIFT ENTITIES ====================
 function initDriftEntities(gs) {
     if (!gs.world.driftEntities) gs.world.driftEntities = [];
@@ -2325,6 +2764,19 @@ function generateRumors(gs, iid) {
             .replace('{good}', CONFIG.goods[goods[Math.floor(Math.random() * goods.length)]].name)
             .replace('{faction}', factions[Math.floor(Math.random() * factions.length)])
             .replace('{direction}', directions[Math.floor(Math.random() * directions.length)]);
+
+        // Handle cove hint rumors
+        if (template.type === 'cove') {
+            const undiscoveredCoves = Object.entries(CONFIG.hiddenCoves)
+                .filter(([id, _]) => !isCoveDiscovered(gs, id));
+            if (undiscoveredCoves.length > 0) {
+                const [_, cove] = undiscoveredCoves[Math.floor(Math.random() * undiscoveredCoves.length)];
+                text = cove.discoveryHint;
+            } else {
+                // All coves discovered, skip this rumor
+                continue;
+            }
+        }
 
         // Determine if rumor is true
         const isTrue = Math.random() < template.accuracy;
@@ -2847,6 +3299,97 @@ function checkQuestlineDeadline(gs) {
     return false;
 }
 
+// Check and advance questline step based on event
+function checkQuestlineStep(gs, event, eventData = {}) {
+    const progress = getQuestlineProgress(gs);
+    if (!progress) return { advanced: false };
+
+    const step = progress.currentStep;
+    if (!step) return { advanced: false };
+
+    let stepComplete = false;
+
+    switch (step.type) {
+        case 'deliver':
+            // Check if we have the goods and we're at the right location
+            if (event === 'dock' && eventData.islandId) {
+                const atDestination = !step.to || step.to === eventData.islandId;
+                if (atDestination && step.goods) {
+                    // Check if player has all required goods
+                    const hasGoods = Object.entries(step.goods).every(([gid, qty]) =>
+                        (gs.player.cargo[gid] || 0) >= qty
+                    );
+                    if (hasGoods) {
+                        // Remove delivered goods
+                        Object.entries(step.goods).forEach(([gid, qty]) => {
+                            gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) - qty;
+                        });
+                        stepComplete = true;
+                    }
+                }
+            }
+            break;
+
+        case 'acquire':
+            // Check if player has the goods in cargo
+            if (event === 'trade' || event === 'loot') {
+                if (step.goods) {
+                    const hasGoods = Object.entries(step.goods).every(([gid, qty]) =>
+                        (gs.player.cargo[gid] || 0) >= qty
+                    );
+                    if (hasGoods) stepComplete = true;
+                }
+            }
+            break;
+
+        case 'talk':
+        case 'report':
+            // Check if at the right island
+            if (event === 'dock' && eventData.islandId) {
+                if (!step.at || step.at === eventData.islandId) {
+                    stepComplete = true;
+                }
+            }
+            break;
+
+        case 'evade':
+            // Track evaded inspections
+            if (event === 'evade_inspection') {
+                const count = (progress.stepProgress.evaded || 0) + 1;
+                gs.player.questlineProgress[progress.questlineId].stepProgress.evaded = count;
+                if (count >= (step.count || 1)) {
+                    stepComplete = true;
+                }
+            }
+            break;
+
+        case 'survive_chase':
+            // Track survived chases
+            if (event === 'escape_chase') {
+                stepComplete = true;
+            }
+            break;
+
+        case 'escort':
+            // Track escort from->to journey
+            if (event === 'dock' && eventData.islandId) {
+                if (eventData.islandId === step.from) {
+                    gs.player.questlineProgress[progress.questlineId].stepProgress.startedEscort = true;
+                } else if (eventData.islandId === step.to && progress.stepProgress.startedEscort) {
+                    stepComplete = true;
+                }
+            }
+            break;
+    }
+
+    if (stepComplete) {
+        const result = advanceQuestline(gs);
+        return { advanced: true, completed: result.completed, rewards: result.rewards };
+    }
+
+    return { advanced: false };
+}
+
 // ==================== LIVING SEA: WAR FRONTS SYSTEM ====================
 function getIslandInfluence(gs, islandId) {
     return gs.world.islandInfluence?.[islandId] || {
@@ -3209,6 +3752,8 @@ m.supply -= qty;
 recordPrice(gid, iid, calcBasePrice(gid, iid, gs), gs); // Record base price for logbook
 // === BALANCE: Track trade fatigue ===
 addTradeFatigue(gs, iid);
+// === LIVING SEA: Apply faction influence ===
+applyTradeInfluence(gs, iid, gs.player.faction);
 // Heat for buying contraband
 if (g.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband);
 return { success: true, cost: price * qty };
@@ -3246,6 +3791,9 @@ addMarketSaturation(gs, iid, gid, qty);
 // === BALANCE: Track trade fatigue ===
 addTradeFatigue(gs, iid);
 
+// === LIVING SEA: Apply faction influence ===
+applyTradeInfluence(gs, iid, gs.player.faction);
+
 // Heat and tracking for contraband
 if (g.category === 'contraband') {
     // Enhanced heat gain with scaling
@@ -3259,6 +3807,9 @@ if (g.category === 'contraband') {
     // Track for smuggler title
     if (!gs.player.stats) gs.player.stats = {};
     gs.player.stats.contrabandTraded = (gs.player.stats.contrabandTraded || 0) + qty;
+
+    // === LIVING SEA: Smuggling destabilizes region ===
+    applySmuggleInfluence(gs, iid);
 }
 return { success: true, revenue };
 }
@@ -3374,6 +3925,8 @@ ship: {
 officers: [],
 discoveredCoves: [],
 chartFragments: 0,
+covesTreasured: [],
+destinationCoveId: null,
 activeQuestline: null,
 questlineProgress: {},
 huntersDefeated: []
@@ -3473,6 +4026,8 @@ if (!gs.player.officers) gs.player.officers = [];
 // Exploration system
 if (!gs.player.discoveredCoves) gs.player.discoveredCoves = [];
 if (gs.player.chartFragments === undefined) gs.player.chartFragments = 0;
+if (!gs.player.covesTreasured) gs.player.covesTreasured = [];
+if (gs.player.destinationCoveId === undefined) gs.player.destinationCoveId = null;
 
 // Questline system
 if (gs.player.activeQuestline === undefined) gs.player.activeQuestline = null;
@@ -3575,7 +4130,7 @@ end() { this.active = false; this.stick.classList.remove('active'); this.stick.s
 class UI {
 constructor(game) { this.game = game; this.el = {}; this.cache(); this.bind(); }
 cache() {
-['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers'].forEach(id => this.el[id] = document.getElementById(id));
+['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','bounty-indicator','bounty-level','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers','questline-section','questline-content'].forEach(id => this.el[id] = document.getElementById(id));
 this.el.tradeTabs = document.querySelectorAll('.trade-tab'); this.el.factionCards = document.querySelectorAll('.faction-card');
 }
 bind() {
@@ -3589,7 +4144,8 @@ this.el['btn-menu']?.addEventListener('click', () => this.showMenu());
 this.el['btn-map']?.addEventListener('click', () => this.showMap());
 this.el['close-menu']?.addEventListener('click', () => this.el['menu-modal'].classList.add('hidden'));
 this.el['close-map']?.addEventListener('click', () => this.el['map-modal'].classList.add('hidden'));
-this.el['clear-course-btn']?.addEventListener('click', () => { this.game.gameState.player.destinationIslandId = null; this.toast('Cleared', 'No course'); this.el['map-modal'].classList.add('hidden'); });
+this.el['close-cove']?.addEventListener('click', () => this.closeCove());
+this.el['clear-course-btn']?.addEventListener('click', () => { this.game.gameState.player.destinationIslandId = null; this.game.gameState.player.destinationCoveId = null; this.toast('Cleared', 'No course'); this.el['map-modal'].classList.add('hidden'); });
 this.el['save-btn']?.addEventListener('click', () => { this.game.save(); this.toast('Saved', 'Progress saved'); });
 this.el['new-game-btn']?.addEventListener('click', () => { if (confirm('New game?')) { localStorage.removeItem('merchantSeasSave'); location.reload(); } });
 this.el['pay-tribute']?.addEventListener('click', () => this.game.payTribute());
@@ -3649,6 +4205,12 @@ updateHUD(gs) {
     this.el['heat-label'].textContent = heat;
     this.el['heat-indicator'].className = heat < 30 ? 'low' : heat < 60 ? 'med' : 'high';
 
+    // Bounty indicator - Living Sea Update
+    const bountyLevel = getBountyLevel(gs);
+    const bountyLabels = { clean: 'Clean', wanted: 'Wanted', hunted: 'Hunted!', infamous: 'INFAMOUS' };
+    this.el['bounty-level'].textContent = bountyLabels[bountyLevel];
+    this.el['bounty-indicator'].className = bountyLevel;
+
     // Ship condition - Living Sea Update
     this.updateShipCondition(gs);
 
@@ -3657,6 +4219,21 @@ updateHUD(gs) {
 
     // World indicator
     this.updateWorldIndicator(gs);
+
+    // Chart fragments indicator
+    this.updateChartFragments(gs);
+}
+
+updateChartFragments(gs) {
+    const fragments = gs.player.chartFragments || 0;
+    const el = this.el['chart-fragments'];
+    if (fragments > 0) {
+        el.classList.remove('hidden');
+        this.el['fragments-count'].textContent = fragments;
+        el.classList.toggle('can-reveal', fragments >= 3);
+    } else {
+        el.classList.add('hidden');
+    }
 }
 
 updateContractTracker(gs) {
@@ -3746,6 +4323,7 @@ updateCompass(h, gs) {
     // Check for tracked contract destination first
     const tracked = getTrackedContract(gs);
     const destId = tracked?.toIsland || gs?.player?.destinationIslandId;
+    const coveId = gs?.player?.destinationCoveId;
 
     if (destId) {
         const d = CONFIG.islands[destId], dx = d.position.x - gs.player.position.x, dz = d.position.z - gs.player.position.z, a = Math.atan2(dx, -dz);
@@ -3754,6 +4332,17 @@ updateCompass(h, gs) {
         this.el['destination-info'].classList.remove('hidden');
         this.el['dest-name'].textContent = d.name;
         this.el['dest-distance'].textContent = `~${Math.ceil(Math.sqrt(dx*dx+dz*dz)/30)}d`;
+    } else if (coveId) {
+        // Point to hidden cove destination
+        const cove = CONFIG.hiddenCoves[coveId];
+        if (cove) {
+            const dx = cove.position.x - gs.player.position.x, dz = cove.position.z - gs.player.position.z, a = Math.atan2(dx, -dz);
+            this.el['compass-needle'].style.transform = `translate(-50%, -100%) rotate(${a * 180 / Math.PI}deg)`;
+            this.el['compass-dest-marker'].classList.remove('hidden');
+            this.el['destination-info'].classList.remove('hidden');
+            this.el['dest-name'].textContent = cove.name;
+            this.el['dest-distance'].textContent = `~${Math.ceil(Math.sqrt(dx*dx+dz*dz)/30)}d`;
+        }
     } else {
         this.el['compass-needle'].style.transform = `translate(-50%, -100%) rotate(${h * 180 / Math.PI}deg)`;
         this.el['compass-dest-marker'].classList.add('hidden');
@@ -3771,7 +4360,12 @@ updateNearby(isl, dist) {
     if (isl) {
         this.el['island-indicator'].classList.add('visible');
         this.el['nearby-island-name'].textContent = isl.name;
-        this.el['nearby-island-faction'].textContent = CONFIG.factions[isl.faction]?.name || 'Neutral';
+        // Handle coves vs islands
+        if (isl.type === 'cove') {
+            this.el['nearby-island-faction'].textContent = 'Hidden Cove';
+        } else {
+            this.el['nearby-island-faction'].textContent = CONFIG.factions[isl.faction]?.name || 'Neutral';
+        }
         this.el['nearby-island-dist'].textContent = dist < CONFIG.settings.dockDistance ? '⚓ Dock' : Math.round(dist) + 'm';
         this.el['btn-dock'].classList.toggle('available', dist < CONFIG.settings.dockDistance);
     }
@@ -3861,6 +4455,9 @@ renderContracts() {
     const gs = this.game.gameState;
     const iid = gs.currentIsland;
     if (!iid) return;
+
+    // Render questlines section
+    this.renderQuestlines();
 
     // Refresh board if needed
     refreshContractBoard(gs, iid);
@@ -4004,6 +4601,108 @@ renderContractCard(contract, gs, mode) {
     `;
 }
 
+// === LIVING SEA: Questline UI ===
+renderQuestlines() {
+    const gs = this.game.gameState;
+    const contentEl = this.el['questline-content'];
+    if (!contentEl) return;
+
+    const activeProgress = getQuestlineProgress(gs);
+
+    if (activeProgress) {
+        // Show active questline
+        const { questline, currentStep, stepIndex, totalSteps, daysRemaining } = activeProgress;
+        const stepsHtml = questline.steps.map((step, i) => {
+            let status = 'pending';
+            let icon = '○';
+            if (i < stepIndex) { status = 'completed'; icon = '✓'; }
+            else if (i === stepIndex) { status = 'current'; icon = '▶'; }
+            return `<div class="questline-step ${status}"><span class="step-icon">${icon}</span><span>${step.desc}</span></div>`;
+        }).join('');
+
+        const rewardsHtml = [];
+        if (questline.rewards.gold) rewardsHtml.push(`<span>🪙 ${questline.rewards.gold}g</span>`);
+        if (questline.rewards.reputation) {
+            Object.entries(questline.rewards.reputation).forEach(([fid, amt]) => {
+                rewardsHtml.push(`<span>${amt > 0 ? '+' : ''}${amt} ${fid}</span>`);
+            });
+        }
+        if (questline.rewards.title) rewardsHtml.push(`<span>🏅 "${questline.rewards.title}"</span>`);
+        if (questline.rewards.pardon) rewardsHtml.push(`<span>⚖️ Pardon</span>`);
+
+        contentEl.innerHTML = `
+            <div class="questline-card active">
+                <div class="questline-header">
+                    <span class="questline-title">${questline.icon} ${questline.name}</span>
+                    <span class="questline-deadline">${daysRemaining} days left</span>
+                </div>
+                <p class="questline-desc">${questline.desc}</p>
+                <div class="questline-steps">${stepsHtml}</div>
+                <div class="questline-rewards">${rewardsHtml.join('')}</div>
+                <div class="questline-actions">
+                    <button class="btn-small btn-danger abandon-quest-btn">Abandon Quest</button>
+                </div>
+            </div>
+        `;
+
+        contentEl.querySelector('.abandon-quest-btn')?.addEventListener('click', () => {
+            if (confirm('Abandon this questline? All progress will be lost.')) {
+                this.game.abandonQuestline();
+                this.renderQuestlines();
+            }
+        });
+    } else {
+        // Show available questlines
+        const availableQuests = Object.entries(CONFIG.questlines).filter(([id, q]) => {
+            // Filter by faction affinity and completion status
+            if (gs.player.questlineProgress[id]?.completed) return false;
+            return true;
+        });
+
+        if (availableQuests.length === 0) {
+            contentEl.innerHTML = '<div class="questline-empty">No questlines available</div>';
+        } else {
+            contentEl.innerHTML = availableQuests.map(([id, q]) => {
+                const rewardsHtml = [];
+                if (q.rewards.gold) rewardsHtml.push(`<span>🪙 ${q.rewards.gold}g</span>`);
+                if (q.rewards.reputation) {
+                    Object.entries(q.rewards.reputation).forEach(([fid, amt]) => {
+                        rewardsHtml.push(`<span>${amt > 0 ? '+' : ''}${amt} ${fid}</span>`);
+                    });
+                }
+                if (q.rewards.title) rewardsHtml.push(`<span>🏅 "${q.rewards.title}"</span>`);
+                if (q.rewards.pardon) rewardsHtml.push(`<span>⚖️ Pardon</span>`);
+
+                return `
+                    <div class="questline-card">
+                        <div class="questline-header">
+                            <span class="questline-title">${q.icon} ${q.name}</span>
+                            <span class="questline-deadline">${q.deadline} day limit</span>
+                        </div>
+                        <p class="questline-desc">${q.desc}</p>
+                        <div class="questline-rewards">${rewardsHtml.join('')}</div>
+                        <div class="questline-actions">
+                            <button class="btn-small btn-primary start-quest-btn" data-id="${id}">Start Quest</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            contentEl.querySelectorAll('.start-quest-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const result = this.game.startQuestline(btn.dataset.id);
+                    if (result.success) {
+                        this.toast('Quest Started', result.questline.name);
+                        this.renderQuestlines();
+                    } else {
+                        this.toast('Cannot Start', result.reason);
+                    }
+                });
+            });
+        }
+    }
+}
+
 renderLogbook() {
     const gs = this.game.gameState, iid = gs.currentIsland, deals = calcDeals(gs, iid);
     this.el['spotlight-list'].innerHTML = deals.length ? deals.map(d => `<div class="spotlight-card" data-dest="${d.sellIsland}"><div class="spotlight-header"><span class="spotlight-good">${d.good.icon} ${d.good.name}</span><span class="spotlight-profit">+${d.profit}g</span></div><div class="spotlight-route">Buy @${d.buyPrice}g → ${CONFIG.islands[d.sellIsland].name} @${d.sellPrice}g <span class="confidence-tag confidence-${d.confidence.level}">${d.confidence.label}</span></div></div>`).join('') : '<div class="spotlight-empty">Visit more ports!</div>';
@@ -4060,9 +4759,36 @@ renderShipyard() {
             </div>
         </div>
         <div class="shipyard-section">
+            <h4>⛵ Ships for Sale</h4>
+            <div class="ship-grid" id="ships-for-sale"></div>
+        </div>
+        <div class="shipyard-section">
             <h4>⚙️ Ship Upgrades</h4>
         </div>
     `;
+
+    // Ship classes for sale
+    const currentShip = gs.player.shipClass || 'brigantine';
+    const shipsHtml = Object.entries(CONFIG.shipClasses || {}).map(([id, ship]) => {
+        const isOwned = currentShip === id;
+        const canAfford = gs.player.gold >= ship.cost;
+        return `
+            <div class="ship-card ${isOwned ? 'owned' : ''}">
+                <div class="ship-header">
+                    <span class="ship-name">${ship.icon || '⛵'} ${ship.name}</span>
+                    <span class="ship-cost">${isOwned ? 'Current' : ship.cost + 'g'}</span>
+                </div>
+                <div class="ship-stats">
+                    <div class="ship-stat"><span>Speed:</span><span>${ship.baseSpeed}x</span></div>
+                    <div class="ship-stat"><span>Cargo:</span><span>${ship.cargoCapacity}</span></div>
+                    <div class="ship-stat"><span>Hull:</span><span>${ship.hullMax}</span></div>
+                    <div class="ship-stat"><span>Rigging:</span><span>${ship.riggingMax}</span></div>
+                </div>
+                <p class="ship-desc">${ship.desc || ''}</p>
+                ${!isOwned ? `<button class="btn-primary btn-small buy-ship-btn" data-id="${id}" ${canAfford ? '' : 'disabled'}>${canAfford ? 'Purchase' : 'Need Gold'}</button>` : ''}
+            </div>
+        `;
+    }).join('');
 
     // Upgrades section
     const upgradesHtml = Object.entries(CONFIG.upgrades).map(([id, u]) => {
@@ -4079,7 +4805,39 @@ renderShipyard() {
         </div>`;
     }).join('');
 
-    this.el['upgrades-list'].innerHTML = repairsHtml + upgradesHtml;
+    // === LIVING SEA: Pardon section ===
+    const bountyLevel = getBountyLevel(gs);
+    const bounty = getBounty(gs);
+    const pardonCost = getPardonCost(gs, gs.currentIsland);
+    const canPardon = pardonCost !== null && bounty > 0 && gs.player.gold >= pardonCost;
+    const bountyColors = { clean: '#4a9', wanted: '#da4', hunted: '#e83', infamous: '#c33' };
+    const bountyIcons = { clean: '✓', wanted: '⚠️', hunted: '🔴', infamous: '💀' };
+
+    let pardonHtml = '';
+    if (bounty > 0) {
+        pardonHtml = `
+            <div class="shipyard-section">
+                <h4>⚖️ Legal Status</h4>
+                <div class="pardon-card">
+                    <div class="pardon-status">
+                        <span class="bounty-icon">${bountyIcons[bountyLevel]}</span>
+                        <span class="bounty-level" style="color: ${bountyColors[bountyLevel]}; text-transform: capitalize;">${bountyLevel}</span>
+                        <span class="bounty-amount">(${bounty} bounty)</span>
+                    </div>
+                    ${pardonCost !== null ? `
+                        <p class="pardon-desc">The authorities here can clear your record... for a price.</p>
+                        <button class="btn-primary btn-small pardon-btn" ${canPardon ? '' : 'disabled'}>
+                            ${canPardon ? `Buy Pardon (${pardonCost}g)` : (gs.player.gold < pardonCost ? `Need ${pardonCost}g` : 'Unavailable')}
+                        </button>
+                    ` : `
+                        <p class="pardon-desc">This port doesn't offer pardons. Try an English, EITC, or neutral port.</p>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
+    this.el['upgrades-list'].innerHTML = repairsHtml + `<div class="ship-grid">${shipsHtml}</div>` + upgradesHtml + pardonHtml;
 
     // Bind repair buttons
     this.el['upgrades-list'].querySelectorAll('.repair-btn').forEach(b => b.addEventListener('click', () => {
@@ -4091,8 +4849,29 @@ renderShipyard() {
         }
     }));
 
+    // Bind ship purchase buttons
+    this.el['upgrades-list'].querySelectorAll('.buy-ship-btn').forEach(b => b.addEventListener('click', () => {
+        if (this.game.buyShip(b.dataset.id)) {
+            this.renderShipyard();
+            this.updateFooter(gs);
+            this.updateHUD(gs);
+        }
+    }));
+
     // Bind upgrade buttons
     this.el['upgrades-list'].querySelectorAll('.upg-btn').forEach(b => b.addEventListener('click', () => { if (this.game.buyUpgrade(b.dataset.id)) { this.renderShipyard(); this.updateFooter(gs); } }));
+
+    // Bind pardon button
+    const pardonBtn = this.el['upgrades-list'].querySelector('.pardon-btn');
+    if (pardonBtn) {
+        pardonBtn.addEventListener('click', () => {
+            if (this.game.buyPardon()) {
+                this.renderShipyard();
+                this.updateFooter(gs);
+                this.updateHUD(gs);
+            }
+        });
+    }
 }
 
 // === LIVING SEA: Tavern / Officers Panel ===
@@ -4184,6 +4963,50 @@ renderTavern() {
 updateFooter(gs) { this.el['trade-gold'].textContent = gs.player.gold.toLocaleString(); this.el['trade-cargo'].textContent = getCargoUsed(gs) + '/' + getCargoCapacity(gs); }
 closeTrade() { this.el['trade-modal'].classList.add('hidden'); }
 
+// ==================== LIVING SEA: Cove UI ====================
+showCove(coveId, gs) {
+    const cove = CONFIG.hiddenCoves[coveId];
+    if (!cove) return;
+
+    this.el['cove-icon'].textContent = cove.icon;
+    this.el['cove-name'].textContent = cove.name;
+    this.el['cove-desc'].textContent = cove.desc;
+
+    // Build service buttons
+    const servicesEl = this.el['cove-services'];
+    servicesEl.innerHTML = '';
+
+    const serviceLabels = {
+        fence: { icon: '💰', label: 'Fence Contraband', desc: 'Sell at 150%, no heat' },
+        salvage: { icon: '⚓', label: 'Buy Salvage (50g)', desc: 'Random goods cheap' },
+        repair: { icon: '🔧', label: 'Cheap Repairs', desc: '50% off repairs' },
+        rest: { icon: '🛏️', label: 'Rest Crew (25g)', desc: 'Restore morale' },
+        treasure: { icon: '💎', label: 'Search Treasure', desc: 'One-time gold find' },
+        charts: { icon: '🗺️', label: 'Buy Charts (75g)', desc: 'Get chart fragment' },
+        rumors: { icon: '👂', label: 'Hear Rumors', desc: 'Learn cove locations' }
+    };
+
+    for (const service of cove.services) {
+        const info = serviceLabels[service];
+        if (!info) continue;
+
+        const btn = document.createElement('button');
+        btn.className = 'btn-secondary cove-service-btn';
+        btn.innerHTML = `${info.icon} ${info.label} <small style="opacity:0.7">(${info.desc})</small>`;
+        btn.addEventListener('click', () => {
+            this.game.useCoveService(coveId, service);
+        });
+        servicesEl.appendChild(btn);
+    }
+
+    this.el['cove-modal'].classList.remove('hidden');
+}
+
+closeCove() {
+    this.el['cove-modal'].classList.add('hidden');
+    this.game.undockCove();
+}
+
 showMenu() {
     const gs = this.game.gameState;
     ['english','eitc','pirates'].forEach(f => { const r = gs.player.reputation[f] || 0; this.el['rep-' + f].style.width = (r + 100) / 2 + '%'; this.el['rep-' + f].className = 'rep-fill' + (r < -30 ? ' hostile' : r > 30 ? ' friendly' : ''); this.el['rep-' + f + '-val'].textContent = r; });
@@ -4254,6 +5077,18 @@ showMap() {
         const line = document.createElement('div'); line.className = 'map-course-line'; line.style.cssText = `left:${px}%;top:${py}%;width:${len}%;transform:rotate(${ang}deg)`; c.appendChild(line);
     }
 
+    // Show faction influence zones (behind everything)
+    Object.entries(CONFIG.islands).forEach(([id, isl]) => {
+        const inf = getIslandInfluence(gs, id);
+        const dominant = getDominantFaction(gs, id);
+        const zoneSize = 60 + (inf.stability / 100) * 40; // 60-100px based on stability
+
+        const zone = document.createElement('div');
+        zone.className = 'map-influence-zone ' + dominant;
+        zone.style.cssText = `left:${toP(isl.position.x, minX, maxX)}%;top:${toP(isl.position.z, minZ, maxZ)}%;width:${zoneSize}px;height:${zoneSize}px`;
+        c.appendChild(zone);
+    });
+
     // Show drift entities (storms, fleets, markets)
     if (gs.world?.driftEntities) {
         for (const entity of gs.world.driftEntities) {
@@ -4269,14 +5104,90 @@ showMap() {
         }
     }
 
+    // Show blockade lines from blockading fleets to blocked islands
+    const blockades = getActiveBlockades(gs);
+    for (const b of blockades) {
+        const isl = CONFIG.islands[b.islandId];
+        if (!isl) continue;
+        // Draw blockade indicator line
+        const ix = toP(isl.position.x, minX, maxX);
+        const iy = toP(isl.position.z, minZ, maxZ);
+        // Small blockade ring
+        const ring = document.createElement('div');
+        ring.className = 'map-blockade-line';
+        ring.style.cssText = `left:${ix - 3}%;top:${iy}%;width:6%;transform:rotate(0deg)`;
+        ring.title = `Blockaded by ${b.blockadingFaction} (${b.daysRemaining}d)`;
+        c.appendChild(ring);
+    }
+
     Object.entries(CONFIG.islands).forEach(([id, isl]) => {
-        const dot = document.createElement('div'); dot.className = 'map-island ' + isl.faction + (id === destId ? ' selected' : '');
-        dot.style.cssText = `left:${toP(isl.position.x, minX, maxX)}%;top:${toP(isl.position.z, minZ, maxZ)}%`; dot.textContent = isl.name[0]; dot.title = isl.name;
+        const isBlockaded = isIslandBlockaded(gs, id);
+        const isWarzone = isIslandWarZone(gs, id);
+        const inf = getIslandInfluence(gs, id);
+        const dominant = getDominantFaction(gs, id);
+
+        // Use dominant faction color if contested
+        const factionClass = dominant === 'contested' ? 'neutral' : (dominant || isl.faction);
+        let classes = 'map-island ' + factionClass + (id === destId ? ' selected' : '');
+        if (isBlockaded) classes += ' blockaded';
+        if (isWarzone) classes += ' warzone';
+
+        const dot = document.createElement('div');
+        dot.className = classes;
+        dot.style.cssText = `left:${toP(isl.position.x, minX, maxX)}%;top:${toP(isl.position.z, minZ, maxZ)}%`;
+        dot.textContent = isl.name[0];
+
+        // Enhanced tooltip with influence info
+        let tooltip = isl.name;
+        if (isBlockaded) {
+            const bInfo = getBlockadeInfo(gs, id);
+            tooltip += ` [BLOCKADED by ${bInfo.blockadingFaction}]`;
+        }
+        if (isWarzone) {
+            const wInfo = getWarZoneInfo(gs, id);
+            tooltip += ` [WAR: ${wInfo.factions.join(' vs ')}]`;
+        }
+        if (dominant === 'contested') {
+            tooltip += ` (Contested: E${Math.round(inf.english)}% C${Math.round(inf.eitc)}% P${Math.round(inf.pirates)}%)`;
+        }
+        dot.title = tooltip;
+
         dot.addEventListener('click', () => { gs.player.destinationIslandId = id; this.showMap(); this.toast('Course', isl.name); });
         c.appendChild(dot);
     });
+
+    // Show discovered hidden coves
+    const discoveredCoves = getDiscoveredCoves(gs);
+    for (const coveId of discoveredCoves) {
+        const cove = CONFIG.hiddenCoves[coveId];
+        if (!cove) continue;
+        const coveDot = document.createElement('div');
+        coveDot.className = 'map-cove' + (gs.player.destinationCoveId === coveId ? ' selected' : '');
+        coveDot.style.cssText = `left:${toP(cove.position.x, minX, maxX)}%;top:${toP(cove.position.z, minZ, maxZ)}%`;
+        coveDot.textContent = cove.icon;
+        coveDot.title = cove.name + ' - ' + cove.desc;
+        coveDot.addEventListener('click', () => {
+            gs.player.destinationCoveId = coveId;
+            gs.player.destinationIslandId = null;
+            this.showMap();
+            this.toast('Course', cove.name);
+        });
+        c.appendChild(coveDot);
+    }
+
     const p = document.createElement('div'); p.className = 'map-player'; p.style.cssText = `left:${toP(gs.player.position.x, minX, maxX)}%;top:${toP(gs.player.position.z, minZ, maxZ)}%`; c.appendChild(p);
-    this.el['map-info'].textContent = destId ? 'Course: ' + CONFIG.islands[destId].name : 'Click island';
+
+    // Enhanced map info with blockade/warzone warnings
+    let mapInfo = 'Click island';
+    if (destId) {
+        mapInfo = 'Course: ' + CONFIG.islands[destId].name;
+        if (isIslandBlockaded(gs, destId)) mapInfo += ' ⚠️ BLOCKADED';
+        if (isIslandWarZone(gs, destId)) mapInfo += ' ⚠️ WAR ZONE';
+    } else if (gs.player.destinationCoveId) {
+        const destCove = CONFIG.hiddenCoves[gs.player.destinationCoveId];
+        if (destCove) mapInfo = 'Course: ' + destCove.name + ' (Hidden)';
+    }
+    this.el['map-info'].textContent = mapInfo;
     this.el['map-modal'].classList.remove('hidden');
 }
 
@@ -4351,6 +5262,32 @@ showContractComplete(contracts) {
     this.el['contract-complete-modal'].classList.remove('hidden');
 }
 
+// === LIVING SEA: Quest Complete Modal ===
+showQuestComplete(rewards) {
+    if (!rewards) return;
+
+    const rewardLines = [];
+    if (rewards.gold) rewardLines.push(`<div style="font-size:1.2rem;color:var(--gold-dark);font-weight:bold">🪙 +${rewards.gold}g</div>`);
+    if (rewards.reputation) {
+        const repText = Object.entries(rewards.reputation)
+            .map(([f, r]) => `${r > 0 ? '+' : ''}${r} ${f}`)
+            .join(', ');
+        rewardLines.push(`<div style="font-size:0.9rem;color:var(--ink-light);margin-top:4px">${repText} reputation</div>`);
+    }
+    if (rewards.title) rewardLines.push(`<div style="font-size:0.9rem;margin-top:4px">🏅 Title earned: "${rewards.title}"</div>`);
+    if (rewards.pardon) rewardLines.push(`<div style="font-size:0.9rem;color:#1e7d34;margin-top:4px">⚖️ Royal Pardon granted!</div>`);
+
+    this.el['contract-complete-icon'].textContent = '📜';
+    this.el['contract-complete-title'].textContent = 'Questline Complete!';
+    this.el['contract-complete-desc'].textContent = 'You have completed an epic questline!';
+    this.el['contract-complete-rewards'].innerHTML = `
+        <div style="margin-top:10px;text-align:center">
+            ${rewardLines.join('')}
+        </div>
+    `;
+    this.el['contract-complete-modal'].classList.remove('hidden');
+}
+
 showEncounter(enc, opts, result) {
     this.el['encounter-icon'].textContent = enc.icon; this.el['encounter-title'].textContent = enc.name; this.el['encounter-desc'].textContent = enc.desc;
     if (result) {
@@ -4373,7 +5310,7 @@ toast(title, desc) { this.el['event-title'].textContent = title; this.el['event-
 
 // ==================== GAME ====================
 class Game {
-constructor() { this.gameState = null; this.scene = null; this.ui = null; this.joystick = null; this.selectedFaction = null; this.nearbyIsland = null; this.lastDayTick = 0; this.init(); }
+constructor() { this.gameState = null; this.scene = null; this.ui = null; this.joystick = null; this.selectedFaction = null; this.nearbyIsland = null; this.nearbyCove = null; this.lastDayTick = 0; this.init(); }
 async init() {
     try {
         this.ui = new UI(this);
@@ -4428,9 +5365,22 @@ update(dt) {
 }
 
 checkNearby() {
-    const pp = this.gameState.player.position; let closest = null, cd = Infinity;
-    Object.entries(CONFIG.islands).forEach(([id, isl]) => { const d = Math.sqrt((isl.position.x - pp.x)**2 + (isl.position.z - pp.z)**2); if (d < 80 && d < cd) { cd = d; closest = { id, ...isl, dist: d }; } });
-    this.nearbyIsland = closest?.id || null; this.ui.updateNearby(closest, cd);
+    const gs = this.gameState;
+    const pp = gs.player.position; let closest = null, cd = Infinity;
+    Object.entries(CONFIG.islands).forEach(([id, isl]) => { const d = Math.sqrt((isl.position.x - pp.x)**2 + (isl.position.z - pp.z)**2); if (d < 80 && d < cd) { cd = d; closest = { id, ...isl, dist: d, type: 'island' }; } });
+
+    // Also check for discovered coves
+    const discoveredCoves = getDiscoveredCoves(gs);
+    for (const coveId of discoveredCoves) {
+        const cove = CONFIG.hiddenCoves[coveId];
+        if (!cove) continue;
+        const d = Math.sqrt((cove.position.x - pp.x)**2 + (cove.position.z - pp.z)**2);
+        if (d < 60 && d < cd) { cd = d; closest = { id: coveId, ...cove, dist: d, type: 'cove' }; }
+    }
+
+    this.nearbyIsland = closest?.type === 'island' ? closest.id : null;
+    this.nearbyCove = closest?.type === 'cove' ? closest.id : null;
+    this.ui.updateNearby(closest, cd);
 }
 
 advanceDay() {
@@ -4543,6 +5493,13 @@ checkEncounters() {
     const cargoVal = estimateCargoValue(gs);
     const mods = getTitleModifiers(gs);
     const seasonMods = getSeasonModifiers(gs);
+
+    // === LIVING SEA: Check for blockade encounters when near blockaded islands ===
+    const nearestBlockaded = this.getNearbyBlockadedIsland(gs);
+    if (nearestBlockaded && Math.random() < 0.15) {
+        this.triggerBlockadeEncounter(nearestBlockaded);
+        return;
+    }
 
     // === LIVING SEA: Check for drift entity encounters first ===
     const nearbyEntities = getNearbyDriftEntities(gs, 60);
@@ -4666,6 +5623,16 @@ triggerPirate() {
     this.startChase('pirate');
 }
 
+// === LIVING SEA: Bounty Hunter Encounters ===
+_pendingHunter = null;
+
+triggerBountyHunter(hunter) {
+    // Store the hunter for use after chase resolves
+    this._pendingHunter = hunter;
+    // Start chase with bounty hunter - they're faster than regular pirates
+    this.startChase('bounty_hunter');
+}
+
 // === LIVING SEA: Chase System ===
 _chaseState = null;
 _chaseInterval = null;
@@ -4752,16 +5719,40 @@ _resolveChase() {
 
     if (escaped) {
         // Successfully escaped!
-        this.ui.showChaseResult(true, 'You escaped! The pirates fall behind.');
+        const escapeMsg = type === 'bounty_hunter'
+            ? 'You escaped! The bounty hunter loses your trail.'
+            : 'You escaped! The pirates fall behind.';
+        this.ui.showChaseResult(true, escapeMsg);
         // Small morale boost for exciting escape
         restoreMorale(gs, 5);
+
+        // Escaping bounty hunter doesn't defeat them - they'll be back
+        if (type === 'bounty_hunter' && this._pendingHunter) {
+            // Small bounty increase for evading justice
+            gs.player.bounty = (gs.player.bounty || 0) + 10;
+        }
+
+        // === LIVING SEA: Check questline for survive_chase step ===
+        const questResult = checkQuestlineStep(gs, 'escape_chase', { type });
+        if (questResult.advanced) {
+            if (questResult.completed) {
+                setTimeout(() => this.ui.showQuestComplete(questResult.rewards), 2100);
+            } else {
+                setTimeout(() => this.ui.toast('Quest Progress', 'Survived the chase!'), 2100);
+            }
+        }
+
         setTimeout(() => {
             this.ui.closeChase();
-            this.ui.toast('Escaped!', 'Lost the pirates');
+            this.ui.toast('Escaped!', type === 'bounty_hunter' ? 'Lost the hunter' : 'Lost the pirates');
+            this._pendingHunter = null; // Clear pending hunter
         }, 2000);
     } else {
         // Caught! Show appropriate encounter
-        this.ui.showChaseResult(false, 'Caught! The pirates board your ship.');
+        const caughtMsg = type === 'bounty_hunter'
+            ? 'Caught! The bounty hunter boards your ship.'
+            : 'Caught! The pirates board your ship.';
+        this.ui.showChaseResult(false, caughtMsg);
         setTimeout(() => {
             this.ui.closeChase();
             if (type === 'pirate') {
@@ -4795,54 +5786,70 @@ _showPirateEncounter() {
 }
 
 _showBountyHunterEncounter() {
-    // Bounty hunter encounter - implemented in bounty system
     const gs = this.gameState;
-    const hunter = spawnBountyHunter(gs);
+    // Use pending hunter from triggerBountyHunter, or spawn new one
+    const hunter = this._pendingHunter || spawnBountyHunter(gs);
+    this._pendingHunter = null; // Clear for next time
+
     if (!hunter) {
         this.ui.toast('Close Call', 'The hunter lost your trail');
         return;
     }
+
+    // Calculate bribe cost based on hunter strength and player bounty
+    const bounty = getBounty(gs);
+    const bribeCost = Math.floor(100 + (bounty * 0.5) + (hunter.strength * 100));
+
     // Show encounter modal with hunter options
     this.ui.showEncounter({
-        icon: '🎯',
+        icon: hunter.icon,
         title: `${hunter.name} Approaches!`,
-        desc: `A ${hunter.tier} bounty hunter has caught up with you. They demand you surrender!`,
-        options: [
-            { text: `💰 Pay Bribe (${hunter.bribeCost}g)`, action: () => this._bribeBountyHunter(hunter) },
-            { text: '⚔️ Fight', action: () => this._fightBountyHunter(hunter) },
-        ]
-    });
+        desc: `A notorious bounty hunter has caught up with you. They demand you surrender or pay for your freedom!`
+    }, [
+        { label: `💰 Pay Bribe (${bribeCost}g)`, style: 'secondary', action: () => this._bribeBountyHunter(hunter, bribeCost) },
+        { label: '⚔️ Fight', style: 'danger', action: () => this._fightBountyHunter(hunter) }
+    ]);
 }
 
-_bribeBountyHunter(hunter) {
+_bribeBountyHunter(hunter, bribeCost) {
     const gs = this.gameState;
-    if (gs.player.gold >= hunter.bribeCost) {
-        gs.player.gold -= hunter.bribeCost;
+    if (gs.player.gold >= bribeCost) {
+        gs.player.gold -= bribeCost;
         this.ui.closeEncounter();
         this.ui.toast('Bribed', `${hunter.name} looks the other way`);
     } else {
+        this.ui.toast('No Gold', 'Cannot afford the bribe!');
         this._fightBountyHunter(hunter);
     }
     this.ui.updateHUD(gs);
+    this.save();
 }
 
 _fightBountyHunter(hunter) {
     const gs = this.gameState;
     this.ui.closeEncounter();
-    // Fight mechanics similar to pirate fight
-    const winChance = 0.4 - (hunter.difficulty * 0.1);
+
+    // Fight mechanics - win chance decreases with hunter strength
+    // strength: 1.2 (Blackwood) = 35%, 1.5 (Iron Maiden) = 25%, 2.0 (Graves) = 10%
+    const winChance = Math.max(0.1, 0.5 - (hunter.strength * 0.2));
+
     if (Math.random() < winChance) {
-        defeatHunter(gs, hunter.id);
-        const reward = hunter.bountyReward || 200;
+        // Victory!
+        defeatHunter(gs, hunter.index);
+        const reward = hunter.reward || 200;
         gs.player.gold += reward;
+        // Defeating hunter reduces bounty slightly
+        gs.player.bounty = Math.max(0, (gs.player.bounty || 0) - 50);
         this.ui.toast('Victory!', `Defeated ${hunter.name}! +${reward}g`);
     } else {
-        // Lost fight - lose gold and cargo
-        const loss = Math.floor(gs.player.gold * 0.3);
-        gs.player.gold -= loss;
-        this.loseCargo(calcCargoLoss(gs, 0.25));
-        damageHull(gs, 20);
-        this.ui.toast('Defeated', `${hunter.name} claims their prize`);
+        // Lost fight - hunter takes their bounty
+        const loss = Math.floor(gs.player.gold * 0.4);
+        gs.player.gold = Math.max(0, gs.player.gold - loss);
+        this.loseCargo(calcCargoLoss(gs, 0.3));
+        damageHull(gs, 25);
+        // Increase bounty from escaping (but alive)
+        gs.player.bounty = (gs.player.bounty || 0) + 30;
+        this.ui.toast('Defeated', `${hunter.name} claims their prize!`);
     }
     this.ui.updateHUD(gs);
     this.save();
@@ -5083,7 +6090,17 @@ triggerWreck() {
             if (r < positiveChance) {
                 // Positive outcomes
                 const outcomeRoll = Math.random();
-                if (outcomeRoll < 0.45) {
+                if (outcomeRoll < 0.15) {
+                    // Chart fragment - rare find!
+                    const result = addChartFragment(gs);
+                    if (result.discovered) {
+                        const cove = CONFIG.hiddenCoves[result.coveId];
+                        this.ui.showEncounter(enc, [], { positive: true, text: `Found a chart fragment! You've discovered ${cove.name}!` });
+                    } else {
+                        this.ui.showEncounter(enc, [], { positive: true, text: `Found a chart fragment! (${gs.player.chartFragments}/3 to reveal a cove)` });
+                    }
+                    this.ui.updateChartFragments(gs);
+                } else if (outcomeRoll < 0.45) {
                     const s = 3 + Math.floor(Math.random() * 5);
                     gs.player.supplies = Math.min(30, gs.player.supplies + s);
                     this.ui.showEncounter(enc, [], { positive: true, text: `Found ${s} supplies!` });
@@ -5430,7 +6447,75 @@ triggerConvoyEncounter(entity) {
     ]);
 }
 
+// === LIVING SEA: Blockade Encounter System ===
+getNearbyBlockadedIsland(gs) {
+    const pp = gs.player.position;
+    const blockades = getActiveBlockades(gs);
+    const blockadedIds = blockades.map(b => b.islandId);
+
+    for (const iid of blockadedIds) {
+        const isl = CONFIG.islands[iid];
+        if (!isl) continue;
+        const dist = Math.sqrt((isl.position.x - pp.x) ** 2 + (isl.position.z - pp.z) ** 2);
+        // Trigger within 80 units of blockaded island
+        if (dist < 80 && dist > CONFIG.settings.dockDistance) {
+            const blockade = getBlockadeInfo(gs, iid);
+            // Don't trigger twice per day
+            if (blockade.lastEncounterDay === gs.player.days) continue;
+            return { iid, island: isl, blockade, distance: dist };
+        }
+    }
+    return null;
+}
+
+triggerBlockadeEncounter(info) {
+    const gs = this.gameState;
+    const { iid, island, blockade } = info;
+    blockade.lastEncounterDay = gs.player.days;
+
+    const blockaderName = blockade.blockadingFaction === 'english' ? 'Royal Navy' :
+                         blockade.blockadingFaction === 'pirates' ? 'Pirate Fleet' : 'Company Ships';
+
+    const enc = {
+        name: 'Blockade!',
+        icon: '⛔',
+        desc: `${blockaderName} blockading ${island.name}! Their ships move to intercept.`
+    };
+
+    const bribeCost = 100 + Math.floor(blockade.strength * 2);
+    const hasContraband = getContrabandCount(gs) > 0;
+
+    this.ui.showEncounter(enc, [
+        { label: `💰 Bribe passage (${bribeCost}g)`, style: gs.player.gold >= bribeCost ? 'primary' : 'secondary', action: () => {
+            if (gs.player.gold < bribeCost) {
+                this.ui.toast('Not enough gold', `Need ${bribeCost}g`);
+                return;
+            }
+            gs.player.gold -= bribeCost;
+            // Reduce influence of blockading faction
+            modifyInfluence(gs, iid, blockade.blockadingFaction, -2);
+            this.ui.showEncounter(enc, [], { positive: true, text: `Paid ${bribeCost}g. The blockade lets you pass.` });
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🏃 Run the blockade', style: 'danger', action: () => {
+            // Chase encounter!
+            this.startChase('blockade');
+        } },
+        { label: '↩️ Turn back', action: () => {
+            // Safe escape but can't reach the island
+            gs.player.destinationIslandId = null;
+            this.ui.showEncounter(enc, [], { positive: true, text: 'You retreat to open waters. The blockade remains.' });
+            this.ui.closeEncounter();
+        } }
+    ]);
+}
+
 dock() {
+    // Check for cove first
+    if (this.nearbyCove) {
+        this.dockAtCove(this.nearbyCove);
+        return;
+    }
     if (!this.nearbyIsland) { this.ui.toast('Too Far', 'Get closer!'); return; }
     const gs = this.gameState, pp = gs.player.position, isl = CONFIG.islands[this.nearbyIsland];
     if (Math.sqrt((isl.position.x - pp.x)**2 + (isl.position.z - pp.z)**2) > CONFIG.settings.dockDistance) { this.ui.toast('Too Far', 'Get closer!'); return; }
@@ -5474,6 +6559,16 @@ dock() {
         this.ui.showContractComplete(completedContracts);
     }
 
+    // === LIVING SEA: Check questline progress ===
+    const questResult = checkQuestlineStep(gs, 'dock', { islandId: this.nearbyIsland });
+    if (questResult.advanced) {
+        if (questResult.completed) {
+            this.ui.showQuestComplete(questResult.rewards);
+        } else {
+            this.ui.toast('Quest Progress', 'Step completed!');
+        }
+    }
+
     // Refresh contract board
     refreshContractBoard(gs, this.nearbyIsland);
 
@@ -5493,6 +6588,164 @@ undock() {
     resetTradeFatigue(this.gameState);
     this.gameState.isDocked = false;
     this.ui.closeTrade();
+}
+
+// ==================== LIVING SEA: HIDDEN COVE DOCKING ====================
+dockAtCove(coveId) {
+    const gs = this.gameState;
+    const cove = CONFIG.hiddenCoves[coveId];
+    if (!cove) { this.ui.toast('Error', 'Unknown cove'); return; }
+
+    const pp = gs.player.position;
+    const dist = Math.sqrt((cove.position.x - pp.x)**2 + (cove.position.z - pp.z)**2);
+    if (dist > CONFIG.settings.dockDistance) { this.ui.toast('Too Far', 'Get closer!'); return; }
+
+    gs.isDocked = true;
+    gs.currentCove = coveId;
+    gs.player.daysSinceDock = 0;
+
+    // Heat drops significantly at hidden coves
+    gs.player.heat = Math.max(0, (gs.player.heat || 0) - 20);
+
+    this.ui.showCove(coveId, gs);
+    this.save();
+}
+
+undockCove() {
+    this.gameState.isDocked = false;
+    this.gameState.currentCove = null;
+    this.ui.closeCove();
+}
+
+// Cove services
+useCoveService(coveId, service) {
+    const gs = this.gameState;
+    const cove = CONFIG.hiddenCoves[coveId];
+    if (!cove) return;
+
+    switch(service) {
+        case 'fence':
+            // Sell contraband at 150% value, no heat
+            this.coveFence(gs);
+            break;
+        case 'salvage':
+            // Buy random salvaged goods cheap
+            this.coveSalvage(gs);
+            break;
+        case 'repair':
+            // Cheap repairs (50% cost)
+            this.coveRepair(gs);
+            break;
+        case 'rest':
+            // Restore morale
+            this.coveRest(gs);
+            break;
+        case 'treasure':
+            // One-time treasure find
+            this.coveTreasure(gs, coveId);
+            break;
+        case 'charts':
+            // Buy chart fragments
+            this.coveCharts(gs);
+            break;
+        case 'rumors':
+            // Get cove hints
+            this.coveRumors(gs);
+            break;
+    }
+    this.ui.updateHUD(gs);
+    this.save();
+}
+
+coveFence(gs) {
+    const contraband = Object.entries(gs.player.cargo)
+        .filter(([gid, qty]) => CONFIG.goods[gid]?.category === 'contraband' && qty > 0);
+    if (contraband.length === 0) {
+        this.ui.toast('No Contraband', 'Nothing to fence');
+        return;
+    }
+    let total = 0;
+    for (const [gid, qty] of contraband) {
+        const price = Math.floor(CONFIG.goods[gid].basePrice * 1.5);
+        total += price * qty;
+        gs.player.cargo[gid] = 0;
+    }
+    gs.player.gold += total;
+    this.ui.toast('Fenced!', '+' + total + 'g (no heat)');
+}
+
+coveSalvage(gs) {
+    const cost = 50;
+    if (gs.player.gold < cost) { this.ui.toast('No Gold', 'Need ' + cost + 'g'); return; }
+    const gids = Object.keys(CONFIG.goods).filter(g => CONFIG.goods[g].category !== 'contraband');
+    const gid = gids[Math.floor(Math.random() * gids.length)];
+    const qty = 2 + Math.floor(Math.random() * 4);
+    const check = canCarryMore(gid, qty, gs);
+    if (!check.canCarry) { this.ui.toast('No Space', check.reason); return; }
+    gs.player.gold -= cost;
+    gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
+    this.ui.toast('Salvage', qty + 'x ' + CONFIG.goods[gid].name);
+}
+
+coveRepair(gs) {
+    const hullDmg = getMaxHull(gs) - getShipHull(gs);
+    const riggingDmg = getMaxRigging(gs) - getShipRigging(gs);
+    if (hullDmg <= 0 && riggingDmg <= 0) { this.ui.toast('No Damage', 'Ship is fine'); return; }
+    const cost = Math.floor((hullDmg + riggingDmg) * 0.5); // Half price
+    if (gs.player.gold < cost) { this.ui.toast('No Gold', 'Need ' + cost + 'g'); return; }
+    gs.player.gold -= cost;
+    if (gs.player.ship) {
+        gs.player.ship.hull = getMaxHull(gs);
+        gs.player.ship.rigging = getMaxRigging(gs);
+    }
+    this.ui.toast('Repaired', '-' + cost + 'g (cheap!)');
+}
+
+coveRest(gs) {
+    const currentMorale = getShipMorale(gs);
+    const maxMorale = getMaxMorale(gs);
+    if (currentMorale >= maxMorale) { this.ui.toast('Crew Happy', 'Morale is full'); return; }
+    const cost = 25;
+    if (gs.player.gold < cost) { this.ui.toast('No Gold', 'Need ' + cost + 'g'); return; }
+    gs.player.gold -= cost;
+    if (gs.player.ship) gs.player.ship.morale = maxMorale;
+    this.ui.toast('Rested', 'Crew morale restored');
+}
+
+coveTreasure(gs, coveId) {
+    // One-time treasure per cove
+    if (!gs.player.covesTreasured) gs.player.covesTreasured = [];
+    if (gs.player.covesTreasured.includes(coveId)) {
+        this.ui.toast('Already Looted', 'Treasure was claimed');
+        return;
+    }
+    gs.player.covesTreasured.push(coveId);
+    const gold = 200 + Math.floor(Math.random() * 300);
+    gs.player.gold += gold;
+    this.ui.toast('Treasure!', '+' + gold + 'g found!');
+}
+
+coveCharts(gs) {
+    const cost = 75;
+    if (gs.player.gold < cost) { this.ui.toast('No Gold', 'Need ' + cost + 'g'); return; }
+    gs.player.gold -= cost;
+    const result = addChartFragment(gs);
+    if (result.discovered) {
+        const cove = CONFIG.hiddenCoves[result.coveId];
+        this.ui.toast('Discovery!', cove.name + ' revealed!');
+    } else {
+        this.ui.toast('Chart Fragment', gs.player.chartFragments + '/3');
+    }
+    this.ui.updateChartFragments(gs);
+}
+
+coveRumors(gs) {
+    const rumor = getCoveRumor(gs);
+    if (rumor) {
+        this.ui.toast('Rumor', rumor.hint);
+    } else {
+        this.ui.toast('No News', 'All coves discovered');
+    }
 }
 
 buyBest() {
@@ -5544,6 +6797,61 @@ getUpgradeCost(id) {
     const prog = CONFIG.balance.progression;
     const costMult = getPowerScaling(gs, 1.0, prog.upgradeCostPowerMult, 1.0, prog.upgradeCostMax);
     return Math.floor(u.cost * costMult);
+}
+
+// === LIVING SEA: Buy Pardon ===
+buyPardon() {
+    const gs = this.gameState;
+    if (!gs.isDocked || !gs.currentIsland) {
+        this.ui.toast('Error', 'Must be docked');
+        return false;
+    }
+
+    const bounty = getBounty(gs);
+    if (bounty <= 0) {
+        this.ui.toast('Clean Record', 'No bounty to clear');
+        return false;
+    }
+
+    const cost = getPardonCost(gs, gs.currentIsland);
+    if (cost === null) {
+        this.ui.toast('Unavailable', 'No pardons here');
+        return false;
+    }
+
+    if (gs.player.gold < cost) {
+        this.ui.toast('No Gold', `Need ${cost}g`);
+        return false;
+    }
+
+    gs.player.gold -= cost;
+    grantPardon(gs);
+    this.ui.toast('Pardoned!', 'Your record is clean');
+    this.ui.updateHUD(gs);
+    this.save();
+    return true;
+}
+
+// === LIVING SEA: Questline Management ===
+startQuestline(questlineId) {
+    const gs = this.gameState;
+    const result = startQuestline(gs, questlineId);
+    if (result.success) {
+        this.ui.updateHUD(gs);
+        this.save();
+    }
+    return result;
+}
+
+abandonQuestline() {
+    const gs = this.gameState;
+    const result = failQuestline(gs);
+    if (result.success) {
+        this.ui.toast('Quest Abandoned', 'Progress lost');
+        this.ui.updateHUD(gs);
+        this.save();
+    }
+    return result;
 }
 
 // === LIVING SEA: Ship repairs at dock ===
@@ -5627,6 +6935,44 @@ fireOfficer(officerId) {
 
     fireOfficer(gs, officerId);
     this.ui.toast('Dismissed', `${officer.name} leaves your crew`);
+    this.save();
+    return true;
+}
+
+// === LIVING SEA: Ship purchase ===
+buyShip(shipId) {
+    const gs = this.gameState;
+    const ship = CONFIG.shipClasses?.[shipId];
+    if (!ship) return false;
+
+    if (gs.player.shipClass === shipId) {
+        this.ui.toast('Already Owned', 'This is your current ship');
+        return false;
+    }
+
+    if (gs.player.gold < ship.cost) {
+        this.ui.toast('No Gold', 'Not enough for this ship');
+        return false;
+    }
+
+    // Check if cargo fits in new ship
+    const currentCargo = getCargoUsed(gs);
+    if (currentCargo > ship.cargoCapacity) {
+        this.ui.toast('Too Much Cargo', `Sell ${currentCargo - ship.cargoCapacity} cargo first`);
+        return false;
+    }
+
+    gs.player.gold -= ship.cost;
+    gs.player.shipClass = shipId;
+
+    // Reset ship condition to new ship's max values
+    gs.player.ship = {
+        hull: ship.hullMax,
+        rigging: ship.riggingMax,
+        morale: gs.player.ship?.morale || 100 // Keep crew morale
+    };
+
+    this.ui.toast('New Ship!', `You now captain a ${ship.name}`);
     this.save();
     return true;
 }
