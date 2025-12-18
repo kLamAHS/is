@@ -219,6 +219,7 @@
     .contract-reward { display: flex; align-items: center; gap: 2px; }
     .contract-reward.gold { color: var(--gold-dark); }
     .contract-reward.rep { color: var(--sea-medium); }
+    .contract-cost { font-size: 0.7rem; color: var(--blood-red); margin-bottom: var(--space-xs); font-style: italic; }
     .contract-actions { display: flex; gap: var(--space-xs); }
     .contract-actions button { flex: 1; }
     .contract-empty { text-align: center; color: var(--ink-light); padding: var(--space-lg); font-style: italic; }
@@ -603,13 +604,13 @@ voyager: {
     effects: { inspectionReduction: 0.02 } // per tier
 }
 },
-// CONTRACT TYPES
+// CONTRACT TYPES - BALANCE: Reduced base rewards, contracts supplement trading not replace it
 contractTypes: {
-delivery: { name: 'Delivery', icon: '📦', baseReward: 100, repReward: 5, riskMult: 1.0 },
-smuggling: { name: 'Smuggling', icon: '🏴‍☠️', baseReward: 200, repReward: -5, riskMult: 1.8, heatGain: 15 },
-courier: { name: 'Courier', icon: '✉️', baseReward: 80, repReward: 8, riskMult: 0.8 },
-supply: { name: 'Supply Run', icon: '🍖', baseReward: 60, repReward: 3, riskMult: 0.6 },
-faction: { name: 'Faction Work', icon: '⚔️', baseReward: 50, repReward: 15, riskMult: 1.2 }
+delivery: { name: 'Delivery', icon: '📦', baseReward: 50, repReward: 5, riskMult: 1.0 },        // Down from 100 - you sacrifice sale profit
+smuggling: { name: 'Smuggling', icon: '🏴‍☠️', baseReward: 100, repReward: -5, riskMult: 1.8, heatGain: 20 }, // Down from 200, more heat
+courier: { name: 'Courier', icon: '✉️', baseReward: 25, repReward: 5, riskMult: 0.8, depositPct: 0.3 },  // Down from 80, requires deposit
+supply: { name: 'Supply Run', icon: '🍖', baseReward: 20, repReward: 3, riskMult: 0.6, supplyCost: 8 },  // Down from 60, consumes supplies
+faction: { name: 'Faction Work', icon: '⚔️', baseReward: 15, repReward: 12, riskMult: 1.2 }    // Down from 50, rep-focused
 },
 events: [
 { id: 'festival', name: 'Festival', desc: 'Luxury demand up!', duration: 3, affects: ['luxury'], multiplier: 1.5 },
@@ -752,6 +753,13 @@ portStateChangeChance: 0.08, reliefRunThreshold: 10
 //   wreckPositiveChance   | 0.7                | 0.5-0.9    | Wreck success rate
 //   merchantDiscountMax   | 0.5                | 0.3-0.6    | Best merchant discount
 //   merchantDiscountMin   | 0.2                | 0.1-0.3    | Worst merchant discount
+//
+// Contract Balance        |                    |            | Contracts supplement trading
+//   delivery.baseReward   | 50                 | 30-80      | Down from 100 - lose goods profit
+//   smuggling.baseReward  | 100                | 60-150     | Down from 200 - high risk
+//   courier.baseReward    | 25                 | 15-40      | Down from 80 - requires 30% deposit
+//   supply.baseReward     | 20                 | 10-35      | Down from 60 - costs 8 supplies
+//   faction.baseReward    | 15                 | 10-25      | Down from 50 - rep-focused
 //
 // Progression Scaling     |                    |            | Anti-snowball
 //   contractRewardMin     | 0.7                | 0.5-0.9    | Min reward multiplier
@@ -1379,22 +1387,45 @@ function getRouteRiskBetween(gs, fromId, toId) {
 
 function acceptContract(gs, contractId) {
     const active = gs.player.contracts.active || [];
-    if (active.length >= CONFIG.settings.maxActiveContracts) return false;
+    if (active.length >= CONFIG.settings.maxActiveContracts) return { success: false, reason: 'Too many active contracts' };
 
     // Find contract in any board
     for (const iid of Object.keys(gs.world.boards)) {
         const board = gs.world.boards[iid];
         const idx = board.contracts.findIndex(c => c.id === contractId);
         if (idx !== -1) {
-            const contract = board.contracts.splice(idx, 1)[0];
+            const contract = board.contracts[idx];
+            const type = CONFIG.contractTypes[contract.typeId];
+
+            // === BALANCE: Contract acceptance costs ===
+            // Courier contracts require a deposit (refunded on completion)
+            if (type.depositPct) {
+                const deposit = Math.floor(contract.rewards.gold * type.depositPct);
+                if (gs.player.gold < deposit) {
+                    return { success: false, reason: `Need ${deposit}g deposit` };
+                }
+                gs.player.gold -= deposit;
+                contract.deposit = deposit;
+            }
+
+            // Supply contracts consume supplies upfront
+            if (type.supplyCost) {
+                if (gs.player.supplies < type.supplyCost) {
+                    return { success: false, reason: `Need ${type.supplyCost} supplies` };
+                }
+                gs.player.supplies -= type.supplyCost;
+            }
+
+            // Remove from board and activate
+            board.contracts.splice(idx, 1);
             contract.dayAccepted = gs.player.days;
             contract.status = 'active';
             active.push(contract);
             gs.player.contracts.active = active;
-            return true;
+            return { success: true, contract };
         }
     }
-    return false;
+    return { success: false, reason: 'Contract not found' };
 }
 
 function abandonContract(gs, contractId) {
@@ -1464,6 +1495,12 @@ function evaluateContractsOnDock(gs, iid) {
     // Award rewards
     for (const contract of completed) {
         gs.player.gold += contract.rewards.gold;
+
+        // === BALANCE: Refund deposit if any ===
+        if (contract.deposit) {
+            gs.player.gold += contract.deposit;
+        }
+
         applyRepChange(gs, contract.rewards.repFaction, contract.rewards.rep, 'contract_complete');
         contract.status = 'completed';
         gs.player.contracts.completed.push(contract);
@@ -2788,13 +2825,15 @@ renderContracts() {
         availEl.innerHTML = board.contracts.map(c => this.renderContractCard(c, gs, 'available')).join('');
         availEl.querySelectorAll('.accept-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (acceptContract(gs, btn.dataset.id)) {
+                const result = acceptContract(gs, btn.dataset.id);
+                if (result.success) {
                     this.renderContracts();
                     this.updateContractTracker(gs);
+                    this.updateHUD(gs);
                     this.toast('Contract Accepted', 'Check your active contracts');
                     this.game.save();
                 } else {
-                    this.toast('Cannot Accept', 'Max 3 active contracts');
+                    this.toast('Cannot Accept', result.reason || 'Unknown error');
                 }
             });
         });
@@ -2881,6 +2920,22 @@ renderContractCard(contract, gs, mode) {
         requirementText = `Arrive with ${contract.requirement.minSupplies}+ supplies`;
     }
 
+    // === BALANCE: Show contract costs ===
+    let costText = '';
+    if (mode === 'available') {
+        const costs = [];
+        if (type.depositPct) {
+            const deposit = Math.floor(contract.rewards.gold * type.depositPct);
+            costs.push(`${deposit}g deposit`);
+        }
+        if (type.supplyCost) {
+            costs.push(`${type.supplyCost} supplies`);
+        }
+        if (costs.length > 0) {
+            costText = `<div class="contract-cost">📤 Cost: ${costs.join(', ')}</div>`;
+        }
+    }
+
     return `
         <div class="contract-card ${cardClass} ${trackedClass}">
             <div class="contract-header">
@@ -2894,6 +2949,7 @@ renderContractCard(contract, gs, mode) {
                 <span class="contract-reward gold">🪙 ${contract.rewards.gold}g</span>
                 <span class="contract-reward rep">${contract.rewards.rep > 0 ? '+' : ''}${contract.rewards.rep} ${contract.rewards.repFaction} rep</span>
             </div>
+            ${costText}
             <div class="contract-actions">${actions}</div>
         </div>
     `;
