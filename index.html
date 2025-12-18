@@ -425,10 +425,35 @@
 
 <div id="contract-complete-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="contract-complete-icon">📜</div><h2 id="contract-complete-title">Contract Complete!</h2><p id="contract-complete-desc">You've fulfilled the contract.</p><div id="contract-complete-rewards"></div><button class="btn-primary" id="contract-complete-dismiss">Collect Rewards</button></div></div>
 
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-<script type="module">
+<script>
+// NON-MODULE FALLBACK - runs even if module fails to load
+window.onerror = function(msg, url, line, col, error) {
+    console.error('Script error:', msg, url, line);
+    var loading = document.getElementById('loading-screen');
+    if (loading) loading.classList.add('hidden');
+    var faction = document.getElementById('faction-screen');
+    if (faction) faction.classList.remove('hidden');
+    return false;
+};
 
-import * as THREE from 'three';
+// Fallback timeout - if loading screen still showing after 5 seconds, something is wrong
+window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var loading = document.getElementById('loading-screen');
+        if (loading && !loading.classList.contains('hidden')) {
+            console.warn('Loading timeout - module may have failed to load');
+            loading.classList.add('hidden');
+            var faction = document.getElementById('faction-screen');
+            if (faction) faction.classList.remove('hidden');
+        }
+    }, 5000);
+});
+</script>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+console.log('Module loaded - Three.js ready');
 
 // ==================== CONFIG ====================
 const CONFIG = {
