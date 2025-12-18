@@ -3364,69 +3364,6 @@ function checkQuestlineStep(gs, event, eventData = {}) {
     return { advanced: false };
 }
 
-// ==================== LIVING SEA: WAR FRONTS SYSTEM ====================
-function getIslandInfluence(gs, islandId) {
-    return gs.world.islandInfluence?.[islandId] || {
-        english: 33,
-        eitc: 33,
-        pirates: 34
-    };
-}
-
-function modifyInfluence(gs, islandId, faction, amount) {
-    if (!gs.world.islandInfluence) gs.world.islandInfluence = {};
-    if (!gs.world.islandInfluence[islandId]) {
-        gs.world.islandInfluence[islandId] = { english: 33, eitc: 33, pirates: 34 };
-    }
-
-    const influence = gs.world.islandInfluence[islandId];
-    influence[faction] = Math.max(0, Math.min(100, (influence[faction] || 0) + amount));
-
-    // Normalize to 100%
-    const total = influence.english + influence.eitc + influence.pirates;
-    if (total > 0) {
-        influence.english = Math.round(influence.english / total * 100);
-        influence.eitc = Math.round(influence.eitc / total * 100);
-        influence.pirates = 100 - influence.english - influence.eitc;
-    }
-}
-
-function getControllingFaction(gs, islandId) {
-    const influence = getIslandInfluence(gs, islandId);
-    const threshold = CONFIG.warFronts.controlThreshold;
-
-    if (influence.english >= threshold) return 'english';
-    if (influence.eitc >= threshold) return 'eitc';
-    if (influence.pirates >= threshold) return 'pirates';
-    return 'contested';
-}
-
-function isBlockaded(gs, islandId) {
-    return gs.world.activeBlockades?.some(b => b.islandId === islandId && b.endDay > gs.player.days) || false;
-}
-
-function isWarZone(gs, islandId) {
-    return gs.world.activeWarZones?.some(w => w.islandId === islandId && w.endDay > gs.player.days) || false;
-}
-
-function startBlockade(gs, islandId) {
-    if (!gs.world.activeBlockades) gs.world.activeBlockades = [];
-    gs.world.activeBlockades.push({
-        islandId,
-        startDay: gs.player.days,
-        endDay: gs.player.days + CONFIG.warFronts.blockadeDuration
-    });
-}
-
-function startWarZone(gs, islandId) {
-    if (!gs.world.activeWarZones) gs.world.activeWarZones = [];
-    gs.world.activeWarZones.push({
-        islandId,
-        startDay: gs.player.days,
-        endDay: gs.player.days + CONFIG.warFronts.warZoneDuration
-    });
-}
-
 // Category-aware capacity check: luxury locker gives bonus for luxury, penalty for commodity
 function getCategoryCapacity(gs, category) {
 let cap = getCargoCapacity(gs);
