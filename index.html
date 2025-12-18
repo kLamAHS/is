@@ -326,6 +326,13 @@
 </head>
 <body>
     <div id="loading-screen"><div class="loading-content"><h1>Merchant Seas</h1><div class="loading-ship">⛵</div><p>Charting the waters...</p><div class="loading-bar"><div class="loading-progress"></div></div></div></div>
+<div id="error-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.9);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;padding:20px;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+    <h2 style="margin:0 0 1rem;color:#f44;">Something went wrong</h2>
+    <p id="error-message" style="margin:0 0 1rem;max-width:500px;opacity:0.8;font-size:0.9rem;">An error occurred while loading the game.</p>
+    <pre id="error-details" style="background:#1a1a1a;padding:10px;border-radius:4px;max-width:90%;overflow:auto;font-size:0.75rem;text-align:left;margin:0 0 1rem;"></pre>
+    <button onclick="location.reload()" style="background:#4a7c59;color:#fff;border:none;padding:12px 24px;border-radius:6px;font-size:1rem;cursor:pointer;">🔄 Reload Game</button>
+</div>
 <div id="faction-screen" class="screen hidden">
     <div class="screen-content">
         <h1>Choose Your Allegiance</h1>
@@ -427,19 +434,34 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
+// Error overlay display function
+function showErrorOverlay(message, details) {
+    var overlay = document.getElementById('error-overlay');
+    var msgEl = document.getElementById('error-message');
+    var detailsEl = document.getElementById('error-details');
+    if (overlay && msgEl && detailsEl) {
+        msgEl.textContent = message || 'An error occurred while loading the game.';
+        detailsEl.textContent = details || '';
+        overlay.classList.remove('hidden');
+        document.getElementById('loading-screen')?.classList.add('hidden');
+    }
+}
+
 // NON-MODULE FALLBACK - runs even if module fails to load
 window.onerror = function(msg, url, line, col, error) {
     console.error('Script error:', msg, url, line);
-    var loading = document.getElementById('loading-screen');
-    if (loading) loading.classList.add('hidden');
-    var faction = document.getElementById('faction-screen');
-    if (faction) faction.classList.remove('hidden');
+    var details = 'Error: ' + msg + '\nLocation: ' + (url || 'unknown') + ':' + (line || '?');
+    if (error && error.stack) details += '\n\nStack:\n' + error.stack;
+    showErrorOverlay('A script error occurred. Try refreshing the page.', details);
     return false;
 };
 
 // Catch module import errors
 window.addEventListener('unhandledrejection', function(event) {
     console.error('Module error:', event.reason);
+    var details = event.reason ? (event.reason.message || String(event.reason)) : 'Unknown module error';
+    if (event.reason && event.reason.stack) details += '\n\nStack:\n' + event.reason.stack;
+    showErrorOverlay('Failed to load a required module. Check your network connection.', details);
 });
 
 // Fallback timeout - if loading screen still showing after 5 seconds, something is wrong
@@ -983,7 +1005,7 @@ function evaluateContractsOnDock(gs, iid) {
                 }
             }
         } else if (req.type === 'reach') {
-            if (req.noInspection && gs.player.inspectionTriggeredThisContract) {
+            if (req.noInspection && contract.wasInspected) {
                 success = false;
             } else {
                 success = true;
@@ -1038,7 +1060,7 @@ function expireContracts(gs) {
 
     for (const contract of gs.player.contracts.active) {
         const daysElapsed = gs.player.days - contract.dayAccepted;
-        if (daysElapsed > contract.deadline) {
+        if (daysElapsed >= contract.deadline) {
             expired.push(contract);
             toRemove.push(contract.id);
         }
@@ -1467,6 +1489,9 @@ function getSupplyRate(gs) {
 let rate = CONFIG.settings.baseSupplyRate;
 if (gs.player.upgrades?.swiftSails) rate += CONFIG.upgrades.swiftSails.effects.supplyCostExtra;
 if (gs.player.upgrades?.smugglerCompartments) rate += CONFIG.upgrades.smugglerCompartments.effects.supplyCostExtra;
+// Apply season supply cost multiplier
+const seasonMods = getSeasonModifiers(gs);
+rate *= (seasonMods.supplyCostMult || 1);
 return rate;
 }
 
@@ -1641,13 +1666,14 @@ gs.player.heat = Math.max(0, (gs.player.heat || 0) - CONFIG.settings.heatDecayPe
 }
 
 // ==================== ECONOMY ====================
-function calcPrice(gid, iid, gs) {
-const g = CONFIG.goods[gid], isl = gs.islands[iid], m = isl.markets[gid];
-if (!g || !m) return 0;
+// Base market price without player-specific bonuses (used for logbook/intel)
+function calcBasePrice(gid, iid, gs) {
+const g = CONFIG.goods[gid], isl = gs.islands[iid], m = isl?.markets?.[gid];
+if (!g || !m) return g?.basePrice || 0;
 const scarcity = Math.max(0.5, Math.min(2, 1 + (m.targetSupply - m.supply) / m.targetSupply));
 const demand = Math.max(0.5, Math.min(2, 1 + (m.demand - m.targetDemand) / m.targetDemand));
 let bias = m.preference === 'exports' ? 0.8 : m.preference === 'imports' ? 1.2 : 1;
-const tariff = calcTariff(gs.player.faction, isl.faction, gs);
+const tariff = calcTariff(gs.player.faction, isl.faction, gs, iid);
 let evMult = 1;
 if (isl.activeEvent) { const ev = CONFIG.events.find(e => e.id === isl.activeEvent.id); if (ev?.affects.includes(g.category)) evMult = ev.multiplier; }
 
@@ -1657,23 +1683,12 @@ if (gs.world?.regionalEvent?.affectedIslands?.includes(iid)) {
     if (catMult) evMult *= catMult;
 }
 
-// === LIVING SEA MODIFIERS ===
-
 // Port state effects
 const portState = getPortStateConfig(gs, iid);
 let portMult = portState.priceMult || 1;
-// Starving ports pay extra for food (commodities)
-if (portState.foodMult && g.category === 'commodity') {
-    portMult *= portState.foodMult;
-}
-// Blockaded ports pay extra for contraband
-if (portState.smugglerBonus && g.category === 'contraband') {
-    portMult *= portState.smugglerBonus;
-}
-// Flooded ports pay extra for materials (timber, iron)
-if (portState.materialBonus && (gid === 'timber' || gid === 'iron')) {
-    portMult *= portState.materialBonus;
-}
+if (portState.foodMult && g.category === 'commodity') portMult *= portState.foodMult;
+if (portState.smugglerBonus && g.category === 'contraband') portMult *= portState.smugglerBonus;
+if (portState.materialBonus && (gid === 'timber' || gid === 'iron')) portMult *= portState.materialBonus;
 
 // Season effects on prices
 const seasonMods = getSeasonModifiers(gs);
@@ -1686,17 +1701,55 @@ if (gs.world?.seasonalEvent?.effects) {
     if (seFx.luxury && g.category === 'luxury') seasonMult *= seFx.luxury;
 }
 
-let fBonus = 1;
-if (gs.player.faction === 'eitc') fBonus = 0.95;
-if (gs.player.faction === 'pirates' && g.category === 'contraband') fBonus *= 0.5;
-// Smuggler compartments contraband bonus
-if (gs.player.upgrades?.smugglerCompartments && g.category === 'contraband') {
-fBonus *= (1 - CONFIG.upgrades.smugglerCompartments.effects.contrabandProfitBonus);
-}
-return Math.max(1, Math.round(g.basePrice * scarcity * demand * bias * tariff * evMult * portMult * seasonMult * fBonus));
+return Math.max(1, Math.round(g.basePrice * scarcity * demand * bias * tariff * evMult * portMult * seasonMult));
 }
 
-function calcTariff(pf, if_, gs) {
+// Buy price: player bonuses REDUCE price (discounts help buying)
+function calcBuyPrice(gid, iid, gs) {
+const base = calcBasePrice(gid, iid, gs);
+const g = CONFIG.goods[gid];
+let discount = 1;
+
+// EITC gets 5% discount when BUYING
+if (gs.player.faction === 'eitc') discount *= 0.95;
+
+// Pirates get 50% discount on contraband when BUYING (underworld connections)
+if (gs.player.faction === 'pirates' && g?.category === 'contraband') discount *= 0.5;
+
+// Smuggler compartments: 10% discount on contraband when buying
+if (gs.player.upgrades?.smugglerCompartments && g?.category === 'contraband') {
+    discount *= (1 - CONFIG.upgrades.smugglerCompartments.effects.contrabandProfitBonus);
+}
+
+return Math.max(1, Math.round(base * discount));
+}
+
+// Sell price: player bonuses INCREASE price (bonuses help selling)
+function calcSellPrice(gid, iid, gs) {
+const base = calcBasePrice(gid, iid, gs);
+const g = CONFIG.goods[gid];
+let bonus = 1;
+
+// EITC gets 5% bonus when SELLING (better negotiation)
+if (gs.player.faction === 'eitc') bonus *= 1.05;
+
+// Pirates get 50% bonus on contraband when SELLING (know the black market)
+if (gs.player.faction === 'pirates' && g?.category === 'contraband') bonus *= 1.5;
+
+// Smuggler compartments: 10% bonus on contraband when selling
+if (gs.player.upgrades?.smugglerCompartments && g?.category === 'contraband') {
+    bonus *= (1 + CONFIG.upgrades.smugglerCompartments.effects.contrabandProfitBonus);
+}
+
+return Math.max(1, Math.round(base * bonus));
+}
+
+// Legacy function for backward compatibility (uses base price)
+function calcPrice(gid, iid, gs) {
+return calcBasePrice(gid, iid, gs);
+}
+
+function calcTariff(pf, if_, gs, iid = null) {
 if (if_ === 'neutral' || pf === if_) return 1;
 const rep = gs.player.reputation[if_] || 0;
 let t = 1 + (CONFIG.factions[if_]?.taxRate || 0);
@@ -1704,31 +1757,36 @@ if (rep < -50) t += 0.3; else if (rep < -20) t += 0.15; else if (rep > 50) t -= 
 // Title modifier
 const mods = getTitleModifiers(gs);
 t *= (1 - mods.tariffReduction);
+// Port state tariff multiplier (blockaded = higher tariffs, lawless = no tariffs)
+if (iid) {
+    const portState = getPortStateConfig(gs, iid);
+    t *= (portState.tariffMult ?? 1);
+}
 return Math.max(0.9, Math.min(2, t));
 }
 
 function buyGood(gid, qty, iid, gs) {
-const m = gs.islands[iid].markets[gid], g = CONFIG.goods[gid], price = calcPrice(gid, iid, gs);
+const m = gs.islands[iid].markets[gid], g = CONFIG.goods[gid], price = calcBuyPrice(gid, iid, gs);
 const check = canCarryMore(gid, qty, gs);
 if (qty > m.supply || price * qty > gs.player.gold || !check.canCarry) return { success: false, reason: check.reason };
 gs.player.gold -= price * qty;
 gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
 gs.player.purchaseHistory[gid] = price;
 m.supply -= qty;
-recordPrice(gid, iid, price, gs);
+recordPrice(gid, iid, calcBasePrice(gid, iid, gs), gs); // Record base price for logbook
 // Heat for buying contraband
 if (g.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband);
 return { success: true, cost: price * qty };
 }
 
 function sellGood(gid, qty, iid, gs) {
-const price = calcPrice(gid, iid, gs), stock = gs.player.cargo[gid] || 0, g = CONFIG.goods[gid];
+const price = calcSellPrice(gid, iid, gs), stock = gs.player.cargo[gid] || 0, g = CONFIG.goods[gid];
 if (qty > stock) return { success: false };
 gs.player.gold += price * qty;
 gs.player.cargo[gid] = stock - qty;
 if (gs.player.cargo[gid] <= 0) delete gs.player.cargo[gid];
 gs.islands[iid].markets[gid].supply += qty;
-recordPrice(gid, iid, price, gs);
+recordPrice(gid, iid, calcBasePrice(gid, iid, gs), gs); // Record base price for logbook
 // Heat for selling contraband
 if (g.category === 'contraband') {
     addHeat(gs, CONFIG.settings.heatGainContraband);
@@ -2178,7 +2236,7 @@ showTrade(iid, gs) {
 renderBuy(iid, gs) {
     const list = this.el['buy-goods-list']; list.innerHTML = '';
     Object.entries(CONFIG.goods).forEach(([gid, g]) => {
-        const m = gs.islands[iid].markets[gid], price = calcPrice(gid, iid, gs), trend = getPriceTrend(gid, iid, price, gs);
+        const m = gs.islands[iid].markets[gid], price = calcBuyPrice(gid, iid, gs), trend = getPriceTrend(gid, iid, price, gs);
         const check = canCarryMore(gid, 1, gs);
         const canBuy = m.supply > 0 && price <= gs.player.gold && check.canCarry;
 
@@ -2206,7 +2264,7 @@ renderSell(iid, gs) {
     const list = this.el['sell-goods-list']; list.innerHTML = '';
     if (!Object.keys(gs.player.cargo).length) { list.innerHTML = '<p style="text-align:center;color:var(--ink-light);padding:20px">Empty</p>'; return; }
     Object.entries(gs.player.cargo).forEach(([gid, qty]) => {
-        const g = CONFIG.goods[gid], price = calcPrice(gid, iid, gs), trend = getPriceTrend(gid, iid, price, gs), pp = gs.player.purchaseHistory[gid];
+        const g = CONFIG.goods[gid], price = calcSellPrice(gid, iid, gs), trend = getPriceTrend(gid, iid, price, gs), pp = gs.player.purchaseHistory[gid];
         const item = document.createElement('div'); item.className = 'good-item';
         item.innerHTML = `<div class="good-info"><span class="good-icon">${g.icon}</span><span class="good-name">${g.name}</span><span class="good-price">${price}g${pp ? (price > pp ? '📈' : '📉') : ''}<span class="price-trend ${trend}">${trend === 'up' ? '↑' : trend === 'down' ? '↓' : ''}</span></span></div><div class="good-details">Have:${qty}${pp ? ' @' + pp + 'g' : ''}</div><div class="good-actions"><button class="qty-btn sell">−</button></div>`;
         item.querySelector('.qty-btn').addEventListener('click', () => { if (sellGood(gid, 1, iid, gs).success) { this.renderBuy(iid, gs); this.renderSell(iid, gs); this.updateFooter(gs); this.game.save(); } });
@@ -2600,6 +2658,9 @@ advanceDay() {
     gs.player.days++;
     gs.player.daysSinceDock = (gs.player.daysSinceDock || 0) + 1;
 
+    // Update season day counter (cycles within season)
+    gs.world.seasonDay = ((gs.world.seasonDay || 1) % CONFIG.settings.seasonCycleDays) + 1;
+
     // Consume supplies (with upgrade modifiers)
     const supplyRate = getSupplyRate(gs);
     gs.player.supplies -= Math.floor(supplyRate);
@@ -2696,6 +2757,11 @@ checkEncounters() {
         // Seasonal event effects
         if (gs.world?.seasonalEvent?.effects?.inspectMult) {
             inspectChance *= gs.world.seasonalEvent.effects.inspectMult;
+        }
+        // Port state inspection multiplier (from nearest island)
+        if (this.nearbyIsland) {
+            const portState = getPortStateConfig(gs, this.nearbyIsland);
+            inspectChance *= (portState.inspectMult ?? 1);
         }
         // Smuggler compartments reduce chance
         if (gs.player.upgrades?.smugglerCompartments) inspectChance *= (1 - CONFIG.upgrades.smugglerCompartments.effects.inspectionReduction);
@@ -2801,8 +2867,12 @@ triggerInspection() {
     const contrabandQty = getContrabandCount(gs);
     const hasContraband = contrabandQty > 0;
 
-    // Mark inspection for courier contracts
-    gs.player.inspectionTriggeredThisContract = true;
+    // Mark inspection for active courier contracts with noInspection requirement (per-contract tracking)
+    for (const contract of gs.player.contracts.active) {
+        if (contract.requirement?.noInspection) {
+            contract.wasInspected = true;
+        }
+    }
 
     // Crackdown increases
     gs.world.crackdown.level = Math.min(CONFIG.settings.crackdownMaxLevel, (gs.world.crackdown.level || 0) + 5);
@@ -3038,10 +3108,11 @@ triggerDriftingMarket(entity) {
             this.ui.updateHUD(gs);
         } },
         { label: '🗣️ Ask for rumors', action: () => {
-            // Get one verified piece of intel
+            // Get one verified piece of intel (same island for name and port state)
             const islands = Object.keys(CONFIG.islands);
-            const randomIsland = CONFIG.islands[islands[Math.floor(Math.random() * islands.length)]];
-            const portState = getPortState(gs, islands[Math.floor(Math.random() * islands.length)]);
+            const randomIslandId = islands[Math.floor(Math.random() * islands.length)];
+            const randomIsland = CONFIG.islands[randomIslandId];
+            const portState = getPortState(gs, randomIslandId);
             const stateInfo = CONFIG.portStates[portState];
             this.ui.showEncounter(enc, [], { positive: true, text: `The merchants whisper: "${randomIsland.name} is ${stateInfo.name.toLowerCase()}. ${stateInfo.desc}"` });
         } },
@@ -3258,7 +3329,7 @@ dock() {
     gs.isDocked = true;
     gs.currentIsland = this.nearbyIsland;
     gs.player.daysSinceDock = 0; // Reset days since dock
-    gs.player.inspectionTriggeredThisContract = false; // Reset for courier contracts
+    // Per-contract inspection tracking: wasInspected flag is on each contract, no global reset needed
 
     // Heat changes on dock
     const islFaction = isl.faction;
@@ -3314,7 +3385,7 @@ buyBest() {
 sellBest() {
     const gs = this.gameState, iid = gs.currentIsland; if (!iid || !Object.keys(gs.player.cargo).length) { this.ui.toast('Empty', 'Nothing to sell'); return; }
     let best = null, bestScore = -Infinity;
-    Object.entries(gs.player.cargo).forEach(([gid, qty]) => { const cp = calcPrice(gid, iid, gs), pp = gs.player.purchaseHistory[gid] || 0, score = (cp - pp) > 0 ? (cp - pp) * 1000 + cp : cp; if (score > bestScore) { bestScore = score; best = gid; } });
+    Object.entries(gs.player.cargo).forEach(([gid, qty]) => { const cp = calcSellPrice(gid, iid, gs), pp = gs.player.purchaseHistory[gid] || 0, score = (cp - pp) > 0 ? (cp - pp) * 1000 + cp : cp; if (score > bestScore) { bestScore = score; best = gid; } });
     if (best) { const g = CONFIG.goods[best], qty = gs.player.cargo[best]; for (let i = 0; i < qty; i++) if (!sellGood(best, 1, iid, gs).success) break; this.ui.toast('Sold', g.name); this.ui.renderBuy(iid, gs); this.ui.renderSell(iid, gs); this.ui.updateFooter(gs); this.save(); }
 }
 
@@ -3329,7 +3400,37 @@ buyUpgrade(id) {
     return true;
 }
 
-save() { localStorage.setItem('merchantSeasSave', JSON.stringify(this.gameState)); }
+// Save throttling with dirty flag - prevents excessive localStorage writes
+_dirty = false;
+_saveTimeout = null;
+_lastSaveTime = 0;
+_saveThrottleMs = 2000; // Minimum 2 seconds between saves
+
+save() {
+    this._dirty = true;
+    const now = performance.now();
+    const elapsed = now - this._lastSaveTime;
+
+    // If enough time has passed, save immediately
+    if (elapsed >= this._saveThrottleMs) {
+        this._flushSave();
+    } else if (!this._saveTimeout) {
+        // Schedule a save for later
+        this._saveTimeout = setTimeout(() => this._flushSave(), this._saveThrottleMs - elapsed);
+    }
+}
+
+_flushSave() {
+    if (this._saveTimeout) {
+        clearTimeout(this._saveTimeout);
+        this._saveTimeout = null;
+    }
+    if (this._dirty && this.gameState) {
+        localStorage.setItem('merchantSeasSave', JSON.stringify(this.gameState));
+        this._dirty = false;
+        this._lastSaveTime = performance.now();
+    }
+}
 load() {
     try {
         this.gameState = migrateState(JSON.parse(localStorage.getItem('merchantSeasSave')));
@@ -3374,12 +3475,7 @@ setTimeout(() => {
     }
 }, 10000);
 
-// Global error handler
-window.onerror = function(msg, url, line, col, error) {
-    console.error('Global error:', msg, 'at', url, line);
-    document.getElementById('loading-screen')?.classList.add('hidden');
-    return false;
-};
+// Note: Global error handler is defined earlier in the file with showErrorOverlay support
 </script>
 
 </body>
