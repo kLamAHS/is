@@ -761,7 +761,6 @@ function applyRepChange(gs, faction, delta, source = null) {
 }
 
 // ==================== CONTRACT SYSTEM ====================
-let contractIdCounter = 1;
 
 function generateContractId() {
     return 'c_' + (contractIdCounter++) + '_' + Date.now().toString(36);
