@@ -6866,42 +6866,40 @@ undockCove() {
 
 // Cove services
 useCoveService(coveId, service) {
-    const gs = this.gameState;
-    const cove = CONFIG.hiddenCoves[coveId];
-    if (!cove) return;
+    try {
+        const gs = this.gameState;
+        const cove = CONFIG.hiddenCoves[coveId];
+        if (!cove) return;
 
-    switch(service) {
-        case 'fence':
-            // Sell contraband at 150% value, no heat
-            this.coveFence(gs);
-            break;
-        case 'salvage':
-            // Buy random salvaged goods cheap
-            this.coveSalvage(gs);
-            break;
-        case 'repair':
-            // Cheap repairs (50% cost)
-            this.coveRepair(gs);
-            break;
-        case 'rest':
-            // Restore morale
-            this.coveRest(gs);
-            break;
-        case 'treasure':
-            // One-time treasure find
-            this.coveTreasure(gs, coveId);
-            break;
-        case 'charts':
-            // Buy chart fragments
-            this.coveCharts(gs);
-            break;
-        case 'rumors':
-            // Get cove hints
-            this.coveRumors(gs);
-            break;
+        switch(service) {
+            case 'fence':
+                this.coveFence(gs);
+                break;
+            case 'salvage':
+                this.coveSalvage(gs);
+                break;
+            case 'repair':
+                this.coveRepair(gs);
+                break;
+            case 'rest':
+                this.coveRest(gs);
+                break;
+            case 'treasure':
+                this.coveTreasure(gs, coveId);
+                break;
+            case 'charts':
+                this.coveCharts(gs);
+                break;
+            case 'rumors':
+                this.coveRumors(gs);
+                break;
+        }
+        this.ui.updateHUD(gs);
+        this.save();
+    } catch (e) {
+        console.error('Cove service error:', service, e);
+        this.ui.toast('Error', e.message || 'Service failed');
     }
-    this.ui.updateHUD(gs);
-    this.save();
 }
 
 coveFence(gs) {
