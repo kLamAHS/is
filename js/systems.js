@@ -3080,7 +3080,7 @@ export {
     // Port states
     getPortState, updatePortStates, getPortStateConfig, getCrackdownLevel,
     // Faction influence
-    updateFactionInfluence, getIslandInfluence,
+    updateFactionInfluence, getIslandInfluence, getDominantFaction,
     // Blockades
     getActiveBlockades, isIslandBlockaded, startBlockade, updateBlockades, getBlockadeInfo,
     // War zones
@@ -3092,13 +3092,13 @@ export {
     // Rumors
     generateRumors, getRumorsForPort,
     // Ship stats
-    getCargoCapacity, getCargoUsed,
+    getCargoCapacity, getCargoUsed, getContrabandCount,
     // Ship condition
     getShipHull, getShipRigging, getShipMorale, getMaxHull, getMaxRigging, getMaxMorale,
     damageHull, damageRigging, damageMorale,
     repairHull, repairRigging, restoreMorale, getRepairCost, isShipCritical,
     // Officers
-    getOfficer, hireOfficer, fireOfficer, getOfficerWages, getAvailableOfficersAtPort,
+    getOfficer, hireOfficer, fireOfficer, getOfficerWages, getAvailableOfficersAtPort, hasOfficer,
     // Chase system
     calculateEscapeChance, getChaseDuration,
     // Cove rumors
@@ -3106,17 +3106,17 @@ export {
     // Bounty hunters
     spawnBountyHunter, defeatHunter,
     // Pardons
-    getPardonCost,
+    getPardonCost, grantPardon,
     // Questlines
     startQuestline, advanceQuestline, failQuestline, completeQuestline,
     getQuestlineProgress, checkQuestlineDeadline, checkQuestlineStep,
     // Risk & value
-    getRouteRisk, getHighMarginGoods, getRiskLabel,
+    getRouteRisk, getHighMarginGoods, getRiskLabel, isNearHostileWaters,
     // Heat
     decayHeat, addHeat, decayHeatBalanced,
     // Economy helpers
-    buyGood, sellGood, calcBuyPrice, calcSellPrice,
-    calcCargoLoss, calcGoldLoss, calcTributeCost,
+    buyGood, sellGood, calcBuyPrice, calcSellPrice, calcDeals, calcTariff,
+    calcCargoLoss, calcGoldLoss, calcTributeCost, getPriceTrend, recordAllPrices,
     // State
     createState, migrateState,
     // Misc helpers
