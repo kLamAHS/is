@@ -102,6 +102,21 @@
     #world-indicator.storm-season { border-left: 3px solid var(--sea-medium); }
     #world-indicator.crackdown { border-left: 3px solid var(--blood-red); }
 
+    /* Ship condition HUD - Living Sea Update */
+    #ship-condition { position: fixed; top: 250px; left: var(--space-sm); background: var(--card-bg); padding: 6px 10px; border-radius: 8px; font-size: 0.6rem; box-shadow: var(--shadow-light); z-index: 10; min-width: 100px; }
+    #ship-condition .ship-class-name { font-family: var(--font-display); font-weight: 600; font-size: 0.7rem; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    #ship-condition .condition-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+    #ship-condition .condition-icon { width: 14px; text-align: center; }
+    #ship-condition .condition-bar { flex: 1; height: 6px; background: var(--parchment-dark); border-radius: 3px; overflow: hidden; }
+    #ship-condition .condition-fill { height: 100%; transition: width 0.3s, background 0.3s; }
+    #ship-condition .condition-fill.hull { background: #8B4513; }
+    #ship-condition .condition-fill.rigging { background: #D2B48C; }
+    #ship-condition .condition-fill.morale { background: #4682B4; }
+    #ship-condition .condition-fill.critical { background: var(--blood-red) !important; animation: pulse-critical 1s infinite; }
+    #ship-condition .condition-value { width: 28px; text-align: right; font-family: var(--font-display); font-size: 0.6rem; }
+    #ship-condition.critical { border: 2px solid var(--blood-red); }
+    @keyframes pulse-critical { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
     #compass { position: fixed; top: 50px; right: var(--space-sm); display: flex; flex-direction: column; align-items: center; gap: var(--space-xs); z-index: 10; }
     .compass-ring { width: 60px; height: 60px; border-radius: 50%; background: var(--card-bg); border: 3px solid var(--wood); position: relative; box-shadow: var(--shadow-light); }
     .compass-needle { position: absolute; top: 50%; left: 50%; width: 3px; height: 24px; background: linear-gradient(180deg, var(--blood-red) 50%, var(--ink) 50%); transform-origin: center bottom; transform: translate(-50%, -100%); border-radius: 2px; transition: transform 0.3s var(--ease-out); }
@@ -252,6 +267,34 @@
     .upgrade-stat.positive { background: rgba(30,125,52,0.2); color: #1e7d34; }
     .upgrade-stat.negative { background: rgba(139,37,0,0.2); color: var(--blood-red); }
 
+    /* Ship Repairs - Living Sea Update */
+    .shipyard-section { margin-bottom: var(--space-md); }
+    .shipyard-section h4 { font-family: var(--font-display); font-size: 0.85rem; margin-bottom: var(--space-sm); color: var(--ink); border-bottom: 1px solid var(--parchment-dark); padding-bottom: var(--space-xs); }
+    .repair-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-sm); }
+    .repair-card { background: rgba(255,255,255,0.5); border: 2px solid var(--parchment-dark); border-radius: 8px; padding: var(--space-sm); text-align: center; }
+    .repair-card.full { border-color: #1e7d34; background: rgba(30,125,52,0.1); }
+    .repair-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs); font-size: 0.8rem; }
+    .repair-bar { height: 8px; background: var(--parchment-dark); border-radius: 4px; overflow: hidden; margin-bottom: var(--space-xs); }
+    .repair-fill { height: 100%; transition: width 0.3s; }
+    .repair-fill.hull { background: #8B4513; }
+    .repair-fill.rigging { background: #D2B48C; }
+    .repair-fill.morale { background: #4682B4; }
+    .repair-full { font-size: 0.7rem; color: #1e7d34; font-style: italic; }
+
+    /* Officer Cards - Living Sea Update */
+    .officer-card { background: rgba(255,255,255,0.6); border: 2px solid var(--parchment-dark); border-radius: 8px; padding: var(--space-sm); margin-bottom: var(--space-sm); }
+    .officer-card.hired { border-color: var(--gold); background: rgba(201,162,39,0.15); }
+    .officer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs); }
+    .officer-name { font-family: var(--font-display); font-size: 0.9rem; display: flex; align-items: center; gap: var(--space-xs); }
+    .officer-type { font-size: 0.7rem; color: var(--ink-light); background: var(--parchment-dark); padding: 2px 6px; border-radius: 4px; }
+    .officer-wage { color: var(--gold-dark); font-weight: 600; font-size: 0.8rem; }
+    .officer-traits { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin: var(--space-xs) 0; }
+    .officer-trait { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; }
+    .officer-trait.positive { background: rgba(30,125,52,0.2); color: #1e7d34; }
+    .officer-trait.negative { background: rgba(139,37,0,0.2); color: var(--blood-red); }
+    .officer-actions { display: flex; gap: var(--space-xs); margin-top: var(--space-xs); }
+    .officers-empty { text-align: center; color: var(--ink-light); padding: var(--space-md); font-style: italic; }
+
     .menu-content { padding: var(--space-md); }
     .menu-content h2 { font-family: var(--font-display); text-align: center; margin-bottom: var(--space-md); }
     .menu-section { margin-bottom: var(--space-md); }
@@ -291,6 +334,30 @@
     .pirate-options, .encounter-options { display: flex; flex-direction: column; gap: var(--space-sm); }
     .encounter-reward { background: rgba(30,125,52,0.1); border: 1px solid #1e7d34; border-radius: 6px; padding: var(--space-sm); margin-bottom: var(--space-md); }
     .encounter-penalty { background: rgba(139,37,0,0.1); border: 1px solid var(--blood-red); border-radius: 6px; padding: var(--space-sm); margin-bottom: var(--space-md); }
+
+    /* Chase System - Living Sea Update */
+    .chase-content { padding: var(--space-lg); text-align: center; }
+    .chase-header { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+    .chase-icon { font-size: 2.5rem; animation: chase-bounce 0.8s ease-in-out infinite; }
+    @keyframes chase-bounce { 0%, 100% { transform: translateX(-5px); } 50% { transform: translateX(5px); } }
+    .chase-content h2 { font-family: var(--font-display); margin: 0; }
+    .chase-desc { color: var(--ink-light); margin-bottom: var(--space-md); }
+    .chase-progress { margin-bottom: var(--space-md); }
+    .chase-bar { position: relative; height: 40px; background: linear-gradient(90deg, rgba(30,125,52,0.3), rgba(139,37,0,0.3)); border-radius: 20px; border: 2px solid var(--parchment-dark); overflow: visible; }
+    .chase-player { position: absolute; left: 20%; top: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; transition: left 0.3s ease-out; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+    .chase-pirate { position: absolute; right: 10%; top: 50%; transform: translateY(-50%); font-size: 1.5rem; animation: chase-pirate-approach 1s ease-in-out infinite; z-index: 1; }
+    @keyframes chase-pirate-approach { 0%, 100% { transform: translateY(-50%) translateX(0); } 50% { transform: translateY(-50%) translateX(-8px); } }
+    .chase-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--ink-light); margin-top: var(--space-xs); }
+    .chase-stats { display: flex; justify-content: center; gap: var(--space-lg); margin-bottom: var(--space-md); }
+    .chase-stat { font-size: 0.8rem; }
+    .chase-stat span:first-child { color: var(--ink-light); margin-right: var(--space-xs); }
+    .chase-stat span:last-child { font-weight: 600; font-family: var(--font-display); }
+    .chase-actions { display: flex; flex-direction: column; gap: var(--space-sm); }
+    .chase-action { padding: var(--space-sm) var(--space-md); font-size: 0.85rem; }
+    .chase-action:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chase-result { margin-top: var(--space-md); padding: var(--space-md); border-radius: 8px; font-family: var(--font-display); }
+    .chase-result.escaped { background: rgba(30,125,52,0.2); border: 2px solid #1e7d34; color: #1e7d34; }
+    .chase-result.caught { background: rgba(139,37,0,0.2); border: 2px solid var(--blood-red); color: var(--blood-red); }
 
     .map-content { padding: var(--space-md); }
     .map-content h2 { font-family: var(--font-display); text-align: center; margin-bottom: var(--space-md); }
@@ -360,6 +427,12 @@
     <div id="heat-indicator" class="low"><span>🔥</span><div class="heat-bar"><div class="heat-fill" id="heat-fill"></div></div><span id="heat-label">0</span></div>
     <div id="contract-tracker" class="hidden"><span>📜</span><span class="contract-title" id="tracker-title">--</span><span class="contract-meta" id="tracker-meta">--</span></div>
     <div id="world-indicator"><span id="world-icon">🌤️</span><span id="world-status">Fair Winds</span></div>
+    <div id="ship-condition">
+        <div class="ship-class-name"><span id="ship-class-icon">⛵</span><span id="ship-class-label">Brigantine</span></div>
+        <div class="condition-row"><span class="condition-icon" title="Hull integrity">🪵</span><div class="condition-bar"><div class="condition-fill hull" id="hull-fill"></div></div><span class="condition-value" id="hull-value">100</span></div>
+        <div class="condition-row"><span class="condition-icon" title="Rigging condition">🪢</span><div class="condition-bar"><div class="condition-fill rigging" id="rigging-fill"></div></div><span class="condition-value" id="rigging-value">100</span></div>
+        <div class="condition-row"><span class="condition-icon" title="Crew morale">👥</span><div class="condition-bar"><div class="condition-fill morale" id="morale-fill"></div></div><span class="condition-value" id="morale-value">100</span></div>
+    </div>
     <div id="compass">
         <div class="compass-ring">
             <div class="compass-needle" id="compass-needle"></div>
@@ -388,12 +461,14 @@
             <button class="trade-tab active" data-tab="buy">Buy</button>
             <button class="trade-tab" data-tab="sell">Sell</button>
             <button class="trade-tab" data-tab="contracts">📜 Jobs<span class="tab-badge hidden" id="contracts-badge">0</span></button>
+            <button class="trade-tab" data-tab="tavern">🍺 Tavern</button>
             <button class="trade-tab" data-tab="logbook">📖 Log</button>
             <button class="trade-tab" data-tab="shipyard">🔧 Ship</button>
         </div>
         <div class="trade-panel" id="buy-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="buy-best-btn">💰 Buy Best</button></div><div class="goods-list" id="buy-goods-list"></div></div>
         <div class="trade-panel hidden" id="sell-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="sell-best-btn">💰 Sell Best</button></div><div class="goods-list" id="sell-goods-list"></div></div>
         <div class="trade-panel hidden" id="contracts-panel"><div class="logbook-section"><h4>📋 Available Contracts</h4><div id="available-contracts"></div></div><div class="logbook-section"><h4>📌 Active Contracts (<span id="active-count">0</span>/3)</h4><div id="active-contracts"></div></div></div>
+        <div class="trade-panel hidden" id="tavern-panel"><div class="logbook-section"><h4>👥 Your Officers (<span id="officer-count">0</span>/3)</h4><div id="current-officers"></div></div><div class="logbook-section"><h4>🍻 Available for Hire</h4><div id="available-officers"></div></div></div>
         <div class="trade-panel hidden" id="logbook-panel"><div class="logbook-section"><h4>💡 Deal Spotlight</h4><div id="spotlight-list"></div></div><div class="logbook-section"><h4>📜 Price History</h4><select class="island-select" id="logbook-island-select"></select><div id="logbook-prices"></div></div></div>
         <div class="trade-panel hidden" id="shipyard-panel"><div id="upgrades-list"></div></div>
         <div class="trade-footer"><div class="player-stats"><span>🪙 <span id="trade-gold">1000</span></span><span>📦 <span id="trade-cargo">0/50</span></span></div><button class="btn-primary" id="leave-port-btn">Set Sail</button></div>
@@ -424,6 +499,36 @@
 </div>
 
 <div id="pirate-modal" class="modal hidden"><div class="modal-content pirate-content"><div class="pirate-icon">🏴‍☠️</div><h2>Pirates!</h2><p>They demand tribute!</p><div class="pirate-options"><button class="btn-danger" id="pay-tribute">💰 Pay <small id="tribute-cost">100g</small></button><button class="btn-secondary" id="fight-pirates">⚔️ Fight</button><button class="btn-primary hidden" id="pirate-pass">🏴‍☠️ Parley</button></div></div></div>
+
+<div id="chase-modal" class="modal hidden">
+    <div class="modal-content chase-content">
+        <div class="chase-header">
+            <span class="chase-icon">🏴‍☠️</span>
+            <h2>Pirates Spotted!</h2>
+        </div>
+        <p class="chase-desc" id="chase-desc">A pirate ship is giving chase! Try to escape!</p>
+        <div class="chase-progress">
+            <div class="chase-bar">
+                <div class="chase-player" id="chase-player">⛵</div>
+                <div class="chase-pirate" id="chase-pirate">🏴‍☠️</div>
+            </div>
+            <div class="chase-labels">
+                <span>Escape</span>
+                <span>Caught</span>
+            </div>
+        </div>
+        <div class="chase-stats">
+            <div class="chase-stat"><span>Escape Chance:</span><span id="chase-chance">50%</span></div>
+            <div class="chase-stat"><span>Time Left:</span><span id="chase-timer">15s</span></div>
+        </div>
+        <div class="chase-actions">
+            <button class="btn-primary chase-action" id="chase-trim">🪢 Trim Sails</button>
+            <button class="btn-secondary chase-action" id="chase-jettison">📦 Jettison Cargo</button>
+            <button class="btn-danger chase-action" id="chase-risky">⚡ Risky Maneuver</button>
+        </div>
+        <div class="chase-result hidden" id="chase-result"></div>
+    </div>
+</div>
 
 <div id="encounter-modal" class="modal hidden"><div class="modal-content encounter-content"><div class="encounter-icon" id="encounter-icon">🌊</div><h2 id="encounter-title">Event</h2><p id="encounter-desc">Description</p><div id="encounter-result"></div><div class="encounter-options" id="encounter-options"></div></div></div>
 
@@ -897,6 +1002,305 @@ balance: {
         priceVolatilityPower: 0.0001, // Markets more volatile at high power
         maxScaling: 2.0               // Cap on any scaling multiplier
     }
+},
+
+// ==================== LIVING SEA UPDATE CONFIG ====================
+// Save version for migration
+saveVersion: 2,
+
+// Ship Classes - distinct vessel types with different characteristics
+shipClasses: {
+    sloop: {
+        name: 'Sloop',
+        icon: '⛵',
+        desc: 'Fast and nimble. Perfect for quick runs and escapes.',
+        baseSpeed: 1.3,
+        cargoCapacity: 35,
+        hullMax: 80,
+        riggingMax: 100,
+        repairCostMult: 0.7,
+        upkeepMult: 0.6,
+        escapeBonus: 0.25,
+        chaseSpeedBonus: 0.2,
+        cost: 0 // Starting class
+    },
+    brigantine: {
+        name: 'Brigantine',
+        icon: '🚢',
+        desc: 'Balanced trader. Good capacity with decent speed.',
+        baseSpeed: 1.0,
+        cargoCapacity: 50,
+        hullMax: 100,
+        riggingMax: 100,
+        repairCostMult: 1.0,
+        upkeepMult: 1.0,
+        escapeBonus: 0,
+        chaseSpeedBonus: 0,
+        cost: 1500
+    },
+    galleon: {
+        name: 'Galleon',
+        icon: '🛳️',
+        desc: 'Massive cargo hauler. Slow but tough.',
+        baseSpeed: 0.7,
+        cargoCapacity: 80,
+        hullMax: 150,
+        riggingMax: 80,
+        repairCostMult: 1.5,
+        upkeepMult: 1.8,
+        escapeBonus: -0.2,
+        chaseSpeedBonus: -0.15,
+        cost: 4000
+    }
+},
+
+// Officers - crew members with perks and drawbacks
+officers: {
+    quartermaster: {
+        name: 'Quartermaster',
+        role: 'quartermaster',
+        icon: '📋',
+        perk: 'Reduces upkeep by 25% and cargo loss by 30%',
+        drawback: 'Demands higher wage',
+        effects: { upkeepMult: 0.75, cargoProtection: 0.3 },
+        baseWage: 8,
+        rarity: 'common'
+    },
+    navigator: {
+        name: 'Navigator',
+        role: 'navigator',
+        icon: '🧭',
+        perk: 'Reveals wind predictions and reduces travel time',
+        drawback: 'Requires expensive charts',
+        effects: { windPrediction: true, speedBonus: 0.1 },
+        baseWage: 10,
+        rarity: 'uncommon'
+    },
+    gunner: {
+        name: 'Master Gunner',
+        role: 'gunner',
+        icon: '💣',
+        perk: '+30% combat win chance, +20% boarding loot',
+        drawback: 'Increases maintenance costs',
+        effects: { combatBonus: 0.3, lootBonus: 0.2, maintenanceMult: 1.25 },
+        baseWage: 12,
+        rarity: 'uncommon'
+    },
+    smuggler: {
+        name: 'Smuggler Contact',
+        role: 'smuggler',
+        icon: '🕵️',
+        perk: '-40% inspection chance, +15% fence prices',
+        drawback: 'Increases heat gain',
+        effects: { inspectionReduction: 0.4, fenceBonus: 0.15, heatMult: 1.3 },
+        baseWage: 15,
+        rarity: 'rare'
+    },
+    surgeon: {
+        name: 'Ship Surgeon',
+        role: 'surgeon',
+        icon: '⚕️',
+        perk: 'Crew morale recovers faster, +5 max morale',
+        drawback: 'Requires medical supplies',
+        effects: { moraleRecovery: 1.5, maxMoraleBonus: 5, supplyCostExtra: 0.5 },
+        baseWage: 10,
+        rarity: 'uncommon'
+    },
+    bosun: {
+        name: 'Bosun',
+        role: 'bosun',
+        icon: '🔧',
+        perk: 'Ship repairs are 30% cheaper, rigging wear -20%',
+        drawback: 'Strict discipline affects morale',
+        effects: { repairDiscount: 0.3, riggingWearMult: 0.8, moralePenalty: 5 },
+        baseWage: 8,
+        rarity: 'common'
+    }
+},
+
+// Hidden Coves - discoverable locations
+hiddenCoves: {
+    smugglersReef: {
+        name: "Smuggler's Reef",
+        icon: '🏴‍☠️',
+        desc: 'A hidden cove where smugglers fence goods off the books.',
+        type: 'fence',
+        position: { x: -200, z: 100 },
+        services: ['fence', 'rumors'],
+        discoveryHint: 'Pirates whisper of a reef where the Navy never looks...'
+    },
+    wreckersHaven: {
+        name: "Wrecker's Haven",
+        icon: '⚓',
+        desc: 'Wreckers have salvaged treasures from countless ships.',
+        type: 'salvage',
+        position: { x: 180, z: -120 },
+        services: ['salvage', 'charts'],
+        discoveryHint: 'Old sailors speak of lights that lure ships to their doom...'
+    },
+    healersIsle: {
+        name: "Healer's Isle",
+        icon: '🏥',
+        desc: 'A remote sanctuary where ships can repair cheaply.',
+        type: 'repair',
+        position: { x: -50, z: -180 },
+        services: ['repair', 'rest'],
+        discoveryHint: 'They say there is an island where even the most battered ship can be made whole...'
+    },
+    piratesCache: {
+        name: "Blackbeard's Cache",
+        icon: '💰',
+        desc: 'Legendary pirate treasure, if you can find it.',
+        type: 'treasure',
+        position: { x: 220, z: 150 },
+        services: ['treasure'],
+        discoveryHint: 'The map speaks of gold buried where the sun sets on the third day...'
+    }
+},
+
+// Questlines - multi-step narrative arcs
+questlines: {
+    relief: {
+        id: 'relief',
+        name: 'The Relief Effort',
+        icon: '🏥',
+        desc: 'A starving port needs your help. Deliver supplies and earn their eternal gratitude.',
+        faction: 'neutral',
+        steps: [
+            { type: 'deliver', goods: { timber: 5, iron: 3 }, to: null, desc: 'Gather building materials' },
+            { type: 'deliver', goods: { rum: 3, sugar: 5 }, to: null, desc: 'Bring food supplies' },
+            { type: 'talk', at: null, desc: 'Speak with the governor' },
+            { type: 'deliver', goods: { gold: 2 }, to: null, desc: 'Final shipment of valuables' }
+        ],
+        rewards: { gold: 500, reputation: { english: 15, eitc: 10 }, title: 'Benefactor', pardon: true },
+        deadline: 20
+    },
+    smuggling: {
+        id: 'smuggling',
+        name: 'The Smuggling Ring',
+        icon: '🏴‍☠️',
+        desc: 'A dangerous smuggling operation with high rewards.',
+        faction: 'pirates',
+        steps: [
+            { type: 'acquire', goods: { gunpowder: 10 }, desc: 'Acquire contraband' },
+            { type: 'evade', count: 2, desc: 'Evade 2 inspections while carrying contraband' },
+            { type: 'deliver', goods: { gunpowder: 10 }, to: 'tortuga', desc: 'Deliver to Tortuga' },
+            { type: 'survive_chase', desc: 'Escape the Navy pursuit' }
+        ],
+        rewards: { gold: 800, reputation: { pirates: 20 }, unlocks: 'smugglersReef' },
+        deadline: 15
+    },
+    faction_english: {
+        id: 'faction_english',
+        name: 'Crown Service',
+        icon: '👑',
+        desc: 'Prove your loyalty to the Crown and earn a Royal Pardon.',
+        faction: 'english',
+        steps: [
+            { type: 'deliver', goods: { tea: 5, silk: 3 }, to: 'portRoyal', desc: 'Supply Port Royal' },
+            { type: 'report', at: 'portRoyal', desc: 'Report pirate activity' },
+            { type: 'escort', from: 'portRoyal', to: 'kingston', desc: 'Escort a merchant convoy' },
+            { type: 'deliver', goods: { gold: 3 }, to: 'portRoyal', desc: 'Deliver captured treasure' }
+        ],
+        rewards: { gold: 600, reputation: { english: 30, pirates: -20 }, pardon: true, title: 'Privateer' },
+        deadline: 25
+    }
+},
+
+// Ship Condition tuning
+shipCondition: {
+    // Wear rates per day at sea
+    hullWearBase: 0.5,
+    hullWearStorm: 5,
+    hullWearOverload: 2,
+    riggingWearBase: 0.3,
+    riggingWearStorm: 3,
+    riggingWearHighWind: 1,
+    moraleWearBase: 0.5,
+    moraleDoldrumsExtra: 2,
+    moraleLowSuppliesExtra: 3,
+
+    // Thresholds for penalties
+    criticalThreshold: 30,
+    warningThreshold: 50,
+
+    // Effects of low condition
+    lowHullSinkChance: 0.05,      // Per storm at hull < 30
+    lowHullRepairPenalty: 0.5,    // Sea repairs 50% less effective
+    lowRiggingSpeedPenalty: 0.3,  // -30% speed at rigging < 30
+    lowRiggingEscapePenalty: 0.25, // -25% escape chance
+    lowMoraleEncounterBonus: 0.2, // +20% encounter chance
+    lowMoraleMutinyChance: 0.02,  // Per day at morale < 30
+
+    // Repair costs (gold per point)
+    dockRepairCostHull: 3,
+    dockRepairCostRigging: 2,
+    dockRestCost: 15,
+    seaRepairCostSupplies: 1,     // Supplies per 5 points
+
+    // Recovery rates
+    dockRepairRate: 20,           // Points per rest action
+    seaRepairRate: 10,
+    dockMoraleRecovery: 15
+},
+
+// Chase encounter system
+chase: {
+    baseDuration: 15000,          // 15 seconds
+    minDuration: 10000,
+    maxDuration: 20000,
+    baseEscapeChance: 0.5,
+    windSpeedFactor: 0.15,
+    cargoWeightPenalty: 0.005,    // Per cargo unit
+    riggingFactor: 0.003,         // Per rigging point
+    hazardChance: 0.15,
+    hazardTypes: ['rocks', 'storm', 'shallows'],
+    jukeCooldow: 3000,
+    jukeBon: 0.1
+},
+
+// Bounty hunters and pardon
+bountyHunters: {
+    // Named hunters that appear at infamous level
+    hunters: [
+        { name: 'Captain Blackwood', icon: '⚔️', strength: 1.2, reward: 200 },
+        { name: 'The Iron Maiden', icon: '🗡️', strength: 1.5, reward: 350 },
+        { name: 'Admiral Graves', icon: '💀', strength: 2.0, reward: 500 }
+    ],
+    // Hunter encounter chance per day at sea (by tier)
+    encounterChance: {
+        wanted: 0,
+        hunted: 0.03,
+        infamous: 0.08
+    },
+    // Pardon costs by port type
+    pardonCosts: {
+        english: { base: 500, perBounty: 2 },
+        eitc: { base: 400, perBounty: 1.5 },
+        neutral: { base: 800, perBounty: 3 }
+    }
+},
+
+// Faction war fronts
+warFronts: {
+    // Island influence change per event
+    influencePerTrade: 0.5,
+    influencePerQuest: 5,
+    influencePerSmuggle: -2,
+    stabilityRecoveryPerDay: 0.5,
+    blockadeDuration: 5,
+    warZoneDuration: 8,
+    controlThreshold: 60  // Faction needs 60%+ influence to control
+},
+
+// Debug toggles
+debug: {
+    enabled: false,
+    logWear: false,
+    logChase: false,
+    logBounty: false,
+    logQuests: false,
+    skipChase: false
 }
 };
 
@@ -1075,7 +1479,28 @@ function calculateDailyUpkeep(gs) {
     if (!CONFIG.balance.upkeep.enabled) return 0;
     const up = CONFIG.balance.upkeep;
     const upgradeCount = Object.keys(gs.player.upgrades || {}).filter(k => gs.player.upgrades[k]).length;
-    return up.crewWagesPerDay + (upgradeCount * up.crewWagesPerUpgrade) + up.maintenancePerDay;
+
+    // Base upkeep
+    let upkeep = up.crewWagesPerDay + (upgradeCount * up.crewWagesPerUpgrade) + up.maintenancePerDay;
+
+    // Ship class upkeep multiplier
+    const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+    upkeep *= shipClass.upkeepMult;
+
+    // Officer wages
+    upkeep += getOfficerWages(gs);
+
+    // Quartermaster reduces upkeep
+    if (hasOfficer(gs, 'quartermaster')) {
+        upkeep *= CONFIG.officers.quartermaster.effects.upkeepMult;
+    }
+
+    // Gunner increases maintenance
+    if (hasOfficer(gs, 'gunner')) {
+        upkeep *= CONFIG.officers.gunner.effects.maintenanceMult;
+    }
+
+    return Math.ceil(upkeep);
 }
 
 function calculateDockingFee(gs, iid) {
@@ -1943,22 +2368,43 @@ function getRumorsForPort(gs, iid) {
 // ==================== SHIP STAT HELPERS ====================
 // Returns effective ship speed factoring in upgrades
 function getShipSpeed(gs) {
-let s = CONFIG.settings.baseShipSpeed;
+// Get ship class base speed
+const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+let s = CONFIG.settings.baseShipSpeed * shipClass.baseSpeed;
+
+// Faction bonus
 if (gs.player.faction === 'pirates') s *= 1.2;
+
 // Apply upgrade penalties
 if (gs.player.upgrades?.reinforcedHold) s *= (1 - CONFIG.upgrades.reinforcedHold.effects.speedPenalty);
 if (gs.player.upgrades?.vault) s *= (1 - CONFIG.upgrades.vault.effects.speedPenalty);
+
+// Officer navigator speed bonus
+if (hasOfficer(gs, 'navigator')) s *= (1 + CONFIG.officers.navigator.effects.speedBonus);
+
+// Low rigging penalty
+const rigging = gs.player.ship?.rigging ?? 100;
+if (rigging < CONFIG.shipCondition.criticalThreshold) {
+    s *= (1 - CONFIG.shipCondition.lowRiggingSpeedPenalty);
+}
+
 return s;
 }
 
-// Returns effective cargo capacity factoring in upgrades and faction
+// Returns effective cargo capacity factoring in upgrades, faction, and ship class
 function getCargoCapacity(gs) {
-let c = CONFIG.settings.baseCargoCapacity;
+// Get ship class cargo capacity
+const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+let c = shipClass.cargoCapacity;
+
+// Faction bonus
 if (gs.player.faction === 'eitc') c *= 1.2;
+
 // Apply upgrade effects
 if (gs.player.upgrades?.reinforcedHold) c -= CONFIG.upgrades.reinforcedHold.effects.capacityPenalty;
 if (gs.player.upgrades?.smugglerCompartments) c -= CONFIG.upgrades.smugglerCompartments.effects.capacityPenalty;
 if (gs.player.upgrades?.vault) c -= CONFIG.upgrades.vault.effects.capacityPenalty;
+
 return Math.floor(Math.max(20, c)); // minimum 20
 }
 
@@ -1967,10 +2413,501 @@ function getSupplyRate(gs) {
 let rate = CONFIG.settings.baseSupplyRate;
 if (gs.player.upgrades?.swiftSails) rate += CONFIG.upgrades.swiftSails.effects.supplyCostExtra;
 if (gs.player.upgrades?.smugglerCompartments) rate += CONFIG.upgrades.smugglerCompartments.effects.supplyCostExtra;
+
+// Officer surgeon supply cost
+if (hasOfficer(gs, 'surgeon')) rate += CONFIG.officers.surgeon.effects.supplyCostExtra;
+
 // Apply season supply cost multiplier
 const seasonMods = getSeasonModifiers(gs);
 rate *= (seasonMods.supplyCostMult || 1);
 return rate;
+}
+
+// ==================== LIVING SEA: SHIP CONDITION SYSTEM ====================
+function getShipHull(gs) {
+    return gs.player.ship?.hull ?? 100;
+}
+
+function getShipRigging(gs) {
+    return gs.player.ship?.rigging ?? 100;
+}
+
+function getShipMorale(gs) {
+    return gs.player.ship?.morale ?? 100;
+}
+
+function getMaxHull(gs) {
+    const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+    return shipClass.hullMax;
+}
+
+function getMaxRigging(gs) {
+    const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+    return shipClass.riggingMax;
+}
+
+function getMaxMorale(gs) {
+    let max = 100;
+    if (hasOfficer(gs, 'surgeon')) max += CONFIG.officers.surgeon.effects.maxMoraleBonus;
+    return max;
+}
+
+function damageHull(gs, amount) {
+    if (!gs.player.ship) gs.player.ship = { hull: 100, rigging: 100, morale: 100 };
+    gs.player.ship.hull = Math.max(0, gs.player.ship.hull - amount);
+    if (CONFIG.debug.logWear) console.log(`[Wear] Hull -${amount} = ${gs.player.ship.hull}`);
+}
+
+function damageRigging(gs, amount) {
+    if (!gs.player.ship) gs.player.ship = { hull: 100, rigging: 100, morale: 100 };
+    // Bosun reduces rigging wear
+    if (hasOfficer(gs, 'bosun')) amount *= CONFIG.officers.bosun.effects.riggingWearMult;
+    gs.player.ship.rigging = Math.max(0, gs.player.ship.rigging - amount);
+    if (CONFIG.debug.logWear) console.log(`[Wear] Rigging -${amount} = ${gs.player.ship.rigging}`);
+}
+
+function damageMorale(gs, amount) {
+    if (!gs.player.ship) gs.player.ship = { hull: 100, rigging: 100, morale: 100 };
+    // Bosun's strict discipline affects morale
+    if (hasOfficer(gs, 'bosun')) amount += CONFIG.officers.bosun.effects.moralePenalty * 0.1;
+    gs.player.ship.morale = Math.max(0, gs.player.ship.morale - amount);
+    if (CONFIG.debug.logWear) console.log(`[Wear] Morale -${amount} = ${gs.player.ship.morale}`);
+}
+
+function repairHull(gs, amount, atSea = false) {
+    if (!gs.player.ship) return;
+    // Sea repairs less effective with low hull
+    if (atSea && gs.player.ship.hull < CONFIG.shipCondition.criticalThreshold) {
+        amount *= (1 - CONFIG.shipCondition.lowHullRepairPenalty);
+    }
+    gs.player.ship.hull = Math.min(getMaxHull(gs), gs.player.ship.hull + amount);
+}
+
+function repairRigging(gs, amount) {
+    if (!gs.player.ship) return;
+    gs.player.ship.rigging = Math.min(getMaxRigging(gs), gs.player.ship.rigging + amount);
+}
+
+function restoreMorale(gs, amount) {
+    if (!gs.player.ship) return;
+    // Surgeon improves morale recovery
+    if (hasOfficer(gs, 'surgeon')) amount *= CONFIG.officers.surgeon.effects.moraleRecovery;
+    gs.player.ship.morale = Math.min(getMaxMorale(gs), gs.player.ship.morale + amount);
+}
+
+function applyDailyWear(gs, isStorm = false, windStrength = 0) {
+    const sc = CONFIG.shipCondition;
+    const seasonMods = getSeasonModifiers(gs);
+
+    // Hull wear
+    let hullWear = sc.hullWearBase;
+    if (isStorm) hullWear += sc.hullWearStorm;
+    // Cargo overload
+    const cargoUsed = getCargoUsed(gs);
+    const capacity = getCargoCapacity(gs);
+    if (cargoUsed > capacity * 0.9) hullWear += sc.hullWearOverload;
+    damageHull(gs, hullWear);
+
+    // Rigging wear
+    let riggingWear = sc.riggingWearBase;
+    if (isStorm) riggingWear += sc.riggingWearStorm;
+    if (windStrength >= 3) riggingWear += sc.riggingWearHighWind;
+    damageRigging(gs, riggingWear);
+
+    // Morale wear
+    let moraleWear = sc.moraleWearBase;
+    // Doldrums season
+    if (seasonMods.speedMult && seasonMods.speedMult < 1) moraleWear += sc.moraleDoldrumsExtra;
+    // Low supplies
+    if (gs.player.supplies < 10) moraleWear += sc.moraleLowSuppliesExtra;
+    damageMorale(gs, moraleWear);
+}
+
+function getRepairCost(gs, type, amount) {
+    const sc = CONFIG.shipCondition;
+    const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+    let cost = 0;
+
+    if (type === 'hull') cost = amount * sc.dockRepairCostHull;
+    else if (type === 'rigging') cost = amount * sc.dockRepairCostRigging;
+    else if (type === 'rest') cost = sc.dockRestCost;
+
+    // Ship class cost multiplier
+    cost *= shipClass.repairCostMult;
+
+    // Bosun discount
+    if (hasOfficer(gs, 'bosun')) cost *= (1 - CONFIG.officers.bosun.effects.repairDiscount);
+
+    return Math.ceil(cost);
+}
+
+function isShipCritical(gs) {
+    const sc = CONFIG.shipCondition;
+    return getShipHull(gs) < sc.criticalThreshold ||
+           getShipRigging(gs) < sc.criticalThreshold ||
+           getShipMorale(gs) < sc.criticalThreshold;
+}
+
+function checkMutinyRisk(gs) {
+    if (getShipMorale(gs) < CONFIG.shipCondition.criticalThreshold) {
+        if (Math.random() < CONFIG.shipCondition.lowMoraleMutinyChance) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ==================== LIVING SEA: OFFICERS SYSTEM ====================
+function hasOfficer(gs, role) {
+    return gs.player.officers?.some(o => o.role === role) || false;
+}
+
+function getOfficer(gs, role) {
+    return gs.player.officers?.find(o => o.role === role) || null;
+}
+
+function hireOfficer(gs, officerId) {
+    const officerConfig = CONFIG.officers[officerId];
+    if (!officerConfig) return { success: false, reason: 'Unknown officer type' };
+    if (gs.player.officers.length >= 3) return { success: false, reason: 'Crew full (max 3 officers)' };
+    if (hasOfficer(gs, officerConfig.role)) return { success: false, reason: 'Already have this role' };
+
+    const officer = {
+        id: officerId,
+        role: officerConfig.role,
+        name: generateOfficerName(officerConfig.role),
+        hiredDay: gs.player.days,
+        wage: officerConfig.baseWage
+    };
+
+    gs.player.officers.push(officer);
+    return { success: true, officer };
+}
+
+function fireOfficer(gs, role) {
+    const index = gs.player.officers.findIndex(o => o.role === role);
+    if (index >= 0) {
+        gs.player.officers.splice(index, 1);
+        return true;
+    }
+    return false;
+}
+
+function getOfficerWages(gs) {
+    return gs.player.officers?.reduce((total, o) => {
+        const config = Object.values(CONFIG.officers).find(c => c.role === o.role);
+        return total + (config?.baseWage || 5);
+    }, 0) || 0;
+}
+
+function generateOfficerName(role) {
+    const firstNames = ['James', 'William', 'Thomas', 'Edward', 'John', 'Mary', 'Anne', 'Elizabeth', 'Grace', 'Sarah'];
+    const lastNames = ['Blackwood', 'Stormwind', 'Ironside', 'Wavecrest', 'Saltborne', 'Tidebringer', 'Keel', 'Compass'];
+    return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+}
+
+function getAvailableOfficersAtPort(gs, islandId) {
+    // Generate 1-2 random officers available at this port
+    const allOfficers = Object.keys(CONFIG.officers);
+    const available = [];
+    const count = 1 + Math.floor(Math.random() * 2);
+
+    for (let i = 0; i < count && i < allOfficers.length; i++) {
+        const idx = Math.floor(Math.random() * allOfficers.length);
+        const officerId = allOfficers[idx];
+        if (!available.includes(officerId) && !hasOfficer(gs, CONFIG.officers[officerId].role)) {
+            available.push(officerId);
+        }
+    }
+    return available;
+}
+
+// ==================== LIVING SEA: CHASE ENCOUNTER SYSTEM ====================
+function calculateEscapeChance(gs) {
+    const chase = CONFIG.chase;
+    const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+
+    let chance = chase.baseEscapeChance;
+
+    // Ship class bonus
+    chance += shipClass.escapeBonus;
+
+    // Wind factor
+    const windStr = gs.wind?.strength || 0;
+    chance += windStr * chase.windSpeedFactor;
+
+    // Cargo weight penalty
+    const cargoUsed = getCargoUsed(gs);
+    chance -= cargoUsed * chase.cargoWeightPenalty;
+
+    // Rigging condition
+    const rigging = getShipRigging(gs);
+    if (rigging < CONFIG.shipCondition.criticalThreshold) {
+        chance -= CONFIG.shipCondition.lowRiggingEscapePenalty;
+    } else {
+        chance += (rigging - 50) * chase.riggingFactor;
+    }
+
+    // Gunner officer makes fighting more attractive but doesn't help escape
+    // Navigator helps with escape
+    if (hasOfficer(gs, 'navigator')) chance += 0.1;
+
+    // Bounty level makes escape harder
+    const bountyLevel = getBountyLevel(gs);
+    if (bountyLevel === 'wanted') chance -= 0.05;
+    else if (bountyLevel === 'hunted') chance -= 0.1;
+    else if (bountyLevel === 'infamous') chance -= 0.15;
+
+    return Math.max(0.1, Math.min(0.9, chance));
+}
+
+function getChaseDuration(gs) {
+    const chase = CONFIG.chase;
+    const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+
+    // Base duration modified by ship speed
+    let duration = chase.baseDuration;
+    duration -= (shipClass.baseSpeed - 1) * 3000; // Faster ships = shorter chase
+
+    // Cargo slows you down
+    const cargoUsed = getCargoUsed(gs);
+    duration += cargoUsed * 50;
+
+    return Math.max(chase.minDuration, Math.min(chase.maxDuration, duration));
+}
+
+// ==================== LIVING SEA: EXPLORATION SYSTEM ====================
+function discoverCove(gs, coveId) {
+    if (!gs.player.discoveredCoves.includes(coveId)) {
+        gs.player.discoveredCoves.push(coveId);
+        return true;
+    }
+    return false;
+}
+
+function hasCoveDiscovered(gs, coveId) {
+    return gs.player.discoveredCoves?.includes(coveId) || false;
+}
+
+function addChartFragment(gs) {
+    gs.player.chartFragments = (gs.player.chartFragments || 0) + 1;
+
+    // Check if we can discover a new cove
+    const undiscovered = Object.keys(CONFIG.hiddenCoves).filter(id => !hasCoveDiscovered(gs, id));
+    if (undiscovered.length > 0 && gs.player.chartFragments >= 3) {
+        gs.player.chartFragments -= 3;
+        const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+        discoverCove(gs, coveId);
+        return { discovered: true, coveId };
+    }
+    return { discovered: false };
+}
+
+function getCoveRumor(gs) {
+    const undiscovered = Object.keys(CONFIG.hiddenCoves).filter(id => !hasCoveDiscovered(gs, id));
+    if (undiscovered.length === 0) return null;
+
+    const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+    const cove = CONFIG.hiddenCoves[coveId];
+    return { coveId, hint: cove.discoveryHint };
+}
+
+// ==================== LIVING SEA: BOUNTY HUNTER SYSTEM ====================
+function spawnBountyHunter(gs) {
+    const bountyLevel = getBountyLevel(gs);
+    const hunters = CONFIG.bountyHunters.hunters;
+
+    // Get undefeated hunters
+    const available = hunters.filter((h, i) => !gs.player.huntersDefeated.includes(i));
+    if (available.length === 0) return null;
+
+    // Pick based on bounty level
+    let hunterIndex = 0;
+    if (bountyLevel === 'infamous') {
+        hunterIndex = Math.min(available.length - 1, gs.player.stats.huntersDefeated || 0);
+    }
+
+    return { ...available[Math.min(hunterIndex, available.length - 1)], index: hunters.indexOf(available[hunterIndex]) };
+}
+
+function defeatHunter(gs, hunterIndex) {
+    if (!gs.player.huntersDefeated.includes(hunterIndex)) {
+        gs.player.huntersDefeated.push(hunterIndex);
+        gs.player.stats.huntersDefeated = (gs.player.stats.huntersDefeated || 0) + 1;
+    }
+}
+
+function getPardonCost(gs, islandId) {
+    const island = CONFIG.islands[islandId];
+    if (!island) return null;
+
+    const faction = island.faction;
+    if (faction === 'pirates') return null; // Pirates don't offer pardons
+
+    const costs = CONFIG.bountyHunters.pardonCosts[faction] || CONFIG.bountyHunters.pardonCosts.neutral;
+    const bounty = getBounty(gs);
+
+    return Math.ceil(costs.base + bounty * costs.perBounty);
+}
+
+function grantPardon(gs) {
+    gs.player.bounty = 0;
+    gs.player.huntersDefeated = [];
+}
+
+// ==================== LIVING SEA: QUESTLINE SYSTEM ====================
+function startQuestline(gs, questlineId) {
+    const questline = CONFIG.questlines[questlineId];
+    if (!questline) return { success: false, reason: 'Unknown questline' };
+    if (gs.player.activeQuestline) return { success: false, reason: 'Already on a questline' };
+
+    gs.player.activeQuestline = questlineId;
+    gs.player.questlineProgress[questlineId] = {
+        currentStep: 0,
+        startDay: gs.player.days,
+        stepProgress: {}
+    };
+
+    return { success: true, questline };
+}
+
+function getQuestlineProgress(gs) {
+    if (!gs.player.activeQuestline) return null;
+    const questlineId = gs.player.activeQuestline;
+    const questline = CONFIG.questlines[questlineId];
+    const progress = gs.player.questlineProgress[questlineId];
+
+    if (!questline || !progress) return null;
+
+    const currentStep = questline.steps[progress.currentStep];
+    const daysRemaining = questline.deadline - (gs.player.days - progress.startDay);
+
+    return {
+        questlineId,
+        questline,
+        currentStep,
+        stepIndex: progress.currentStep,
+        totalSteps: questline.steps.length,
+        daysRemaining,
+        stepProgress: progress.stepProgress
+    };
+}
+
+function advanceQuestline(gs) {
+    const progress = getQuestlineProgress(gs);
+    if (!progress) return { success: false };
+
+    const questlineId = gs.player.activeQuestline;
+    gs.player.questlineProgress[questlineId].currentStep++;
+    gs.player.questlineProgress[questlineId].stepProgress = {};
+
+    // Check if completed
+    if (gs.player.questlineProgress[questlineId].currentStep >= progress.questline.steps.length) {
+        return completeQuestline(gs);
+    }
+
+    return { success: true, advanced: true };
+}
+
+function completeQuestline(gs) {
+    const questlineId = gs.player.activeQuestline;
+    const questline = CONFIG.questlines[questlineId];
+    if (!questline) return { success: false };
+
+    const rewards = questline.rewards;
+
+    // Apply rewards
+    if (rewards.gold) gs.player.gold += rewards.gold;
+    if (rewards.reputation) {
+        Object.entries(rewards.reputation).forEach(([fid, amount]) => {
+            applyRepChange(gs, fid, amount, 'questline_' + questlineId);
+        });
+    }
+    if (rewards.pardon) grantPardon(gs);
+    if (rewards.unlocks) discoverCove(gs, rewards.unlocks);
+
+    gs.player.activeQuestline = null;
+
+    return { success: true, completed: true, rewards };
+}
+
+function failQuestline(gs) {
+    gs.player.activeQuestline = null;
+    return { success: true, failed: true };
+}
+
+function checkQuestlineDeadline(gs) {
+    const progress = getQuestlineProgress(gs);
+    if (!progress) return false;
+
+    if (progress.daysRemaining <= 0) {
+        failQuestline(gs);
+        return true;
+    }
+    return false;
+}
+
+// ==================== LIVING SEA: WAR FRONTS SYSTEM ====================
+function getIslandInfluence(gs, islandId) {
+    return gs.world.islandInfluence?.[islandId] || {
+        english: 33,
+        eitc: 33,
+        pirates: 34
+    };
+}
+
+function modifyInfluence(gs, islandId, faction, amount) {
+    if (!gs.world.islandInfluence) gs.world.islandInfluence = {};
+    if (!gs.world.islandInfluence[islandId]) {
+        gs.world.islandInfluence[islandId] = { english: 33, eitc: 33, pirates: 34 };
+    }
+
+    const influence = gs.world.islandInfluence[islandId];
+    influence[faction] = Math.max(0, Math.min(100, (influence[faction] || 0) + amount));
+
+    // Normalize to 100%
+    const total = influence.english + influence.eitc + influence.pirates;
+    if (total > 0) {
+        influence.english = Math.round(influence.english / total * 100);
+        influence.eitc = Math.round(influence.eitc / total * 100);
+        influence.pirates = 100 - influence.english - influence.eitc;
+    }
+}
+
+function getControllingFaction(gs, islandId) {
+    const influence = getIslandInfluence(gs, islandId);
+    const threshold = CONFIG.warFronts.controlThreshold;
+
+    if (influence.english >= threshold) return 'english';
+    if (influence.eitc >= threshold) return 'eitc';
+    if (influence.pirates >= threshold) return 'pirates';
+    return 'contested';
+}
+
+function isBlockaded(gs, islandId) {
+    return gs.world.activeBlockades?.some(b => b.islandId === islandId && b.endDay > gs.player.days) || false;
+}
+
+function isWarZone(gs, islandId) {
+    return gs.world.activeWarZones?.some(w => w.islandId === islandId && w.endDay > gs.player.days) || false;
+}
+
+function startBlockade(gs, islandId) {
+    if (!gs.world.activeBlockades) gs.world.activeBlockades = [];
+    gs.world.activeBlockades.push({
+        islandId,
+        startDay: gs.player.days,
+        endDay: gs.player.days + CONFIG.warFronts.blockadeDuration
+    });
+}
+
+function startWarZone(gs, islandId) {
+    if (!gs.world.activeWarZones) gs.world.activeWarZones = [];
+    gs.world.activeWarZones.push({
+        islandId,
+        startDay: gs.player.days,
+        endDay: gs.player.days + CONFIG.warFronts.warZoneDuration
+    });
 }
 
 // Category-aware capacity check: luxury locker gives bonus for luxury, penalty for commodity
@@ -2414,6 +3351,7 @@ markets[gid] = { supply: mc.targetSupply + Math.floor((Math.random() - 0.5) * 20
 islands[id] = { id, name: cfg.name, faction: cfg.faction, markets, activeEvent: null };
 });
 return {
+saveVersion: CONFIG.saveVersion,
 player: {
 faction, gold: CONFIG.settings.startingGold, days: 1, supplies: CONFIG.settings.startingSupplies,
 cargo: {}, position: getSafeSpawn(), reputation: { ...fc.startingRep },
@@ -2421,11 +3359,24 @@ visitedIslands: {}, purchaseHistory: {}, upgrades: {}, destinationIslandId: null
 heat: 0, daysSinceDock: 0,
 // New fields
 titles: {},
-stats: { contrabandTraded: 0, contractsCompleted: 0, repChanges: {} },
+stats: { contrabandTraded: 0, contractsCompleted: 0, repChanges: {}, chasesEscaped: 0, huntersDefeated: 0 },
 contracts: { active: [], completed: [], failed: [] },
 trackedContractId: null,
 tokens: 0,
-inspectionTriggeredThisContract: false
+inspectionTriggeredThisContract: false,
+// Living Sea Update fields
+shipClass: 'brigantine',
+ship: {
+    hull: 100,
+    rigging: 100,
+    morale: 100
+},
+officers: [],
+discoveredCoves: [],
+chartFragments: 0,
+activeQuestline: null,
+questlineProgress: {},
+huntersDefeated: []
 },
 islands,
 wind: { direction: Math.floor(Math.random() * 8), strength: Math.floor(Math.random() * 4), daysUntilChange: CONFIG.settings.windChangeDays },
@@ -2438,7 +3389,11 @@ world: {
     driftEntities: [],
     portStates: {},
     rumors: {},
-    seasonalEvent: null
+    seasonalEvent: null,
+    // War front / influence tracking per island
+    islandInfluence: {},
+    activeBlockades: [],
+    activeWarZones: []
 },
 currentIsland: null, isDocked: false
 };
@@ -2494,6 +3449,47 @@ if (!gs.world.driftEntities) gs.world.driftEntities = [];
 if (!gs.world.portStates) gs.world.portStates = {};
 if (!gs.world.rumors) gs.world.rumors = {};
 if (gs.world.seasonalEvent === undefined) gs.world.seasonalEvent = null;
+
+// === LIVING SEA UPDATE v2 MIGRATIONS ===
+// Save version tracking
+if (gs.saveVersion === undefined) gs.saveVersion = 1;
+
+// Ship class system
+if (!gs.player.shipClass) gs.player.shipClass = 'brigantine';
+
+// Ship condition system
+if (!gs.player.ship) {
+    const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
+    gs.player.ship = {
+        hull: shipClass.hullMax,
+        rigging: shipClass.riggingMax,
+        morale: 100
+    };
+}
+
+// Officers system
+if (!gs.player.officers) gs.player.officers = [];
+
+// Exploration system
+if (!gs.player.discoveredCoves) gs.player.discoveredCoves = [];
+if (gs.player.chartFragments === undefined) gs.player.chartFragments = 0;
+
+// Questline system
+if (gs.player.activeQuestline === undefined) gs.player.activeQuestline = null;
+if (!gs.player.questlineProgress) gs.player.questlineProgress = {};
+
+// Bounty hunter tracking
+if (!gs.player.huntersDefeated) gs.player.huntersDefeated = [];
+if (!gs.player.stats.chasesEscaped) gs.player.stats.chasesEscaped = 0;
+if (!gs.player.stats.huntersDefeated) gs.player.stats.huntersDefeated = 0;
+
+// World war fronts
+if (!gs.world.islandInfluence) gs.world.islandInfluence = {};
+if (!gs.world.activeBlockades) gs.world.activeBlockades = [];
+if (!gs.world.activeWarZones) gs.world.activeWarZones = [];
+
+// Update save version
+gs.saveVersion = CONFIG.saveVersion;
 
 return gs;
 }
@@ -2579,13 +3575,13 @@ end() { this.active = false; this.stick.classList.remove('active'); this.stick.s
 class UI {
 constructor(game) { this.game = game; this.el = {}; this.cache(); this.bind(); }
 cache() {
-['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss'].forEach(id => this.el[id] = document.getElementById(id));
+['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers'].forEach(id => this.el[id] = document.getElementById(id));
 this.el.tradeTabs = document.querySelectorAll('.trade-tab'); this.el.factionCards = document.querySelectorAll('.faction-card');
 }
 bind() {
 this.el.factionCards.forEach(c => c.addEventListener('click', () => { this.el.factionCards.forEach(x => x.classList.remove('selected')); c.classList.add('selected'); this.el['continue-btn']?.classList.remove('hidden'); this.game.selectedFaction = c.dataset.faction; console.log('Selected faction:', c.dataset.faction); }));
 this.el['continue-btn']?.addEventListener('click', () => { if (this.game.selectedFaction) this.game.startGame(this.game.selectedFaction); });
-this.el.tradeTabs.forEach(tab => tab.addEventListener('click', () => { this.el.tradeTabs.forEach(t => t.classList.remove('active')); tab.classList.add('active'); ['buy','sell','contracts','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== tab.dataset.tab)); if (tab.dataset.tab === 'logbook') this.renderLogbook(); if (tab.dataset.tab === 'shipyard') this.renderShipyard(); if (tab.dataset.tab === 'contracts') this.renderContracts(); }));
+this.el.tradeTabs.forEach(tab => tab.addEventListener('click', () => { this.el.tradeTabs.forEach(t => t.classList.remove('active')); tab.classList.add('active'); ['buy','sell','contracts','tavern','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== tab.dataset.tab)); if (tab.dataset.tab === 'logbook') this.renderLogbook(); if (tab.dataset.tab === 'shipyard') this.renderShipyard(); if (tab.dataset.tab === 'contracts') this.renderContracts(); if (tab.dataset.tab === 'tavern') this.renderTavern(); }));
 this.el['close-trade']?.addEventListener('click', () => this.closeTrade());
 this.el['leave-port-btn']?.addEventListener('click', () => { this.closeTrade(); this.game.undock(); });
 this.el['btn-dock']?.addEventListener('click', () => this.game.dock());
@@ -2606,6 +3602,10 @@ this.el['buy-best-btn']?.addEventListener('click', () => this.game.buyBest());
 this.el['sell-best-btn']?.addEventListener('click', () => this.game.sellBest());
 this.el['logbook-island-select']?.addEventListener('change', e => this.renderLogPrices(e.target.value));
 this.el['contract-tracker']?.addEventListener('click', () => { if (this.game.gameState?.isDocked) { this.el.tradeTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'contracts')); ['buy','sell','contracts','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== 'contracts')); this.renderContracts(); } });
+// Chase action bindings - Living Sea Update
+this.el['chase-trim']?.addEventListener('click', () => this.game.chaseAction('trim'));
+this.el['chase-jettison']?.addEventListener('click', () => this.game.chaseAction('jettison'));
+this.el['chase-risky']?.addEventListener('click', () => this.game.chaseAction('risky'));
 }
 showLoading(p) { document.querySelector('.loading-progress').style.width = p + '%'; }
 hideLoading() { this.el['loading-screen'].classList.add('hidden'); }
@@ -2649,6 +3649,9 @@ updateHUD(gs) {
     this.el['heat-label'].textContent = heat;
     this.el['heat-indicator'].className = heat < 30 ? 'low' : heat < 60 ? 'med' : 'high';
 
+    // Ship condition - Living Sea Update
+    this.updateShipCondition(gs);
+
     // Contract tracker
     this.updateContractTracker(gs);
 
@@ -2668,6 +3671,45 @@ updateContractTracker(gs) {
     } else {
         this.el['contract-tracker'].classList.add('hidden');
     }
+}
+
+updateShipCondition(gs) {
+    // Ship class display
+    const shipClass = CONFIG.shipClasses?.[gs.player.shipClass] || CONFIG.shipClasses?.brigantine;
+    const shipIcons = { sloop: '⛵', brigantine: '🚢', galleon: '🛳️' };
+    this.el['ship-class-icon'].textContent = shipIcons[gs.player.shipClass] || '⛵';
+    this.el['ship-class-label'].textContent = shipClass?.name || 'Brigantine';
+
+    // Get condition values
+    const hull = getShipHull(gs);
+    const rigging = getShipRigging(gs);
+    const morale = getShipMorale(gs);
+    const maxHull = getMaxHull(gs);
+    const maxRigging = getMaxRigging(gs);
+    const maxMorale = getMaxMorale(gs);
+    const critThreshold = CONFIG.shipCondition?.criticalThreshold || 30;
+
+    // Update hull bar
+    const hullPct = Math.round((hull / maxHull) * 100);
+    this.el['hull-fill'].style.width = hullPct + '%';
+    this.el['hull-value'].textContent = Math.round(hull);
+    this.el['hull-fill'].classList.toggle('critical', hull < critThreshold);
+
+    // Update rigging bar
+    const riggingPct = Math.round((rigging / maxRigging) * 100);
+    this.el['rigging-fill'].style.width = riggingPct + '%';
+    this.el['rigging-value'].textContent = Math.round(rigging);
+    this.el['rigging-fill'].classList.toggle('critical', rigging < critThreshold);
+
+    // Update morale bar
+    const moralePct = Math.round((morale / maxMorale) * 100);
+    this.el['morale-fill'].style.width = moralePct + '%';
+    this.el['morale-value'].textContent = Math.round(morale);
+    this.el['morale-fill'].classList.toggle('critical', morale < critThreshold);
+
+    // Critical state styling for whole widget
+    const isCritical = isShipCritical(gs);
+    this.el['ship-condition'].classList.toggle('critical', isCritical);
 }
 
 updateWorldIndicator(gs) {
@@ -2983,7 +4025,47 @@ renderLogPrices(iid) {
 
 renderShipyard() {
     const gs = this.game.gameState;
-    this.el['upgrades-list'].innerHTML = Object.entries(CONFIG.upgrades).map(([id, u]) => {
+
+    // === LIVING SEA: Ship Repairs Section ===
+    const hull = getShipHull(gs), rigging = getShipRigging(gs), morale = getShipMorale(gs);
+    const maxHull = getMaxHull(gs), maxRigging = getMaxRigging(gs), maxMorale = getMaxMorale(gs);
+    const hullDmg = maxHull - hull, riggingDmg = maxRigging - rigging, moraleDmg = maxMorale - morale;
+    const hullCost = getRepairCost(gs, 'hull');
+    const riggingCost = getRepairCost(gs, 'rigging');
+    const moraleCost = getRepairCost(gs, 'morale');
+    const canAffordHull = gs.player.gold >= hullCost && hullDmg > 0;
+    const canAffordRigging = gs.player.gold >= riggingCost && riggingDmg > 0;
+    const canAffordMorale = gs.player.gold >= moraleCost && moraleDmg > 0;
+    const shipClass = CONFIG.shipClasses?.[gs.player.shipClass] || CONFIG.shipClasses?.brigantine;
+
+    const repairsHtml = `
+        <div class="shipyard-section">
+            <h4>🛠️ Ship Repairs - ${shipClass?.name || 'Brigantine'}</h4>
+            <div class="repair-grid">
+                <div class="repair-card ${hullDmg <= 0 ? 'full' : ''}">
+                    <div class="repair-header"><span>🪵 Hull</span><span>${Math.round(hull)}/${maxHull}</span></div>
+                    <div class="repair-bar"><div class="repair-fill hull" style="width: ${(hull/maxHull)*100}%"></div></div>
+                    ${hullDmg > 0 ? `<button class="btn-secondary btn-small repair-btn" data-type="hull" ${canAffordHull ? '' : 'disabled'}>Repair ${hullCost}g</button>` : '<span class="repair-full">Full</span>'}
+                </div>
+                <div class="repair-card ${riggingDmg <= 0 ? 'full' : ''}">
+                    <div class="repair-header"><span>🪢 Rigging</span><span>${Math.round(rigging)}/${maxRigging}</span></div>
+                    <div class="repair-bar"><div class="repair-fill rigging" style="width: ${(rigging/maxRigging)*100}%"></div></div>
+                    ${riggingDmg > 0 ? `<button class="btn-secondary btn-small repair-btn" data-type="rigging" ${canAffordRigging ? '' : 'disabled'}>Repair ${riggingCost}g</button>` : '<span class="repair-full">Full</span>'}
+                </div>
+                <div class="repair-card ${moraleDmg <= 0 ? 'full' : ''}">
+                    <div class="repair-header"><span>👥 Morale</span><span>${Math.round(morale)}/${maxMorale}</span></div>
+                    <div class="repair-bar"><div class="repair-fill morale" style="width: ${(morale/maxMorale)*100}%"></div></div>
+                    ${moraleDmg > 0 ? `<button class="btn-secondary btn-small repair-btn" data-type="morale" ${canAffordMorale ? '' : 'disabled'}>Rest & Resupply ${moraleCost}g</button>` : '<span class="repair-full">High Spirits</span>'}
+                </div>
+            </div>
+        </div>
+        <div class="shipyard-section">
+            <h4>⚙️ Ship Upgrades</h4>
+        </div>
+    `;
+
+    // Upgrades section
+    const upgradesHtml = Object.entries(CONFIG.upgrades).map(([id, u]) => {
         // === BALANCE: Use scaled upgrade cost ===
         const scaledCost = this.game.getUpgradeCost(id);
         const owned = gs.player.upgrades[id], afford = gs.player.gold >= scaledCost;
@@ -2996,7 +4078,107 @@ renderShipyard() {
             ${!owned ? `<button class="btn-secondary btn-small upg-btn" data-id="${id}" ${afford ? '' : 'disabled'}>${afford ? 'Buy' : 'Need gold'}</button>` : ''}
         </div>`;
     }).join('');
+
+    this.el['upgrades-list'].innerHTML = repairsHtml + upgradesHtml;
+
+    // Bind repair buttons
+    this.el['upgrades-list'].querySelectorAll('.repair-btn').forEach(b => b.addEventListener('click', () => {
+        const type = b.dataset.type;
+        if (this.game.repairShip(type)) {
+            this.renderShipyard();
+            this.updateFooter(gs);
+            this.updateHUD(gs);
+        }
+    }));
+
+    // Bind upgrade buttons
     this.el['upgrades-list'].querySelectorAll('.upg-btn').forEach(b => b.addEventListener('click', () => { if (this.game.buyUpgrade(b.dataset.id)) { this.renderShipyard(); this.updateFooter(gs); } }));
+}
+
+// === LIVING SEA: Tavern / Officers Panel ===
+renderTavern() {
+    const gs = this.game.gameState;
+    const officers = gs.player.officers || [];
+    const islandId = gs.currentIsland;
+
+    // Update officer count
+    this.el['officer-count'].textContent = officers.length;
+
+    // Render current officers
+    if (officers.length === 0) {
+        this.el['current-officers'].innerHTML = '<div class="officers-empty">No officers hired. Visit the tavern to recruit!</div>';
+    } else {
+        this.el['current-officers'].innerHTML = officers.map(off => {
+            const cfg = CONFIG.officers?.[off.type] || {};
+            return `
+                <div class="officer-card hired">
+                    <div class="officer-header">
+                        <span class="officer-name">${cfg.icon || '👤'} ${off.name}</span>
+                        <span class="officer-wage">${cfg.wage || 5}g/day</span>
+                    </div>
+                    <span class="officer-type">${cfg.name || off.type}</span>
+                    <div class="officer-traits">
+                        ${(cfg.pros || []).map(p => `<span class="officer-trait positive">${p}</span>`).join('')}
+                        ${(cfg.cons || []).map(c => `<span class="officer-trait negative">${c}</span>`).join('')}
+                    </div>
+                    <div class="officer-actions">
+                        <button class="btn-danger btn-small fire-officer-btn" data-id="${off.id}">Dismiss</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Bind fire buttons
+        this.el['current-officers'].querySelectorAll('.fire-officer-btn').forEach(b => {
+            b.addEventListener('click', () => {
+                if (this.game.fireOfficer(b.dataset.id)) {
+                    this.renderTavern();
+                    this.updateFooter(gs);
+                }
+            });
+        });
+    }
+
+    // Render available officers at this port
+    const available = getAvailableOfficersAtPort(gs, islandId);
+    if (available.length === 0) {
+        this.el['available-officers'].innerHTML = '<div class="officers-empty">No officers looking for work here. Try another port.</div>';
+    } else {
+        this.el['available-officers'].innerHTML = available.map(off => {
+            const cfg = CONFIG.officers?.[off.type] || {};
+            const hireCost = cfg.hireCost || 100;
+            const canHire = officers.length < 3 && gs.player.gold >= hireCost;
+            return `
+                <div class="officer-card">
+                    <div class="officer-header">
+                        <span class="officer-name">${cfg.icon || '👤'} ${off.name}</span>
+                        <span class="officer-wage">${cfg.wage || 5}g/day</span>
+                    </div>
+                    <span class="officer-type">${cfg.name || off.type}</span>
+                    <div class="officer-traits">
+                        ${(cfg.pros || []).map(p => `<span class="officer-trait positive">${p}</span>`).join('')}
+                        ${(cfg.cons || []).map(c => `<span class="officer-trait negative">${c}</span>`).join('')}
+                    </div>
+                    <div class="officer-actions">
+                        <button class="btn-primary btn-small hire-officer-btn" data-type="${off.type}" data-name="${off.name}" ${canHire ? '' : 'disabled'}>
+                            ${canHire ? `Hire (${hireCost}g)` : officers.length >= 3 ? 'Crew Full' : 'Need Gold'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Bind hire buttons
+        this.el['available-officers'].querySelectorAll('.hire-officer-btn').forEach(b => {
+            b.addEventListener('click', () => {
+                if (this.game.hireOfficer(b.dataset.type, b.dataset.name)) {
+                    this.renderTavern();
+                    this.updateFooter(gs);
+                    this.updateHUD(gs);
+                }
+            });
+        });
+    }
 }
 
 updateFooter(gs) { this.el['trade-gold'].textContent = gs.player.gold.toLocaleString(); this.el['trade-cargo'].textContent = getCargoUsed(gs) + '/' + getCargoCapacity(gs); }
@@ -3100,6 +4282,40 @@ showMap() {
 
 showPirate(cost, parley) { this.el['tribute-cost'].textContent = cost + 'g'; this.el['pirate-pass'].classList.toggle('hidden', !parley); this.el['pirate-modal'].classList.remove('hidden'); }
 closePirate() { this.el['pirate-modal'].classList.add('hidden'); }
+
+// === LIVING SEA: Chase UI Methods ===
+showChase(escapeChance, duration) {
+    this.el['chase-chance'].textContent = Math.round(escapeChance * 100) + '%';
+    this.el['chase-timer'].textContent = Math.ceil(duration / 1000) + 's';
+    this.el['chase-player'].style.left = '20%';
+    this.el['chase-result'].classList.add('hidden');
+    this.el['chase-result'].className = 'chase-result hidden';
+    // Enable all action buttons
+    this.el['chase-trim'].disabled = false;
+    this.el['chase-jettison'].disabled = false;
+    this.el['chase-risky'].disabled = false;
+    this.el['chase-modal'].classList.remove('hidden');
+}
+
+updateChase(escapeChance, timeLeft, playerProgress) {
+    this.el['chase-chance'].textContent = Math.round(escapeChance * 100) + '%';
+    this.el['chase-timer'].textContent = Math.ceil(timeLeft / 1000) + 's';
+    // Player position: 20% (start) to 5% (escaped) based on progress
+    const pos = 20 - (playerProgress * 15);
+    this.el['chase-player'].style.left = pos + '%';
+}
+
+showChaseResult(escaped, message) {
+    this.el['chase-result'].textContent = message;
+    this.el['chase-result'].className = 'chase-result ' + (escaped ? 'escaped' : 'caught');
+    this.el['chase-result'].classList.remove('hidden');
+    // Disable action buttons
+    this.el['chase-trim'].disabled = true;
+    this.el['chase-jettison'].disabled = true;
+    this.el['chase-risky'].disabled = true;
+}
+
+closeChase() { this.el['chase-modal'].classList.add('hidden'); }
 
 showTitleEarned(icon, name, desc) {
     this.el['title-icon'].textContent = icon;
@@ -3238,6 +4454,44 @@ advanceDay() {
         // Track total upkeep for stats
         if (!gs.player.stats.totalUpkeep) gs.player.stats.totalUpkeep = 0;
         gs.player.stats.totalUpkeep += upkeep;
+    }
+
+    // === LIVING SEA: Ship condition wear ===
+    const windStrength = gs.wind?.strength || 0;
+    applyDailyWear(gs, false, windStrength);
+
+    // Check for mutiny at low morale
+    if (checkMutinyRisk(gs)) {
+        // Mutiny event - lose some gold and supplies
+        const goldLoss = Math.floor(gs.player.gold * 0.1);
+        const supplyLoss = Math.floor(gs.player.supplies * 0.2);
+        gs.player.gold = Math.max(0, gs.player.gold - goldLoss);
+        gs.player.supplies = Math.max(0, gs.player.supplies - supplyLoss);
+        this.ui.showWarning('⚔️', 'Mutiny!', `Crew unrest! Lost ${goldLoss}g and ${supplyLoss} supplies.`);
+        restoreMorale(gs, 20); // Situation calms after confrontation
+    }
+
+    // Ship condition warnings
+    if (getShipHull(gs) < CONFIG.shipCondition.criticalThreshold) {
+        this.ui.showWarning('🔨', 'Hull Critical!', 'Repair at port or risk sinking!');
+    } else if (getShipRigging(gs) < CONFIG.shipCondition.criticalThreshold) {
+        this.ui.showWarning('⛵', 'Rigging Failing!', 'Speed reduced. Repair soon!');
+    }
+
+    // Check questline deadline
+    if (checkQuestlineDeadline(gs)) {
+        this.ui.showWarning('📜', 'Quest Failed!', 'You ran out of time.');
+    }
+
+    // Check for bounty hunter encounter
+    const bountyLevel = getBountyLevel(gs);
+    const hunterChance = CONFIG.bountyHunters.encounterChance[bountyLevel] || 0;
+    if (hunterChance > 0 && Math.random() < hunterChance) {
+        const hunter = spawnBountyHunter(gs);
+        if (hunter) {
+            this.triggerBountyHunter(hunter);
+            return; // Skip normal day processing
+        }
     }
 
     // === BALANCE: Decay systems ===
@@ -3403,6 +4657,128 @@ checkEncounters() {
 
 triggerPirate() {
     const gs = this.gameState;
+    // === LIVING SEA: Start chase sequence before pirate confrontation ===
+    // Pirates with parley skip the chase
+    if (gs.player.faction === 'pirates') {
+        this._showPirateEncounter();
+        return;
+    }
+    this.startChase('pirate');
+}
+
+// === LIVING SEA: Chase System ===
+_chaseState = null;
+_chaseInterval = null;
+
+startChase(type = 'pirate') {
+    const gs = this.gameState;
+    const escapeChance = calculateEscapeChance(gs);
+    const duration = getChaseDuration(gs);
+
+    this._chaseState = {
+        type,
+        startTime: Date.now(),
+        duration,
+        escapeChance,
+        progress: 0,
+        actionsUsed: { trim: false, jettison: false, risky: false },
+        cargoJettisoned: 0
+    };
+
+    this.ui.showChase(escapeChance, duration);
+
+    // Start chase timer
+    this._chaseInterval = setInterval(() => this._updateChase(), 100);
+}
+
+_updateChase() {
+    if (!this._chaseState) return;
+
+    const elapsed = Date.now() - this._chaseState.startTime;
+    const remaining = Math.max(0, this._chaseState.duration - elapsed);
+    const progress = Math.min(1, elapsed / this._chaseState.duration);
+
+    this._chaseState.progress = progress;
+    this.ui.updateChase(this._chaseState.escapeChance, remaining, progress);
+
+    // Chase resolution
+    if (remaining <= 0) {
+        this._resolveChase();
+    }
+}
+
+chaseAction(action) {
+    if (!this._chaseState || this._chaseState.actionsUsed[action]) return;
+
+    const gs = this.gameState;
+    this._chaseState.actionsUsed[action] = true;
+
+    if (action === 'trim') {
+        // Trim sails: +10% escape chance, slight rigging wear
+        this._chaseState.escapeChance = Math.min(0.95, this._chaseState.escapeChance + 0.10);
+        damageRigging(gs, 5);
+        this.ui.toast('Trim Sails', '+10% escape, rigging strain');
+    } else if (action === 'jettison') {
+        // Jettison cargo: +15% escape chance, lose 20% cargo
+        const cargoLost = this.loseCargo(calcCargoLoss(gs, 0.2));
+        this._chaseState.cargoJettisoned += cargoLost;
+        this._chaseState.escapeChance = Math.min(0.95, this._chaseState.escapeChance + 0.15);
+        this.ui.toast('Jettison!', `+15% escape, lost ${cargoLost} cargo`);
+    } else if (action === 'risky') {
+        // Risky maneuver: 50% chance +25% escape, 50% chance -20% and hull damage
+        if (Math.random() < 0.5) {
+            this._chaseState.escapeChance = Math.min(0.95, this._chaseState.escapeChance + 0.25);
+            this.ui.toast('Daring Move!', '+25% escape chance!');
+        } else {
+            this._chaseState.escapeChance = Math.max(0.1, this._chaseState.escapeChance - 0.20);
+            damageHull(gs, 15);
+            this.ui.toast('Risky Failed!', '-20% escape, hull damage');
+        }
+    }
+
+    // Disable used action button
+    this.ui.el['chase-' + action].disabled = true;
+    this.ui.updateChase(this._chaseState.escapeChance, this._chaseState.duration - (Date.now() - this._chaseState.startTime), this._chaseState.progress);
+    this.ui.updateHUD(gs);
+}
+
+_resolveChase() {
+    clearInterval(this._chaseInterval);
+    this._chaseInterval = null;
+
+    const gs = this.gameState;
+    const escaped = Math.random() < this._chaseState.escapeChance;
+    const type = this._chaseState.type;
+
+    if (escaped) {
+        // Successfully escaped!
+        this.ui.showChaseResult(true, 'You escaped! The pirates fall behind.');
+        // Small morale boost for exciting escape
+        restoreMorale(gs, 5);
+        setTimeout(() => {
+            this.ui.closeChase();
+            this.ui.toast('Escaped!', 'Lost the pirates');
+        }, 2000);
+    } else {
+        // Caught! Show appropriate encounter
+        this.ui.showChaseResult(false, 'Caught! The pirates board your ship.');
+        setTimeout(() => {
+            this.ui.closeChase();
+            if (type === 'pirate') {
+                this._showPirateEncounter();
+            } else if (type === 'bounty_hunter') {
+                this._showBountyHunterEncounter();
+            }
+        }, 2000);
+    }
+
+    this._chaseState = null;
+    this.ui.updateHUD(gs);
+    this.save();
+}
+
+_showPirateEncounter() {
+    const gs = this.gameState;
     // Power-scaled tribute calculation
     const enc = CONFIG.balance.encounters;
     const power = getPlayerPower(gs);
@@ -3416,6 +4792,60 @@ triggerPirate() {
     const baseCost = Math.max(enc.pirateMinTribute, Math.floor(gs.player.gold * tributeRate) + enc.pirateMinTribute);
     const cost = calcTributeCost(gs, baseCost);
     this.ui.showPirate(cost, gs.player.faction === 'pirates');
+}
+
+_showBountyHunterEncounter() {
+    // Bounty hunter encounter - implemented in bounty system
+    const gs = this.gameState;
+    const hunter = spawnBountyHunter(gs);
+    if (!hunter) {
+        this.ui.toast('Close Call', 'The hunter lost your trail');
+        return;
+    }
+    // Show encounter modal with hunter options
+    this.ui.showEncounter({
+        icon: '🎯',
+        title: `${hunter.name} Approaches!`,
+        desc: `A ${hunter.tier} bounty hunter has caught up with you. They demand you surrender!`,
+        options: [
+            { text: `💰 Pay Bribe (${hunter.bribeCost}g)`, action: () => this._bribeBountyHunter(hunter) },
+            { text: '⚔️ Fight', action: () => this._fightBountyHunter(hunter) },
+        ]
+    });
+}
+
+_bribeBountyHunter(hunter) {
+    const gs = this.gameState;
+    if (gs.player.gold >= hunter.bribeCost) {
+        gs.player.gold -= hunter.bribeCost;
+        this.ui.closeEncounter();
+        this.ui.toast('Bribed', `${hunter.name} looks the other way`);
+    } else {
+        this._fightBountyHunter(hunter);
+    }
+    this.ui.updateHUD(gs);
+}
+
+_fightBountyHunter(hunter) {
+    const gs = this.gameState;
+    this.ui.closeEncounter();
+    // Fight mechanics similar to pirate fight
+    const winChance = 0.4 - (hunter.difficulty * 0.1);
+    if (Math.random() < winChance) {
+        defeatHunter(gs, hunter.id);
+        const reward = hunter.bountyReward || 200;
+        gs.player.gold += reward;
+        this.ui.toast('Victory!', `Defeated ${hunter.name}! +${reward}g`);
+    } else {
+        // Lost fight - lose gold and cargo
+        const loss = Math.floor(gs.player.gold * 0.3);
+        gs.player.gold -= loss;
+        this.loseCargo(calcCargoLoss(gs, 0.25));
+        damageHull(gs, 20);
+        this.ui.toast('Defeated', `${hunter.name} claims their prize`);
+    }
+    this.ui.updateHUD(gs);
+    this.save();
 }
 
 payTribute() {
@@ -4114,6 +5544,91 @@ getUpgradeCost(id) {
     const prog = CONFIG.balance.progression;
     const costMult = getPowerScaling(gs, 1.0, prog.upgradeCostPowerMult, 1.0, prog.upgradeCostMax);
     return Math.floor(u.cost * costMult);
+}
+
+// === LIVING SEA: Ship repairs at dock ===
+repairShip(type) {
+    const gs = this.gameState;
+    const cost = getRepairCost(gs, type);
+    if (gs.player.gold < cost) return false;
+
+    let repaired = false;
+    if (type === 'hull') {
+        const maxHull = getMaxHull(gs);
+        const current = getShipHull(gs);
+        if (current < maxHull) {
+            repairHull(gs, maxHull - current);
+            repaired = true;
+        }
+    } else if (type === 'rigging') {
+        const maxRigging = getMaxRigging(gs);
+        const current = getShipRigging(gs);
+        if (current < maxRigging) {
+            repairRigging(gs, maxRigging - current);
+            repaired = true;
+        }
+    } else if (type === 'morale') {
+        const maxMorale = getMaxMorale(gs);
+        const current = getShipMorale(gs);
+        if (current < maxMorale) {
+            restoreMorale(gs, maxMorale - current);
+            repaired = true;
+        }
+    }
+
+    if (repaired) {
+        gs.player.gold -= cost;
+        const labels = { hull: 'Hull Repaired', rigging: 'Rigging Fixed', morale: 'Crew Rested' };
+        this.ui.toast('Repairs', labels[type] || 'Ship Repaired');
+        this.save();
+    }
+    return repaired;
+}
+
+// === LIVING SEA: Officer hiring/firing ===
+hireOfficer(type, name) {
+    const gs = this.gameState;
+    const cfg = CONFIG.officers?.[type];
+    if (!cfg) return false;
+
+    const officers = gs.player.officers || [];
+    if (officers.length >= 3) {
+        this.ui.toast('Full Crew', 'Max 3 officers');
+        return false;
+    }
+
+    const hireCost = cfg.hireCost || 100;
+    if (gs.player.gold < hireCost) {
+        this.ui.toast('No Gold', 'Not enough to hire');
+        return false;
+    }
+
+    // Check if already have this type
+    if (hasOfficer(gs, type)) {
+        this.ui.toast('Duplicate', `Already have a ${cfg.name}`);
+        return false;
+    }
+
+    gs.player.gold -= hireCost;
+    hireOfficer(gs, type);
+    // Set the name for the hired officer
+    const hired = gs.player.officers[gs.player.officers.length - 1];
+    if (hired) hired.name = name;
+
+    this.ui.toast('Hired!', `${name} joins your crew`);
+    this.save();
+    return true;
+}
+
+fireOfficer(officerId) {
+    const gs = this.gameState;
+    const officer = gs.player.officers?.find(o => o.id === officerId);
+    if (!officer) return false;
+
+    fireOfficer(gs, officerId);
+    this.ui.toast('Dismissed', `${officer.name} leaves your crew`);
+    this.save();
+    return true;
 }
 
 // Save throttling with dirty flag - prevents excessive localStorage writes
