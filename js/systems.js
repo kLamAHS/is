@@ -3105,8 +3105,8 @@ export {
     // Bounty hunters
     spawnBountyHunter, defeatHunter,
     // Questlines
-    startQuestline, updateQuestlineProgress, abandonQuestline, completeQuestline,
-    getQuestlineProgress, checkQuestlineDeadline,
+    startQuestline, advanceQuestline, failQuestline, completeQuestline,
+    getQuestlineProgress, checkQuestlineDeadline, checkQuestlineStep,
     // Risk & value
     getRouteRisk, getHighMarginGoods,
     // Heat
