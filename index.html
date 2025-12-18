@@ -2671,10 +2671,9 @@ function addChartFragment(gs) {
 
     // Auto-reveal cove when 3 fragments collected
     if (gs.player.chartFragments >= 3) {
-        const revealed = useChartFragments(gs);
-        if (revealed) {
-            const coveId = Object.entries(CONFIG.hiddenCoves).find(([id, c]) => c.name === revealed.name)?.[0];
-            return { discovered: true, coveId };
+        const result = useChartFragments(gs);
+        if (result) {
+            return { discovered: true, coveId: result.coveId };
         }
     }
     return { discovered: false };
@@ -2696,7 +2695,7 @@ function useChartFragments(gs) {
     // Reveal random cove
     const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
     discoverCove(gs, coveId);
-    return CONFIG.hiddenCoves[coveId];
+    return { coveId, cove: CONFIG.hiddenCoves[coveId] };
 }
 
 function getCoveByPosition(gs, radius = 40) {
@@ -5126,14 +5125,15 @@ closeTrade() { this.el['trade-modal'].classList.add('hidden'); }
 // ==================== LIVING SEA: Cove UI ====================
 showCove(coveId, gs) {
     const cove = CONFIG.hiddenCoves[coveId];
-    if (!cove) return;
+    if (!cove || !cove.services || !Array.isArray(cove.services)) return;
 
-    this.el['cove-icon'].textContent = cove.icon;
-    this.el['cove-name'].textContent = cove.name;
-    this.el['cove-desc'].textContent = cove.desc;
+    this.el['cove-icon'].textContent = cove.icon || '🏴‍☠️';
+    this.el['cove-name'].textContent = cove.name || 'Hidden Cove';
+    this.el['cove-desc'].textContent = cove.desc || '';
 
     // Build service buttons
     const servicesEl = this.el['cove-services'];
+    if (!servicesEl) return;
     servicesEl.innerHTML = '';
 
     const serviceLabels = {
@@ -6867,42 +6867,40 @@ undockCove() {
 
 // Cove services
 useCoveService(coveId, service) {
-    const gs = this.gameState;
-    const cove = CONFIG.hiddenCoves[coveId];
-    if (!cove) return;
+    try {
+        const gs = this.gameState;
+        const cove = CONFIG.hiddenCoves[coveId];
+        if (!cove) return;
 
-    switch(service) {
-        case 'fence':
-            // Sell contraband at 150% value, no heat
-            this.coveFence(gs);
-            break;
-        case 'salvage':
-            // Buy random salvaged goods cheap
-            this.coveSalvage(gs);
-            break;
-        case 'repair':
-            // Cheap repairs (50% cost)
-            this.coveRepair(gs);
-            break;
-        case 'rest':
-            // Restore morale
-            this.coveRest(gs);
-            break;
-        case 'treasure':
-            // One-time treasure find
-            this.coveTreasure(gs, coveId);
-            break;
-        case 'charts':
-            // Buy chart fragments
-            this.coveCharts(gs);
-            break;
-        case 'rumors':
-            // Get cove hints
-            this.coveRumors(gs);
-            break;
+        switch(service) {
+            case 'fence':
+                this.coveFence(gs);
+                break;
+            case 'salvage':
+                this.coveSalvage(gs);
+                break;
+            case 'repair':
+                this.coveRepair(gs);
+                break;
+            case 'rest':
+                this.coveRest(gs);
+                break;
+            case 'treasure':
+                this.coveTreasure(gs, coveId);
+                break;
+            case 'charts':
+                this.coveCharts(gs);
+                break;
+            case 'rumors':
+                this.coveRumors(gs);
+                break;
+        }
+        this.ui.updateHUD(gs);
+        this.save();
+    } catch (e) {
+        console.error('Cove service error:', service, e);
+        this.ui.toast('Error', e.message || 'Service failed');
     }
-    this.ui.updateHUD(gs);
-    this.save();
 }
 
 coveFence(gs) {
