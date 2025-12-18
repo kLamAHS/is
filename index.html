@@ -1262,28 +1262,26 @@ questlines: {
         desc: 'A starving port needs your help. Deliver supplies and earn their eternal gratitude.',
         faction: 'neutral',
         steps: [
-            { type: 'deliver', goods: { timber: 5, iron: 3 }, to: null, desc: 'Gather building materials' },
-            { type: 'deliver', goods: { rum: 3, sugar: 5 }, to: null, desc: 'Bring food supplies' },
-            { type: 'talk', at: null, desc: 'Speak with the governor' },
-            { type: 'deliver', goods: { gold: 2 }, to: null, desc: 'Final shipment of valuables' }
+            { type: 'deliver', goods: { timber: 5, iron: 3 }, to: null, desc: 'Deliver building materials' },
+            { type: 'deliver', goods: { rum: 3, sugar: 5 }, to: null, desc: 'Deliver food supplies' },
+            { type: 'visit', at: null, desc: 'Return to speak with the governor' }
         ],
         rewards: { gold: 500, reputation: { english: 15, eitc: 10 }, title: 'Benefactor', pardon: true },
-        deadline: 20
+        deadline: 25
     },
     smuggling: {
         id: 'smuggling',
         name: 'The Smuggling Ring',
         icon: '🏴‍☠️',
-        desc: 'A dangerous smuggling operation with high rewards.',
+        desc: 'Run contraband for the pirate network and prove your worth.',
         faction: 'pirates',
         steps: [
-            { type: 'acquire', goods: { gunpowder: 10 }, desc: 'Acquire contraband' },
-            { type: 'evade', count: 2, desc: 'Evade 2 inspections while carrying contraband' },
-            { type: 'deliver', goods: { gunpowder: 10 }, to: 'tortuga', desc: 'Deliver to Tortuga' },
-            { type: 'survive_chase', desc: 'Escape the Navy pursuit' }
+            { type: 'deliver', goods: { gunpowder: 8 }, to: 'tortuga', desc: 'Deliver gunpowder to Tortuga' },
+            { type: 'deliver', goods: { gunpowder: 8 }, to: 'nassau', desc: 'Deliver gunpowder to Nassau' },
+            { type: 'visit', at: 'tortuga', desc: 'Collect payment in Tortuga' }
         ],
         rewards: { gold: 800, reputation: { pirates: 20 }, unlocks: 'smugglersReef' },
-        deadline: 15
+        deadline: 20
     },
     faction_english: {
         id: 'faction_english',
@@ -1292,13 +1290,12 @@ questlines: {
         desc: 'Prove your loyalty to the Crown and earn a Royal Pardon.',
         faction: 'english',
         steps: [
-            { type: 'deliver', goods: { tea: 5, silk: 3 }, to: 'portRoyal', desc: 'Supply Port Royal' },
-            { type: 'report', at: 'portRoyal', desc: 'Report pirate activity' },
-            { type: 'escort', from: 'portRoyal', to: 'kingston', desc: 'Escort a merchant convoy' },
-            { type: 'deliver', goods: { gold: 3 }, to: 'portRoyal', desc: 'Deliver captured treasure' }
+            { type: 'deliver', goods: { tea: 5, silk: 3 }, to: 'portRoyal', desc: 'Supply Port Royal with luxuries' },
+            { type: 'visit', at: 'kingston', desc: 'Deliver dispatches to Kingston' },
+            { type: 'deliver', goods: { iron: 5, timber: 5 }, to: 'portRoyal', desc: 'Bring naval supplies to Port Royal' }
         ],
         rewards: { gold: 600, reputation: { english: 30, pirates: -20 }, pardon: true, title: 'Privateer' },
-        deadline: 25
+        deadline: 30
     }
 },
 
@@ -2975,22 +2972,26 @@ function applyDailyWear(gs, isStorm = false, windStrength = 0) {
     damageMorale(gs, moraleWear);
 }
 
-function getRepairCost(gs, type, amount) {
+function getRepairCost(gs, type, amount = 0) {
     const sc = CONFIG.shipCondition;
     const shipClass = CONFIG.shipClasses[gs.player.shipClass] || CONFIG.shipClasses.brigantine;
     let cost = 0;
 
     if (type === 'hull') cost = amount * sc.dockRepairCostHull;
     else if (type === 'rigging') cost = amount * sc.dockRepairCostRigging;
-    else if (type === 'rest') cost = sc.dockRestCost;
+    else if (type === 'rest' || type === 'morale') {
+        // Scale morale cost with amount, minimum 5g
+        cost = Math.max(5, Math.ceil(amount * 0.5)) + 5;
+    }
 
     // Ship class cost multiplier
-    cost *= shipClass.repairCostMult;
+    cost *= shipClass.repairCostMult || 1;
 
     // Bosun discount
-    if (hasOfficer(gs, 'bosun')) cost *= (1 - CONFIG.officers.bosun.effects.repairDiscount);
+    if (hasOfficer(gs, 'bosun')) cost *= (1 - (CONFIG.officers.bosun?.effects?.repairDiscount || 0));
 
-    return Math.ceil(cost);
+    // Minimum cost of 1g for any repair
+    return Math.max(1, Math.ceil(cost));
 }
 
 function isShipCritical(gs) {
@@ -3036,8 +3037,8 @@ function hireOfficer(gs, officerId) {
     return { success: true, officer };
 }
 
-function fireOfficer(gs, role) {
-    const index = gs.player.officers.findIndex(o => o.role === role);
+function fireOfficer(gs, officerId) {
+    const index = gs.player.officers.findIndex(o => o.id === officerId || o.role === officerId);
     if (index >= 0) {
         gs.player.officers.splice(index, 1);
         return true;
@@ -3067,8 +3068,12 @@ function getAvailableOfficersAtPort(gs, islandId) {
     for (let i = 0; i < count && i < allOfficers.length; i++) {
         const idx = Math.floor(Math.random() * allOfficers.length);
         const officerId = allOfficers[idx];
-        if (!available.includes(officerId) && !hasOfficer(gs, CONFIG.officers[officerId].role)) {
-            available.push(officerId);
+        const cfg = CONFIG.officers[officerId];
+        if (!available.some(o => o.type === officerId) && !hasOfficer(gs, cfg.role)) {
+            available.push({
+                type: officerId,
+                name: generateOfficerName(cfg.role)
+            });
         }
     }
     return available;
@@ -3283,75 +3288,36 @@ function checkQuestlineStep(gs, event, eventData = {}) {
 
     let stepComplete = false;
 
+    // Only check on dock events
+    if (event !== 'dock' || !eventData.islandId) {
+        return { advanced: false };
+    }
+
     switch (step.type) {
         case 'deliver':
             // Check if we have the goods and we're at the right location
-            if (event === 'dock' && eventData.islandId) {
-                const atDestination = !step.to || step.to === eventData.islandId;
-                if (atDestination && step.goods) {
-                    // Check if player has all required goods
-                    const hasGoods = Object.entries(step.goods).every(([gid, qty]) =>
-                        (gs.player.cargo[gid] || 0) >= qty
-                    );
-                    if (hasGoods) {
-                        // Remove delivered goods
-                        Object.entries(step.goods).forEach(([gid, qty]) => {
-                            gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) - qty;
-                        });
-                        stepComplete = true;
-                    }
+            const atDestination = !step.to || step.to === eventData.islandId;
+            if (atDestination && step.goods) {
+                // Check if player has all required goods
+                const hasGoods = Object.entries(step.goods).every(([gid, qty]) =>
+                    (gs.player.cargo[gid] || 0) >= qty
+                );
+                if (hasGoods) {
+                    // Remove delivered goods
+                    Object.entries(step.goods).forEach(([gid, qty]) => {
+                        gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) - qty;
+                    });
+                    stepComplete = true;
                 }
             }
             break;
 
-        case 'acquire':
-            // Check if player has the goods in cargo
-            if (event === 'trade' || event === 'loot') {
-                if (step.goods) {
-                    const hasGoods = Object.entries(step.goods).every(([gid, qty]) =>
-                        (gs.player.cargo[gid] || 0) >= qty
-                    );
-                    if (hasGoods) stepComplete = true;
-                }
-            }
-            break;
-
+        case 'visit':
         case 'talk':
         case 'report':
-            // Check if at the right island
-            if (event === 'dock' && eventData.islandId) {
-                if (!step.at || step.at === eventData.islandId) {
-                    stepComplete = true;
-                }
-            }
-            break;
-
-        case 'evade':
-            // Track evaded inspections
-            if (event === 'evade_inspection') {
-                const count = (progress.stepProgress.evaded || 0) + 1;
-                gs.player.questlineProgress[progress.questlineId].stepProgress.evaded = count;
-                if (count >= (step.count || 1)) {
-                    stepComplete = true;
-                }
-            }
-            break;
-
-        case 'survive_chase':
-            // Track survived chases
-            if (event === 'escape_chase') {
+            // Simply visit the specified island
+            if (!step.at || step.at === eventData.islandId) {
                 stepComplete = true;
-            }
-            break;
-
-        case 'escort':
-            // Track escort from->to journey
-            if (event === 'dock' && eventData.islandId) {
-                if (eventData.islandId === step.from) {
-                    gs.player.questlineProgress[progress.questlineId].stepProgress.startedEscort = true;
-                } else if (eventData.islandId === step.to && progress.stepProgress.startedEscort) {
-                    stepComplete = true;
-                }
             }
             break;
     }
@@ -4641,9 +4607,9 @@ renderShipyard() {
     const hull = getShipHull(gs), rigging = getShipRigging(gs), morale = getShipMorale(gs);
     const maxHull = getMaxHull(gs), maxRigging = getMaxRigging(gs), maxMorale = getMaxMorale(gs);
     const hullDmg = maxHull - hull, riggingDmg = maxRigging - rigging, moraleDmg = maxMorale - morale;
-    const hullCost = getRepairCost(gs, 'hull');
-    const riggingCost = getRepairCost(gs, 'rigging');
-    const moraleCost = getRepairCost(gs, 'morale');
+    const hullCost = hullDmg > 0 ? getRepairCost(gs, 'hull', hullDmg) : 0;
+    const riggingCost = riggingDmg > 0 ? getRepairCost(gs, 'rigging', riggingDmg) : 0;
+    const moraleCost = moraleDmg > 0 ? getRepairCost(gs, 'rest', moraleDmg) : 0;
     const canAffordHull = gs.player.gold >= hullCost && hullDmg > 0;
     const canAffordRigging = gs.player.gold >= riggingCost && riggingDmg > 0;
     const canAffordMorale = gs.player.gold >= moraleCost && moraleDmg > 0;
@@ -4800,17 +4766,17 @@ renderTavern() {
         this.el['current-officers'].innerHTML = '<div class="officers-empty">No officers hired. Visit the tavern to recruit!</div>';
     } else {
         this.el['current-officers'].innerHTML = officers.map(off => {
-            const cfg = CONFIG.officers?.[off.type] || {};
+            const cfg = CONFIG.officers?.[off.id] || {};
             return `
                 <div class="officer-card hired">
                     <div class="officer-header">
                         <span class="officer-name">${cfg.icon || '👤'} ${off.name}</span>
-                        <span class="officer-wage">${cfg.wage || 5}g/day</span>
+                        <span class="officer-wage">${off.wage || cfg.baseWage || 5}g/day</span>
                     </div>
-                    <span class="officer-type">${cfg.name || off.type}</span>
+                    <span class="officer-type">${cfg.name || off.role}</span>
                     <div class="officer-traits">
-                        ${(cfg.pros || []).map(p => `<span class="officer-trait positive">${p}</span>`).join('')}
-                        ${(cfg.cons || []).map(c => `<span class="officer-trait negative">${c}</span>`).join('')}
+                        ${cfg.perk ? `<span class="officer-trait positive">✓ ${cfg.perk}</span>` : ''}
+                        ${cfg.drawback ? `<span class="officer-trait negative">✗ ${cfg.drawback}</span>` : ''}
                     </div>
                     <div class="officer-actions">
                         <button class="btn-danger btn-small fire-officer-btn" data-id="${off.id}">Dismiss</button>
@@ -4843,12 +4809,12 @@ renderTavern() {
                 <div class="officer-card">
                     <div class="officer-header">
                         <span class="officer-name">${cfg.icon || '👤'} ${off.name}</span>
-                        <span class="officer-wage">${cfg.wage || 5}g/day</span>
+                        <span class="officer-wage">${cfg.baseWage || 5}g/day</span>
                     </div>
                     <span class="officer-type">${cfg.name || off.type}</span>
                     <div class="officer-traits">
-                        ${(cfg.pros || []).map(p => `<span class="officer-trait positive">${p}</span>`).join('')}
-                        ${(cfg.cons || []).map(c => `<span class="officer-trait negative">${c}</span>`).join('')}
+                        ${cfg.perk ? `<span class="officer-trait positive">✓ ${cfg.perk}</span>` : ''}
+                        ${cfg.drawback ? `<span class="officer-trait negative">✗ ${cfg.drawback}</span>` : ''}
                     </div>
                     <div class="officer-actions">
                         <button class="btn-primary btn-small hire-officer-btn" data-type="${off.type}" data-name="${off.name}" ${canHire ? '' : 'disabled'}>
@@ -6769,31 +6735,32 @@ abandonQuestline() {
 // === LIVING SEA: Ship repairs at dock ===
 repairShip(type) {
     const gs = this.gameState;
-    const cost = getRepairCost(gs, type);
+
+    // Calculate amount to repair
+    let amount = 0;
+    if (type === 'hull') {
+        amount = getMaxHull(gs) - getShipHull(gs);
+    } else if (type === 'rigging') {
+        amount = getMaxRigging(gs) - getShipRigging(gs);
+    } else if (type === 'morale') {
+        amount = getMaxMorale(gs) - getShipMorale(gs);
+    }
+
+    if (amount <= 0) return false;
+
+    const cost = getRepairCost(gs, type === 'morale' ? 'rest' : type, amount);
     if (gs.player.gold < cost) return false;
 
     let repaired = false;
     if (type === 'hull') {
-        const maxHull = getMaxHull(gs);
-        const current = getShipHull(gs);
-        if (current < maxHull) {
-            repairHull(gs, maxHull - current);
-            repaired = true;
-        }
+        repairHull(gs, amount);
+        repaired = true;
     } else if (type === 'rigging') {
-        const maxRigging = getMaxRigging(gs);
-        const current = getShipRigging(gs);
-        if (current < maxRigging) {
-            repairRigging(gs, maxRigging - current);
-            repaired = true;
-        }
+        repairRigging(gs, amount);
+        repaired = true;
     } else if (type === 'morale') {
-        const maxMorale = getMaxMorale(gs);
-        const current = getShipMorale(gs);
-        if (current < maxMorale) {
-            restoreMorale(gs, maxMorale - current);
-            repaired = true;
-        }
+        restoreMorale(gs, amount);
+        repaired = true;
     }
 
     if (repaired) {
