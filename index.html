@@ -219,6 +219,7 @@
     .contract-reward { display: flex; align-items: center; gap: 2px; }
     .contract-reward.gold { color: var(--gold-dark); }
     .contract-reward.rep { color: var(--sea-medium); }
+    .contract-cost { font-size: 0.7rem; color: var(--blood-red); margin-bottom: var(--space-xs); font-style: italic; }
     .contract-actions { display: flex; gap: var(--space-xs); }
     .contract-actions button { flex: 1; }
     .contract-empty { text-align: center; color: var(--ink-light); padding: var(--space-lg); font-style: italic; }
@@ -603,13 +604,13 @@ voyager: {
     effects: { inspectionReduction: 0.02 } // per tier
 }
 },
-// CONTRACT TYPES
+// CONTRACT TYPES - BALANCE: Reduced rewards & rep, contracts supplement trading not replace it
 contractTypes: {
-delivery: { name: 'Delivery', icon: '📦', baseReward: 100, repReward: 5, riskMult: 1.0 },
-smuggling: { name: 'Smuggling', icon: '🏴‍☠️', baseReward: 200, repReward: -5, riskMult: 1.8, heatGain: 15 },
-courier: { name: 'Courier', icon: '✉️', baseReward: 80, repReward: 8, riskMult: 0.8 },
-supply: { name: 'Supply Run', icon: '🍖', baseReward: 60, repReward: 3, riskMult: 0.6 },
-faction: { name: 'Faction Work', icon: '⚔️', baseReward: 50, repReward: 15, riskMult: 1.2 }
+delivery: { name: 'Delivery', icon: '📦', baseReward: 50, repReward: 2, riskMult: 1.0 },        // Rep 5->2, just a routine delivery
+smuggling: { name: 'Smuggling', icon: '🏴‍☠️', baseReward: 100, repReward: -5, riskMult: 1.8, heatGain: 20 }, // Rep penalty stays
+courier: { name: 'Courier', icon: '✉️', baseReward: 25, repReward: 2, riskMult: 0.8, depositPct: 0.3 },  // Rep 5->2, just travel
+supply: { name: 'Supply Run', icon: '🍖', baseReward: 20, repReward: 2, riskMult: 0.6, supplyCost: 8 },  // Rep 3->2, minor help
+faction: { name: 'Faction Work', icon: '⚔️', baseReward: 15, repReward: 5, riskMult: 1.2 }    // Rep 12->5, was way too high
 },
 events: [
 { id: 'festival', name: 'Festival', desc: 'Luxury demand up!', duration: 3, affects: ['luxury'], multiplier: 1.5 },
@@ -700,6 +701,202 @@ crackdownDecayPerDay: 2, crackdownMaxLevel: 100,
 // Living Sea settings
 maxDriftEntities: 8, driftEntitySpawnChance: 0.12, rumorRefreshDays: 2, maxRumorsPerPort: 4,
 portStateChangeChance: 0.08, reliefRunThreshold: 10
+},
+// ==================== BALANCE TUNING ====================
+// All balance values in one place for easy adjustment.
+//
+// === BALANCE PATCH v1.0 - TUNING TABLE ===
+//
+// SYSTEM                  | VALUE              | RANGE      | EFFECT
+// ----------------------- | ------------------ | ---------- | ---------------------------------
+// Power Score             |                    |            | Tracks player progression
+//   goldWeight            | 0.0005             | 0.0001-0.001 | Higher = gold matters more
+//   cargoWeight           | 0.001              | 0.0005-0.005 | Higher = cargo value matters more
+//   upgradeWeight         | 200                | 100-500    | Points per upgrade
+//   titleWeight           | 50                 | 25-100     | Points per title tier
+//   daysWeight            | 2                  | 1-5        | Points per day survived
+//   contractsWeight       | 10                 | 5-25       | Points per completed contract
+//
+// Power Thresholds        |                    |            | Game phase boundaries
+//   mid                   | 500                | 300-800    | Early->mid transition
+//   late                  | 1500               | 1000-2500  | Mid->late transition
+//   endgame               | 3000               | 2000-5000  | Late->endgame transition
+//
+// Upkeep (gold sinks)     |                    |            | Reduces hoarding
+//   crewWagesPerDay       | 3                  | 1-10       | Base daily cost
+//   maintenancePerDay     | 2                  | 1-5        | Ship maintenance
+//   dockingFee            | 25                 | 10-50      | Per-port cost
+//   dockingFeeHostile     | 50                 | 25-100     | Extra for hostile ports
+//
+// Anti-Spam               |                    |            | Prevents trade loops
+//   tradeFatigue.perVisit | 10                 | 5-20       | Trades before penalty
+//   tradeFatigue.penalty  | 0.03               | 0.01-0.1   | Price penalty per excess trade
+//   bulkTrade.threshold   | 5                  | 3-10       | Units before bulk penalty
+//   portVisit.minDays     | 2                  | 1-5        | Days for cooldown reset
+//
+// Smuggling               |                    |            | Contraband risk/reward
+//   heatGainBase          | 12                 | 5-20       | Heat per transaction
+//   heatGainPerUnit       | 2                  | 1-5        | Additional heat per unit
+//   fenceLimit            | 10                 | 5-20       | Max units per port visit
+//   inspectionBaseChance  | 0.08               | 0.03-0.15  | Base inspection chance
+//
+// Bounty System           |                    |            | Escalating consequences
+//   baseGainPerCrime      | 50                 | 25-100     | Bounty per major crime
+//   bountyDecayPerDay     | 5                  | 2-15       | Daily decay rate
+//   wanted threshold      | 100                | 50-200     | First notoriety tier
+//   hunted threshold      | 300                | 200-500    | Second tier
+//   infamous threshold    | 600                | 400-1000   | Maximum tier
+//
+// Encounter Scaling       |                    |            | Power-based difficulty
+//   pirateStrengthBase    | 0.1                | 0.05-0.2   | Base tribute %
+//   pirateFightWinBase    | 0.5                | 0.3-0.7    | Base win chance
+//   wreckPositiveChance   | 0.7                | 0.5-0.9    | Wreck success rate
+//   merchantDiscountMax   | 0.5                | 0.3-0.6    | Best merchant discount
+//   merchantDiscountMin   | 0.2                | 0.1-0.3    | Worst merchant discount
+//
+// Contract Balance        |                    |            | Contracts supplement trading
+//   delivery.baseReward   | 50                 | 30-80      | Down from 100 - lose goods profit
+//   smuggling.baseReward  | 100                | 60-150     | Down from 200 - high risk
+//   courier.baseReward    | 25                 | 15-40      | Down from 80 - requires 30% deposit
+//   supply.baseReward     | 20                 | 10-35      | Down from 60 - costs 8 supplies
+//   faction.baseReward    | 15                 | 10-25      | Down from 50 - rep-focused
+//
+// Contract Reputation      |                    |            | Rep should match difficulty
+//   delivery.repReward    | 2                  | 1-3        | Down from 5 - routine work
+//   smuggling.repReward   | -5                 | -3 to -8   | Penalty stays - illegal
+//   courier.repReward     | 2                  | 1-3        | Down from 5 - just travel
+//   supply.repReward      | 2                  | 1-3        | Down from 3 - minor help
+//   faction.repReward     | 5                  | 3-8        | Down from 12 - was way too high
+//
+// Progression Scaling     |                    |            | Anti-snowball
+//   contractRewardMin     | 0.7                | 0.5-0.9    | Min reward multiplier
+//   upgradeCostMax        | 2.0                | 1.5-3.0    | Max cost multiplier
+//
+// === END TUNING TABLE ===
+
+balance: {
+    // === PLAYER POWER SCORE WEIGHTS ===
+    // Used to calculate overall player strength for scaling
+    powerScore: {
+        goldWeight: 0.0005,        // 1 point per 2000 gold (range: 0.0001-0.001)
+        cargoWeight: 0.001,        // 1 point per 1000 cargo value (range: 0.0005-0.005)
+        upgradeWeight: 200,        // Points per upgrade owned (range: 100-500)
+        titleWeight: 50,           // Points per title tier (range: 25-100)
+        daysWeight: 2,             // Points per day survived (range: 1-5)
+        contractsWeight: 10        // Points per completed contract (range: 5-25)
+    },
+    // Power thresholds for game phases
+    powerThresholds: {
+        early: 0,      // 0-500 power: early game
+        mid: 500,      // 500-1500: mid game
+        late: 1500,    // 1500-3000: late game
+        endgame: 3000  // 3000+: endgame
+    },
+
+    // === ECONOMY CONTROLS ===
+    upkeep: {
+        enabled: true,
+        crewWagesPerDay: 3,        // Base gold per day for crew
+        crewWagesPerUpgrade: 1,    // Additional per upgrade owned
+        maintenancePerDay: 2,      // Ship maintenance per day
+        dockingFee: 25,            // Fee to dock at any port
+        dockingFeeHostile: 50      // Additional fee at hostile ports
+    },
+    demandSaturation: {
+        enabled: true,
+        decayRate: 0.15,           // Price drops 15% per unit sold above threshold
+        threshold: 5,              // Units sold before saturation kicks in
+        recoveryPerDay: 2,         // Units of saturation that recover per day
+        maxPenalty: 0.5            // Minimum price multiplier (50% of base)
+    },
+    tradeCooldown: {
+        enabled: true,
+        sameGoodPenalty: 0.05,     // 5% less profit per repeated same-good trade
+        maxPenalty: 0.3,           // Max 30% penalty for repeated trades
+        decayPerDay: 0.1           // Penalty decays 10% per day
+    },
+    bulkTrade: {
+        enabled: true,
+        threshold: 5,              // Units before bulk penalty kicks in
+        penaltyPerUnit: 0.02,      // 2% worse price per unit above threshold
+        maxPenalty: 0.3            // Max 30% penalty for bulk trades
+    },
+    portVisitCooldown: {
+        enabled: true,
+        minDaysBetween: 2,         // Minimum days between visits for full prices
+        penaltyPerEarlyDay: 0.1,   // 10% penalty per day early
+        maxPenalty: 0.2            // Max 20% penalty for visiting too soon
+    },
+    tradeFatigue: {
+        enabled: true,
+        transactionsPerVisit: 10,  // After N trades, prices worsen
+        penaltyPerTrade: 0.03,     // 3% worse per trade after limit
+        maxPenalty: 0.25           // Max 25% penalty from fatigue
+    },
+
+    // === SMUGGLING BALANCE ===
+    smuggling: {
+        heatGainBase: 12,          // Heat per contraband transaction (up from 8)
+        heatGainPerUnit: 2,        // Additional heat per unit traded
+        heatDecayBase: 1,          // Base decay per day (down from 2)
+        heatDecayAtSea: 0.5,       // Reduced decay while at sea
+        fenceLimit: 10,            // Max contraband units per port per visit
+        fenceLimitDecayDays: 5,    // Days for fence limit to reset
+        priceDropPerUnit: 0.03,    // 3% price drop per unit sold to fence
+        inspectionBaseChance: 0.08, // Increased base inspection chance
+        inspectionHeatMult: 1.5    // Heat multiplier for inspection chance
+    },
+
+    // === BOUNTY/NOTORIETY SYSTEM ===
+    bounty: {
+        enabled: true,
+        baseGainPerCrime: 50,      // Gold bounty per major infraction
+        contrabandBounty: 10,      // Per contraband unit when caught
+        fleeingBounty: 25,         // Bounty for fleeing inspection
+        bountyDecayPerDay: 5,      // Bounty decay per day
+        bountyDecayDocked: 10,     // Faster decay when docked at friendly port
+        // Bounty thresholds trigger different responses
+        thresholds: {
+            wanted: 100,           // Inspections more frequent
+            hunted: 300,           // Navy actively seeks you
+            infamous: 600          // Bounty hunters appear
+        },
+        // Bounty affects tribute demands
+        tributeBountyMult: 0.002   // +0.2% tribute per bounty point
+    },
+
+    // === ENCOUNTER SCALING ===
+    encounters: {
+        pirateStrengthBase: 0.1,   // Base tribute % of gold
+        pirateStrengthPower: 0.0001, // Additional % per power point
+        pirateMinTribute: 50,      // Minimum tribute
+        pirateFightWinBase: 0.5,   // Base fight win chance
+        pirateFightWinPenalty: 0.05, // Reduced by this per power tier
+        pirateLootBase: 50,        // Base loot from winning
+        pirateLootPowerMult: 0.02, // Loot scales slightly with power
+        wreckPositiveChance: 0.7,  // Down from 90% positive
+        merchantDiscountMax: 0.5,  // Merchant discount capped at 50%
+        merchantDiscountMin: 0.2   // Min discount (gets worse with power)
+    },
+
+    // === PROGRESSION SCALING ===
+    progression: {
+        contractRewardBase: 1.0,        // Base multiplier
+        contractRewardPowerMult: -0.0001, // Slight decrease per power point
+        contractRewardMin: 0.7,         // Minimum 70% of base reward
+        upgradeCostPowerMult: 0.0005,   // Upgrades cost more as power grows
+        upgradeCostMax: 2.0,            // Max 2x base cost
+        titleBonusDecay: 0.9            // Each title tier bonus is 90% of previous
+    },
+
+    // === DIFFICULTY SCALING ===
+    difficulty: {
+        inspectionPowerMult: 0.0002,  // Inspection chance increases with power
+        piratePowerMult: 0.0001,      // Pirate encounter rate scales
+        stormPowerMult: 0,            // Storms don't scale (nature doesn't care)
+        priceVolatilityPower: 0.0001, // Markets more volatile at high power
+        maxScaling: 2.0               // Cap on any scaling multiplier
+    }
 }
 };
 
@@ -710,6 +907,253 @@ const WIND_DIRS = [
 { name: 'W', angle: 270, v: { x: -1, z: 0 } }, { name: 'NW', angle: 315, v: { x: -0.7, z: -0.7 } }
 ];
 const WIND_STR = [{ name: 'Calm', m: 0 }, { name: 'Light', m: 0.15 }, { name: 'Moderate', m: 0.25 }, { name: 'Strong', m: 0.4 }];
+
+// ==================== PLAYER POWER SCORE SYSTEM ====================
+// Calculates overall player strength for difficulty scaling
+function getPlayerPower(gs) {
+    const ps = CONFIG.balance.powerScore;
+    let power = 0;
+
+    // Wealth contribution
+    power += (gs.player.gold || 0) * ps.goldWeight;
+
+    // Cargo value (use base prices to avoid circular dependency)
+    let cargoValue = 0;
+    Object.entries(gs.player.cargo || {}).forEach(([gid, qty]) => {
+        cargoValue += (CONFIG.goods[gid]?.basePrice || 0) * qty;
+    });
+    power += cargoValue * ps.cargoWeight;
+
+    // Upgrades owned
+    const upgradeCount = Object.keys(gs.player.upgrades || {}).filter(k => gs.player.upgrades[k]).length;
+    power += upgradeCount * ps.upgradeWeight;
+
+    // Title tiers (sum across all tracks)
+    let totalTiers = 0;
+    Object.keys(CONFIG.titles).forEach(trackId => {
+        totalTiers += getTitleTierSafe(trackId, gs);
+    });
+    power += totalTiers * ps.titleWeight;
+
+    // Days survived
+    power += (gs.player.days || 1) * ps.daysWeight;
+
+    // Contracts completed
+    power += (gs.player.stats?.contractsCompleted || 0) * ps.contractsWeight;
+
+    return Math.floor(power);
+}
+
+// Safe title tier lookup that doesn't cause circular dependency
+function getTitleTierSafe(trackId, gs) {
+    const track = CONFIG.titles[trackId];
+    if (!track) return 0;
+    let value = 0;
+    switch (trackId) {
+        case 'merchant': value = (gs.player.gold || 0); break; // Simplified, no cargo
+        case 'smuggler': value = gs.player.stats?.contrabandTraded || 0; break;
+        case 'voyager': value = gs.player.days || 0; break;
+    }
+    let tier = 0;
+    for (let i = 0; i < track.thresholds.length; i++) {
+        if (value >= track.thresholds[i]) tier = i + 1;
+        else break;
+    }
+    return tier;
+}
+
+// Returns game phase: 'early', 'mid', 'late', 'endgame'
+function getGamePhase(gs) {
+    const power = getPlayerPower(gs);
+    const t = CONFIG.balance.powerThresholds;
+    if (power >= t.endgame) return 'endgame';
+    if (power >= t.late) return 'late';
+    if (power >= t.mid) return 'mid';
+    return 'early';
+}
+
+// Get power-scaled multiplier (clamped between min and max)
+function getPowerScaling(gs, baseMult, powerMult, min = 0, max = CONFIG.balance.difficulty.maxScaling) {
+    const power = getPlayerPower(gs);
+    return Math.max(min, Math.min(max, baseMult + power * powerMult));
+}
+
+// ==================== BOUNTY SYSTEM ====================
+function getBounty(gs) {
+    return gs.player.bounty || 0;
+}
+
+function addBounty(gs, amount) {
+    if (!CONFIG.balance.bounty.enabled) return;
+    gs.player.bounty = Math.max(0, (gs.player.bounty || 0) + amount);
+}
+
+function decayBounty(gs, isDocked = false, isFriendlyPort = false) {
+    if (!CONFIG.balance.bounty.enabled) return;
+    const bb = CONFIG.balance.bounty;
+    let decay = bb.bountyDecayPerDay;
+    if (isDocked && isFriendlyPort) decay = bb.bountyDecayDocked;
+    gs.player.bounty = Math.max(0, (gs.player.bounty || 0) - decay);
+}
+
+function getBountyLevel(gs) {
+    const bounty = getBounty(gs);
+    const t = CONFIG.balance.bounty.thresholds;
+    if (bounty >= t.infamous) return 'infamous';
+    if (bounty >= t.hunted) return 'hunted';
+    if (bounty >= t.wanted) return 'wanted';
+    return 'clean';
+}
+
+// ==================== DEMAND SATURATION SYSTEM ====================
+function getMarketSaturation(gs, iid, gid) {
+    if (!CONFIG.balance.demandSaturation.enabled) return 0;
+    return gs.world.saturation?.[iid]?.[gid] || 0;
+}
+
+function addMarketSaturation(gs, iid, gid, qty) {
+    if (!CONFIG.balance.demandSaturation.enabled) return;
+    if (!gs.world.saturation) gs.world.saturation = {};
+    if (!gs.world.saturation[iid]) gs.world.saturation[iid] = {};
+    gs.world.saturation[iid][gid] = (gs.world.saturation[iid][gid] || 0) + qty;
+}
+
+function decayMarketSaturation(gs) {
+    if (!CONFIG.balance.demandSaturation.enabled || !gs.world.saturation) return;
+    const recovery = CONFIG.balance.demandSaturation.recoveryPerDay;
+    for (const iid of Object.keys(gs.world.saturation)) {
+        for (const gid of Object.keys(gs.world.saturation[iid])) {
+            gs.world.saturation[iid][gid] = Math.max(0, gs.world.saturation[iid][gid] - recovery);
+            if (gs.world.saturation[iid][gid] <= 0) delete gs.world.saturation[iid][gid];
+        }
+        if (Object.keys(gs.world.saturation[iid]).length === 0) delete gs.world.saturation[iid];
+    }
+}
+
+function getSaturationPenalty(gs, iid, gid) {
+    if (!CONFIG.balance.demandSaturation.enabled) return 1;
+    const sat = getMarketSaturation(gs, iid, gid);
+    const ds = CONFIG.balance.demandSaturation;
+    if (sat <= ds.threshold) return 1;
+    const excess = sat - ds.threshold;
+    const penalty = 1 - (excess * ds.decayRate);
+    return Math.max(ds.maxPenalty, penalty);
+}
+
+// ==================== FENCE LIMIT SYSTEM ====================
+function getFenceUsage(gs, iid) {
+    const fenceData = gs.world.fenceUsage?.[iid];
+    if (!fenceData) return 0;
+    const daysSince = gs.player.days - fenceData.lastDay;
+    if (daysSince >= CONFIG.balance.smuggling.fenceLimitDecayDays) return 0;
+    return fenceData.amount || 0;
+}
+
+function addFenceUsage(gs, iid, qty) {
+    if (!gs.world.fenceUsage) gs.world.fenceUsage = {};
+    const existing = gs.world.fenceUsage[iid];
+    if (existing && (gs.player.days - existing.lastDay) < CONFIG.balance.smuggling.fenceLimitDecayDays) {
+        existing.amount += qty;
+        existing.lastDay = gs.player.days;
+    } else {
+        gs.world.fenceUsage[iid] = { amount: qty, lastDay: gs.player.days };
+    }
+}
+
+function canFence(gs, iid, qty) {
+    const current = getFenceUsage(gs, iid);
+    const limit = CONFIG.balance.smuggling.fenceLimit;
+    return (current + qty) <= limit;
+}
+
+function getFenceRemaining(gs, iid) {
+    return Math.max(0, CONFIG.balance.smuggling.fenceLimit - getFenceUsage(gs, iid));
+}
+
+// ==================== UPKEEP SYSTEM ====================
+function calculateDailyUpkeep(gs) {
+    if (!CONFIG.balance.upkeep.enabled) return 0;
+    const up = CONFIG.balance.upkeep;
+    const upgradeCount = Object.keys(gs.player.upgrades || {}).filter(k => gs.player.upgrades[k]).length;
+    return up.crewWagesPerDay + (upgradeCount * up.crewWagesPerUpgrade) + up.maintenancePerDay;
+}
+
+function calculateDockingFee(gs, iid) {
+    if (!CONFIG.balance.upkeep.enabled) return 0;
+    const up = CONFIG.balance.upkeep;
+    const isl = CONFIG.islands[iid];
+    let fee = up.dockingFee;
+    // Hostile port fee
+    if (isl?.faction && isl.faction !== 'neutral' && isl.faction !== gs.player.faction) {
+        const rep = gs.player.reputation?.[isl.faction] || 0;
+        if (rep < -20) fee += up.dockingFeeHostile;
+    }
+    return fee;
+}
+
+// ==================== ANTI-SPAM SYSTEMS ====================
+
+// Trade fatigue: prices worsen after too many transactions at one port
+function getTradeFatigue(gs, iid) {
+    if (!CONFIG.balance.tradeFatigue.enabled) return 0;
+    const fatigue = gs.player.tradeFatigue?.[iid] || 0;
+    const tf = CONFIG.balance.tradeFatigue;
+    const excessTrades = Math.max(0, fatigue - tf.transactionsPerVisit);
+    return Math.min(tf.maxPenalty, excessTrades * tf.penaltyPerTrade);
+}
+
+function addTradeFatigue(gs, iid) {
+    if (!gs.player.tradeFatigue) gs.player.tradeFatigue = {};
+    gs.player.tradeFatigue[iid] = (gs.player.tradeFatigue[iid] || 0) + 1;
+}
+
+function resetTradeFatigue(gs) {
+    // Reset all fatigue when leaving port
+    gs.player.tradeFatigue = {};
+}
+
+// Port visit cooldown: visiting same port too quickly worsens prices
+function getPortVisitPenalty(gs, iid) {
+    if (!CONFIG.balance.portVisitCooldown.enabled) return 0;
+    const lastVisit = gs.player.portVisitDays?.[iid];
+    if (lastVisit === undefined) return 0;
+
+    const pv = CONFIG.balance.portVisitCooldown;
+    const daysSince = gs.player.days - lastVisit;
+    if (daysSince >= pv.minDaysBetween) return 0;
+
+    const earlyDays = pv.minDaysBetween - daysSince;
+    return Math.min(pv.maxPenalty, earlyDays * pv.penaltyPerEarlyDay);
+}
+
+function recordPortVisit(gs, iid) {
+    if (!gs.player.portVisitDays) gs.player.portVisitDays = {};
+    gs.player.portVisitDays[iid] = gs.player.days;
+}
+
+// Bulk trade penalty: larger single transactions have diminishing returns
+function getBulkTradePenalty(qty) {
+    if (!CONFIG.balance.bulkTrade.enabled) return 0;
+    const bt = CONFIG.balance.bulkTrade;
+    const excessUnits = Math.max(0, qty - bt.threshold);
+    return Math.min(bt.maxPenalty, excessUnits * bt.penaltyPerUnit);
+}
+
+// Combined anti-spam price modifier (for selling)
+function getAntiSpamSellMult(gs, iid, qty) {
+    const fatiguePenalty = getTradeFatigue(gs, iid);
+    const visitPenalty = getPortVisitPenalty(gs, iid);
+    const bulkPenalty = getBulkTradePenalty(qty);
+    return Math.max(0.5, 1 - fatiguePenalty - visitPenalty - bulkPenalty);
+}
+
+// Combined anti-spam price modifier (for buying - less punitive)
+function getAntiSpamBuyMult(gs, iid, qty) {
+    const fatiguePenalty = getTradeFatigue(gs, iid) * 0.5; // Half penalty for buying
+    const visitPenalty = getPortVisitPenalty(gs, iid) * 0.5;
+    const bulkPenalty = getBulkTradePenalty(qty) * 0.5;
+    return Math.min(1.5, 1 + fatiguePenalty + visitPenalty + bulkPenalty); // Prices go UP
+}
 
 // ==================== TITLE SYSTEM ====================
 function getTitleTier(trackId, gs) {
@@ -871,7 +1315,12 @@ function generateContractsForIsland(gs, iid) {
         const deadline = Math.max(2, Math.floor(baseDays * (1.5 + (1 - urgency) * 2)));
         const riskFactor = type.riskMult * (1 + getRouteRiskBetween(gs, iid, destId) * 0.5);
 
-        let goldReward = Math.floor(type.baseReward * (1 + dist / 100) * riskFactor * urgency);
+        // === BALANCE: Contract rewards scale down with player power ===
+        // Prevents snowballing - as player gets richer, contracts become less lucrative
+        const prog = CONFIG.balance.progression;
+        const powerRewardMult = getPowerScaling(gs, prog.contractRewardBase, prog.contractRewardPowerMult, prog.contractRewardMin, 1.0);
+
+        let goldReward = Math.floor(type.baseReward * (1 + dist / 100) * riskFactor * urgency * powerRewardMult);
         let repReward = type.repReward;
         let repFaction = island.faction !== 'neutral' ? island.faction : (Math.random() > 0.5 ? 'english' : 'eitc');
 
@@ -945,22 +1394,45 @@ function getRouteRiskBetween(gs, fromId, toId) {
 
 function acceptContract(gs, contractId) {
     const active = gs.player.contracts.active || [];
-    if (active.length >= CONFIG.settings.maxActiveContracts) return false;
+    if (active.length >= CONFIG.settings.maxActiveContracts) return { success: false, reason: 'Too many active contracts' };
 
     // Find contract in any board
     for (const iid of Object.keys(gs.world.boards)) {
         const board = gs.world.boards[iid];
         const idx = board.contracts.findIndex(c => c.id === contractId);
         if (idx !== -1) {
-            const contract = board.contracts.splice(idx, 1)[0];
+            const contract = board.contracts[idx];
+            const type = CONFIG.contractTypes[contract.typeId];
+
+            // === BALANCE: Contract acceptance costs ===
+            // Courier contracts require a deposit (refunded on completion)
+            if (type.depositPct) {
+                const deposit = Math.floor(contract.rewards.gold * type.depositPct);
+                if (gs.player.gold < deposit) {
+                    return { success: false, reason: `Need ${deposit}g deposit` };
+                }
+                gs.player.gold -= deposit;
+                contract.deposit = deposit;
+            }
+
+            // Supply contracts consume supplies upfront
+            if (type.supplyCost) {
+                if (gs.player.supplies < type.supplyCost) {
+                    return { success: false, reason: `Need ${type.supplyCost} supplies` };
+                }
+                gs.player.supplies -= type.supplyCost;
+            }
+
+            // Remove from board and activate
+            board.contracts.splice(idx, 1);
             contract.dayAccepted = gs.player.days;
             contract.status = 'active';
             active.push(contract);
             gs.player.contracts.active = active;
-            return true;
+            return { success: true, contract };
         }
     }
-    return false;
+    return { success: false, reason: 'Contract not found' };
 }
 
 function abandonContract(gs, contractId) {
@@ -1030,6 +1502,12 @@ function evaluateContractsOnDock(gs, iid) {
     // Award rewards
     for (const contract of completed) {
         gs.player.gold += contract.rewards.gold;
+
+        // === BALANCE: Refund deposit if any ===
+        if (contract.deposit) {
+            gs.player.gold += contract.deposit;
+        }
+
         applyRepChange(gs, contract.rewards.repFaction, contract.rewards.rep, 'contract_complete');
         contract.status = 'completed';
         gs.player.contracts.completed.push(contract);
@@ -1665,6 +2143,20 @@ function decayHeat(gs) {
 gs.player.heat = Math.max(0, (gs.player.heat || 0) - CONFIG.settings.heatDecayPerDay);
 }
 
+// Balanced heat decay - slower at sea, faster when docked at friendly ports
+function decayHeatBalanced(gs, isDocked = false, isFriendlyPort = false) {
+    const smug = CONFIG.balance.smuggling;
+    let decay = smug.heatDecayBase;
+    if (!isDocked) {
+        // At sea: slower decay
+        decay = smug.heatDecayAtSea;
+    } else if (isFriendlyPort) {
+        // Docked at friendly port: faster decay
+        decay = smug.heatDecayBase * 2;
+    }
+    gs.player.heat = Math.max(0, (gs.player.heat || 0) - decay);
+}
+
 // ==================== ECONOMY ====================
 // Base market price without player-specific bonuses (used for logbook/intel)
 function calcBasePrice(gid, iid, gs) {
@@ -1766,7 +2258,11 @@ return Math.max(0.9, Math.min(2, t));
 }
 
 function buyGood(gid, qty, iid, gs) {
-const m = gs.islands[iid].markets[gid], g = CONFIG.goods[gid], price = calcBuyPrice(gid, iid, gs);
+const m = gs.islands[iid].markets[gid], g = CONFIG.goods[gid];
+// === BALANCE: Apply anti-spam price increase ===
+const antiSpamMult = getAntiSpamBuyMult(gs, iid, qty);
+const price = Math.max(1, Math.round(calcBuyPrice(gid, iid, gs) * antiSpamMult));
+
 const check = canCarryMore(gid, qty, gs);
 if (qty > m.supply || price * qty > gs.player.gold || !check.canCarry) return { success: false, reason: check.reason };
 gs.player.gold -= price * qty;
@@ -1774,27 +2270,60 @@ gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
 gs.player.purchaseHistory[gid] = price;
 m.supply -= qty;
 recordPrice(gid, iid, calcBasePrice(gid, iid, gs), gs); // Record base price for logbook
+// === BALANCE: Track trade fatigue ===
+addTradeFatigue(gs, iid);
 // Heat for buying contraband
 if (g.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband);
 return { success: true, cost: price * qty };
 }
 
 function sellGood(gid, qty, iid, gs) {
-const price = calcSellPrice(gid, iid, gs), stock = gs.player.cargo[gid] || 0, g = CONFIG.goods[gid];
-if (qty > stock) return { success: false };
-gs.player.gold += price * qty;
+const stock = gs.player.cargo[gid] || 0, g = CONFIG.goods[gid];
+if (qty > stock) return { success: false, reason: 'Not enough stock' };
+
+// Fence limit check for contraband
+if (g.category === 'contraband') {
+    const fenceRemaining = getFenceRemaining(gs, iid);
+    if (qty > fenceRemaining) {
+        return { success: false, reason: `Fence can only take ${fenceRemaining} more units today` };
+    }
+}
+
+// Calculate price with saturation penalty AND anti-spam penalty
+let price = calcSellPrice(gid, iid, gs);
+const satPenalty = getSaturationPenalty(gs, iid, gid);
+// === BALANCE: Apply anti-spam sell penalty ===
+const antiSpamMult = getAntiSpamSellMult(gs, iid, qty);
+price = Math.max(1, Math.round(price * satPenalty * antiSpamMult));
+
+const revenue = price * qty;
+gs.player.gold += revenue;
 gs.player.cargo[gid] = stock - qty;
 if (gs.player.cargo[gid] <= 0) delete gs.player.cargo[gid];
 gs.islands[iid].markets[gid].supply += qty;
 recordPrice(gid, iid, calcBasePrice(gid, iid, gs), gs); // Record base price for logbook
-// Heat for selling contraband
+
+// Add market saturation
+addMarketSaturation(gs, iid, gid, qty);
+
+// === BALANCE: Track trade fatigue ===
+addTradeFatigue(gs, iid);
+
+// Heat and tracking for contraband
 if (g.category === 'contraband') {
-    addHeat(gs, CONFIG.settings.heatGainContraband);
+    // Enhanced heat gain with scaling
+    const smug = CONFIG.balance.smuggling;
+    const heatGain = smug.heatGainBase + (qty * smug.heatGainPerUnit);
+    addHeat(gs, heatGain);
+
+    // Track fence usage
+    addFenceUsage(gs, iid, qty);
+
     // Track for smuggler title
     if (!gs.player.stats) gs.player.stats = {};
     gs.player.stats.contrabandTraded = (gs.player.stats.contrabandTraded || 0) + qty;
 }
-return { success: true, revenue: price * qty };
+return { success: true, revenue };
 }
 
 function recordPrice(gid, iid, price, gs) {
@@ -1945,6 +2474,20 @@ if (gs.world.seasonDay === undefined) gs.world.seasonDay = 1;
 if (!gs.world.crackdown) gs.world.crackdown = { level: 0 };
 if (gs.world.regionalEvent === undefined) gs.world.regionalEvent = null;
 if (!gs.world.boards) gs.world.boards = {};
+
+// === BALANCE: New state migrations ===
+// Bounty/notoriety system
+if (gs.player.bounty === undefined) gs.player.bounty = 0;
+// Market saturation tracking { islandId: { goodId: saturationLevel } }
+if (!gs.player.saturation) gs.player.saturation = {};
+// Fence usage tracking { islandId: { units: number, lastVisitDay: number } }
+if (!gs.player.fenceUsage) gs.player.fenceUsage = {};
+// Track total upkeep paid
+if (!gs.player.stats.totalUpkeep) gs.player.stats.totalUpkeep = 0;
+// Port visit days for cooldown system { islandId: lastVisitDay }
+if (!gs.player.portVisitDays) gs.player.portVisitDays = {};
+// Trade fatigue per port (resets on undock) { islandId: transactionCount }
+if (!gs.player.tradeFatigue) gs.player.tradeFatigue = {};
 
 // Living Sea migrations
 if (!gs.world.driftEntities) gs.world.driftEntities = [];
@@ -2289,13 +2832,15 @@ renderContracts() {
         availEl.innerHTML = board.contracts.map(c => this.renderContractCard(c, gs, 'available')).join('');
         availEl.querySelectorAll('.accept-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (acceptContract(gs, btn.dataset.id)) {
+                const result = acceptContract(gs, btn.dataset.id);
+                if (result.success) {
                     this.renderContracts();
                     this.updateContractTracker(gs);
+                    this.updateHUD(gs);
                     this.toast('Contract Accepted', 'Check your active contracts');
                     this.game.save();
                 } else {
-                    this.toast('Cannot Accept', 'Max 3 active contracts');
+                    this.toast('Cannot Accept', result.reason || 'Unknown error');
                 }
             });
         });
@@ -2382,6 +2927,22 @@ renderContractCard(contract, gs, mode) {
         requirementText = `Arrive with ${contract.requirement.minSupplies}+ supplies`;
     }
 
+    // === BALANCE: Show contract costs ===
+    let costText = '';
+    if (mode === 'available') {
+        const costs = [];
+        if (type.depositPct) {
+            const deposit = Math.floor(contract.rewards.gold * type.depositPct);
+            costs.push(`${deposit}g deposit`);
+        }
+        if (type.supplyCost) {
+            costs.push(`${type.supplyCost} supplies`);
+        }
+        if (costs.length > 0) {
+            costText = `<div class="contract-cost">📤 Cost: ${costs.join(', ')}</div>`;
+        }
+    }
+
     return `
         <div class="contract-card ${cardClass} ${trackedClass}">
             <div class="contract-header">
@@ -2395,6 +2956,7 @@ renderContractCard(contract, gs, mode) {
                 <span class="contract-reward gold">🪙 ${contract.rewards.gold}g</span>
                 <span class="contract-reward rep">${contract.rewards.rep > 0 ? '+' : ''}${contract.rewards.rep} ${contract.rewards.repFaction} rep</span>
             </div>
+            ${costText}
             <div class="contract-actions">${actions}</div>
         </div>
     `;
@@ -2422,11 +2984,13 @@ renderLogPrices(iid) {
 renderShipyard() {
     const gs = this.game.gameState;
     this.el['upgrades-list'].innerHTML = Object.entries(CONFIG.upgrades).map(([id, u]) => {
-        const owned = gs.player.upgrades[id], afford = gs.player.gold >= u.cost;
+        // === BALANCE: Use scaled upgrade cost ===
+        const scaledCost = this.game.getUpgradeCost(id);
+        const owned = gs.player.upgrades[id], afford = gs.player.gold >= scaledCost;
         const prosHtml = u.pros.map(p => `<span class="upgrade-stat positive">${p}</span>`).join('');
         const consHtml = u.cons.map(c => `<span class="upgrade-stat negative">${c}</span>`).join('');
         return `<div class="upgrade-card ${owned ? 'owned' : ''}">
-            <div class="upgrade-header"><span class="upgrade-name">${u.icon} ${u.name}</span><span class="upgrade-cost">${owned ? '✓' : u.cost + 'g'}</span></div>
+            <div class="upgrade-header"><span class="upgrade-name">${u.icon} ${u.name}</span><span class="upgrade-cost">${owned ? '✓' : scaledCost + 'g'}</span></div>
             <div class="upgrade-desc">${u.desc}</div>
             <div class="upgrade-stats">${prosHtml}${consHtml}</div>
             ${!owned ? `<button class="btn-secondary btn-small upg-btn" data-id="${id}" ${afford ? '' : 'disabled'}>${afford ? 'Buy' : 'Need gold'}</button>` : ''}
@@ -2667,8 +3231,24 @@ advanceDay() {
     // Handle fractional supply cost via RNG
     if (Math.random() < (supplyRate % 1)) gs.player.supplies--;
 
-    // Decay heat while at sea
-    decayHeat(gs);
+    // === BALANCE: Daily upkeep costs ===
+    const upkeep = calculateDailyUpkeep(gs);
+    if (upkeep > 0) {
+        gs.player.gold = Math.max(0, gs.player.gold - upkeep);
+        // Track total upkeep for stats
+        if (!gs.player.stats.totalUpkeep) gs.player.stats.totalUpkeep = 0;
+        gs.player.stats.totalUpkeep += upkeep;
+    }
+
+    // === BALANCE: Decay systems ===
+    // Heat decays slower at sea
+    decayHeatBalanced(gs, false);
+
+    // Bounty decays
+    decayBounty(gs, false, false);
+
+    // Market saturation recovers
+    decayMarketSaturation(gs);
 
     simMarketDay(gs);
 
@@ -2749,9 +3329,14 @@ checkEncounters() {
     if (gs.player.convoyProtection && gs.player.convoyProtection >= gs.player.days) pirateChance *= 0.1;
     if (Math.random() < pirateChance) { this.triggerPirate(); return; }
 
-    // Inspection encounter - scales with heat, crackdown, port state, and proximity to English/EITC waters
-    if (isNearHostileWaters(gs) || gs.player.heat > 30) {
+    // Inspection encounter - scales with heat, crackdown, bounty, port state, and proximity to English/EITC waters
+    const bountyLevel = getBountyLevel(gs);
+    // Bounty level increases base chance of being inspected
+    const bountyInspectMult = { clean: 1.0, wanted: 1.5, hunted: 2.5, infamous: 4.0 }[bountyLevel] || 1.0;
+    if (isNearHostileWaters(gs) || gs.player.heat > 30 || bountyLevel !== 'clean') {
         let inspectChance = CONFIG.encounters.inspection.baseChance * (1 + gs.player.heat / 100);
+        // === BALANCE: Bounty increases inspection chance significantly ===
+        inspectChance *= bountyInspectMult;
         // Crackdown increases inspection chance
         inspectChance *= (1 + getCrackdownLevel(gs) / 100);
         // Seasonal event effects
@@ -2763,8 +3348,13 @@ checkEncounters() {
             const portState = getPortStateConfig(gs, this.nearbyIsland);
             inspectChance *= (portState.inspectMult ?? 1);
         }
-        // Smuggler compartments reduce chance
-        if (gs.player.upgrades?.smugglerCompartments) inspectChance *= (1 - CONFIG.upgrades.smugglerCompartments.effects.inspectionReduction);
+        // Smuggler compartments reduce chance (less effective at higher bounty)
+        if (gs.player.upgrades?.smugglerCompartments) {
+            const compartmentReduction = CONFIG.upgrades.smugglerCompartments.effects.inspectionReduction;
+            // Effectiveness reduces with bounty level
+            const bountyPenalty = { clean: 0, wanted: 0.25, hunted: 0.5, infamous: 0.75 }[bountyLevel] || 0;
+            inspectChance *= (1 - compartmentReduction * (1 - bountyPenalty));
+        }
         // Title modifiers
         inspectChance *= (1 - mods.inspectionReduction);
         if (Math.random() < inspectChance) { this.triggerInspection(); return; }
@@ -2813,15 +3403,33 @@ checkEncounters() {
 
 triggerPirate() {
     const gs = this.gameState;
-    const baseCost = Math.floor(gs.player.gold * 0.1) + 50;
+    // Power-scaled tribute calculation
+    const enc = CONFIG.balance.encounters;
+    const power = getPlayerPower(gs);
+    const bounty = getBounty(gs);
+
+    // Base tribute scales with gold AND power
+    let tributeRate = enc.pirateStrengthBase + (power * enc.pirateStrengthPower);
+    // Bounty makes pirates demand more (they know you're valuable)
+    tributeRate *= (1 + bounty * CONFIG.balance.bounty.tributeBountyMult);
+
+    const baseCost = Math.max(enc.pirateMinTribute, Math.floor(gs.player.gold * tributeRate) + enc.pirateMinTribute);
     const cost = calcTributeCost(gs, baseCost);
     this.ui.showPirate(cost, gs.player.faction === 'pirates');
 }
 
 payTribute() {
     const gs = this.gameState;
-    const baseCost = Math.floor(gs.player.gold * 0.1) + 50;
+    const enc = CONFIG.balance.encounters;
+    const power = getPlayerPower(gs);
+    const bounty = getBounty(gs);
+
+    let tributeRate = enc.pirateStrengthBase + (power * enc.pirateStrengthPower);
+    tributeRate *= (1 + bounty * CONFIG.balance.bounty.tributeBountyMult);
+
+    const baseCost = Math.max(enc.pirateMinTribute, Math.floor(gs.player.gold * tributeRate) + enc.pirateMinTribute);
     const cost = calcTributeCost(gs, baseCost);
+
     if (gs.player.gold >= cost) {
         gs.player.gold -= cost;
         this.ui.closePirate();
@@ -2837,16 +3445,36 @@ payTribute() {
 fight() {
     const gs = this.gameState;
     this.ui.closePirate();
-    if (Math.random() < 0.5) {
-        const r = 50 + Math.floor(Math.random() * 100);
+
+    // Power-scaled fight mechanics
+    const enc = CONFIG.balance.encounters;
+    const power = getPlayerPower(gs);
+    const phase = getGamePhase(gs);
+
+    // Win chance decreases with power (pirates get tougher)
+    let winChance = enc.pirateFightWinBase;
+    if (phase === 'mid') winChance -= enc.pirateFightWinPenalty;
+    else if (phase === 'late') winChance -= enc.pirateFightWinPenalty * 2;
+    else if (phase === 'endgame') winChance -= enc.pirateFightWinPenalty * 3;
+    winChance = Math.max(0.2, winChance); // Never below 20%
+
+    if (Math.random() < winChance) {
+        // Loot scales slightly with power (tougher pirates = better loot)
+        const r = Math.floor(enc.pirateLootBase + (power * enc.pirateLootPowerMult) + Math.random() * 100);
         gs.player.gold += r;
         // Pirate reputation boost
         applyRepChange(gs, 'pirates', 5, 'fight_win');
         this.ui.toast('Victory!', '+' + r + 'g');
     } else {
-        this.loseCargo(calcCargoLoss(gs, 0.5));
-        // Also lose some gold (protected by vault)
-        const goldLoss = calcGoldLoss(gs, Math.floor(gs.player.gold * 0.1));
+        // Loss is more punishing at higher power
+        let cargoLossFrac = 0.5;
+        let goldLossFrac = 0.1;
+        if (phase === 'late' || phase === 'endgame') {
+            cargoLossFrac = 0.6;
+            goldLossFrac = 0.15;
+        }
+        this.loseCargo(calcCargoLoss(gs, cargoLossFrac));
+        const goldLoss = calcGoldLoss(gs, Math.floor(gs.player.gold * goldLossFrac));
         gs.player.gold = Math.max(0, gs.player.gold - goldLoss);
         this.ui.toast('Defeated', 'Lost cargo & gold');
     }
@@ -2866,6 +3494,7 @@ triggerInspection() {
     const gs = this.gameState, enc = CONFIG.encounters.inspection;
     const contrabandQty = getContrabandCount(gs);
     const hasContraband = contrabandQty > 0;
+    const bb = CONFIG.balance.bounty;
 
     // Mark inspection for active courier contracts with noInspection requirement (per-contract tracking)
     for (const contract of gs.player.contracts.active) {
@@ -2883,16 +3512,21 @@ triggerInspection() {
         return;
     }
 
-    // Has contraband - calculate penalty
-    let confiscateQty = Math.ceil(contrabandQty * 0.5);
-    let fine = 50 + contrabandQty * 10;
+    // Has contraband - calculate penalty (scales with player power)
+    const power = getPlayerPower(gs);
+    let fine = 50 + contrabandQty * 15 + Math.floor(power * 0.05);
 
-    // Smuggler compartments can hide some
-    if (gs.player.upgrades?.smugglerCompartments && Math.random() < 0.4) {
-        // 40% chance to hide contraband completely
+    // Smuggler compartments can hide some (reduced from 40% to 25% with power scaling)
+    const hideChance = gs.player.upgrades?.smugglerCompartments
+        ? Math.max(0.15, 0.25 - (power * 0.00005))
+        : 0;
+    if (hideChance > 0 && Math.random() < hideChance) {
         this.ui.showEncounter(enc, [], { positive: true, text: 'Hidden compartments concealed your cargo. You pass inspection!' });
         return;
     }
+
+    const bountyLevel = getBountyLevel(gs);
+    const bountyWarning = bountyLevel !== 'clean' ? ` (Bounty: ${getBounty(gs)}g)` : '';
 
     this.ui.showEncounter(enc, [
         {
@@ -2900,15 +3534,18 @@ triggerInspection() {
             action: () => {
                 if (gs.player.gold >= fine) {
                     gs.player.gold -= fine;
-                    addHeat(gs, 10); // Heat increases when caught
-                    this.ui.showEncounter(enc, [], { positive: false, text: `Paid ${fine}g fine. Contraband confiscated!` });
+                    addHeat(gs, 15);
+                    // Add bounty for smuggling
+                    addBounty(gs, bb.contrabandBounty * contrabandQty);
+                    this.ui.showEncounter(enc, [], { positive: false, text: `Paid ${fine}g fine. Contraband confiscated! Bounty increased.` });
                 } else {
                     // Can't pay - lose all contraband and reputation hit
                     this.confiscateContraband(gs);
-                    applyRepChange(gs, 'english', -10, 'inspection_caught');
-                    applyRepChange(gs, 'eitc', -10, 'inspection_caught');
-                    addHeat(gs, 20);
-                    this.ui.showEncounter(enc, [], { positive: false, text: 'No gold! All contraband seized. Reputation damaged.' });
+                    applyRepChange(gs, 'english', -15, 'inspection_caught');
+                    applyRepChange(gs, 'eitc', -15, 'inspection_caught');
+                    addHeat(gs, 25);
+                    addBounty(gs, bb.baseGainPerCrime + bb.contrabandBounty * contrabandQty);
+                    this.ui.showEncounter(enc, [], { positive: false, text: 'No gold! All contraband seized. Reputation damaged. Major bounty added!' });
                 }
                 // Confiscate contraband regardless
                 this.confiscateContraband(gs);
@@ -2920,20 +3557,28 @@ triggerInspection() {
         {
             label: '🏃 Flee!',
             action: () => {
-                if (Math.random() < 0.4) {
+                // Flee chance decreases with bounty level
+                let fleeChance = 0.4;
+                if (bountyLevel === 'wanted') fleeChance = 0.3;
+                else if (bountyLevel === 'hunted') fleeChance = 0.2;
+                else if (bountyLevel === 'infamous') fleeChance = 0.1;
+
+                if (Math.random() < fleeChance) {
                     // Escaped
-                    addHeat(gs, 15);
-                    this.ui.showEncounter(enc, [], { positive: true, text: 'You escaped the patrol! Heat increased.' });
+                    addHeat(gs, 20);
+                    addBounty(gs, bb.fleeingBounty);
+                    this.ui.showEncounter(enc, [], { positive: true, text: 'You escaped the patrol! Heat and bounty increased.' });
                 } else {
                     // Caught - worse penalty
                     this.confiscateContraband(gs);
-                    const penalty = Math.floor(gs.player.gold * 0.15);
+                    const penalty = Math.floor(gs.player.gold * 0.2);
                     gs.player.gold = Math.max(0, gs.player.gold - penalty);
-                    applyRepChange(gs, 'english', -15, 'inspection_fled');
-                    applyRepChange(gs, 'eitc', -15, 'inspection_fled');
-                    addHeat(gs, 25);
-                    gs.world.crackdown.level = Math.min(CONFIG.settings.crackdownMaxLevel, (gs.world.crackdown.level || 0) + 15);
-                    this.ui.showEncounter(enc, [], { positive: false, text: `Caught fleeing! Lost ${penalty}g and all contraband. Major reputation hit.` });
+                    applyRepChange(gs, 'english', -20, 'inspection_fled');
+                    applyRepChange(gs, 'eitc', -20, 'inspection_fled');
+                    addHeat(gs, 30);
+                    addBounty(gs, bb.baseGainPerCrime + bb.fleeingBounty + bb.contrabandBounty * contrabandQty);
+                    gs.world.crackdown.level = Math.min(CONFIG.settings.crackdownMaxLevel, (gs.world.crackdown.level || 0) + 20);
+                    this.ui.showEncounter(enc, [], { positive: false, text: `Caught fleeing! Lost ${penalty}g and all contraband. Major bounty placed on your head!` });
                 }
                 this.ui.updateHUD(gs);
             }
@@ -2971,7 +3616,15 @@ triggerStorm() {
 }
 
 triggerMerchant() {
-    const gs = this.gameState, enc = CONFIG.encounters.adriftMerchant, gids = Object.keys(CONFIG.goods), gid = gids[Math.floor(Math.random() * gids.length)], g = CONFIG.goods[gid], qty = 3 + Math.floor(Math.random() * 5), price = Math.floor(g.basePrice * 0.6), total = price * qty;
+    const gs = this.gameState, enc = CONFIG.encounters.adriftMerchant;
+    const gids = Object.keys(CONFIG.goods), gid = gids[Math.floor(Math.random() * gids.length)], g = CONFIG.goods[gid];
+    const qty = 3 + Math.floor(Math.random() * 5);
+
+    // === BALANCE: Discount scales down with player power ===
+    const balEnc = CONFIG.balance.encounters;
+    const discountMult = getPowerScaling(gs, balEnc.merchantDiscountMax, -0.0001, balEnc.merchantDiscountMin, balEnc.merchantDiscountMax);
+    const price = Math.floor(g.basePrice * (1 - discountMult)), total = price * qty;
+
     this.ui.showEncounter({ ...enc, desc: `Offers ${qty}x ${g.name} for ${price}g each (${total}g)` }, [
         { label: `💰 Buy (${total}g)`, style: 'primary', action: () => {
             const check = canCarryMore(gid, qty, gs);
@@ -2991,28 +3644,52 @@ triggerMerchant() {
 
 triggerWreck() {
     const gs = this.gameState, enc = CONFIG.encounters.wreckSalvage;
+    // === BALANCE: Positive outcome chance decreases with power ===
+    const positiveChance = getPowerScaling(gs, CONFIG.balance.encounters.wreckPositiveChance, -0.0001, 0.5, 0.9);
+
     this.ui.showEncounter(enc, [
         { label: '🔍 Investigate', style: 'primary', action: () => {
             const r = Math.random();
-            if (r < 0.4) {
-                const s = 3 + Math.floor(Math.random() * 5);
-                gs.player.supplies = Math.min(30, gs.player.supplies + s);
-                this.ui.showEncounter(enc, [], { positive: true, text: `Found ${s} supplies!` });
-            } else if (r < 0.7) {
-                const g = 20 + Math.floor(Math.random() * 50);
-                gs.player.gold += g;
-                this.ui.showEncounter(enc, [], { positive: true, text: `Found ${g} gold!` });
-            } else if (r < 0.9) {
-                const gids = Object.keys(CONFIG.goods), gid = gids[Math.floor(Math.random() * gids.length)], good = CONFIG.goods[gid], q = 1 + Math.floor(Math.random() * 3);
-                const check = canCarryMore(gid, q, gs);
-                if (check.canCarry) {
-                    gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + q;
-                    if (good.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband / 2);
-                    this.ui.showEncounter(enc, [], { positive: true, text: `Salvaged ${q}x ${good.name}!` });
-                } else
-                    this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'No room!' });
-            } else
-                this.ui.showEncounter(enc, [], { positive: false, text: 'Nothing useful...' });
+            if (r < positiveChance) {
+                // Positive outcomes
+                const outcomeRoll = Math.random();
+                if (outcomeRoll < 0.45) {
+                    const s = 3 + Math.floor(Math.random() * 5);
+                    gs.player.supplies = Math.min(30, gs.player.supplies + s);
+                    this.ui.showEncounter(enc, [], { positive: true, text: `Found ${s} supplies!` });
+                } else if (outcomeRoll < 0.8) {
+                    // Gold scales with power but not excessively
+                    const baseGold = 20 + Math.floor(Math.random() * 50);
+                    const g = Math.floor(baseGold * (1 + getPlayerPower(gs) * 0.0002));
+                    gs.player.gold += g;
+                    this.ui.showEncounter(enc, [], { positive: true, text: `Found ${g} gold!` });
+                } else {
+                    const gids = Object.keys(CONFIG.goods), gid = gids[Math.floor(Math.random() * gids.length)], good = CONFIG.goods[gid], q = 1 + Math.floor(Math.random() * 3);
+                    const check = canCarryMore(gid, q, gs);
+                    if (check.canCarry) {
+                        gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + q;
+                        if (good.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband / 2);
+                        this.ui.showEncounter(enc, [], { positive: true, text: `Salvaged ${q}x ${good.name}!` });
+                    } else
+                        this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'No room!' });
+                }
+            } else {
+                // Negative outcomes scale with power
+                const negRoll = Math.random();
+                if (negRoll < 0.5) {
+                    this.ui.showEncounter(enc, [], { positive: false, text: 'Nothing useful...' });
+                } else if (negRoll < 0.8) {
+                    // Lost supplies while searching
+                    const lost = 1 + Math.floor(Math.random() * 2);
+                    gs.player.supplies = Math.max(0, gs.player.supplies - lost);
+                    this.ui.showEncounter(enc, [], { positive: false, text: `Wasted time searching. Lost ${lost} supplies.` });
+                } else {
+                    // Minor damage - gold loss
+                    const damage = 10 + Math.floor(Math.random() * 20);
+                    gs.player.gold = Math.max(0, gs.player.gold - damage);
+                    this.ui.showEncounter(enc, [], { positive: false, text: `Sharp debris! ${damage}g repair cost.` });
+                }
+            }
             this.ui.updateHUD(gs);
         } },
         { label: '🚢 Sail on', action: () => this.ui.closeEncounter() }
@@ -3027,7 +3704,9 @@ triggerDesperateMerchant() {
     const gid = gids[Math.floor(Math.random() * gids.length)];
     const good = CONFIG.goods[gid];
     const qty = 5 + Math.floor(Math.random() * 10);
-    const price = Math.floor(good.basePrice * 0.5);
+    // === BALANCE: Desperate discount scales down with power ===
+    const despDiscount = getPowerScaling(gs, 0.5, -0.0001, 0.3, 0.5);
+    const price = Math.floor(good.basePrice * (1 - despDiscount));
 
     this.ui.showEncounter({ ...enc, desc: `${enc.desc} They offer ${qty}x ${good.name} for ${price}g each.` }, [
         { label: `💰 Take cargo (${price * qty}g)`, style: 'danger', action: () => {
@@ -3331,6 +4010,22 @@ dock() {
     gs.player.daysSinceDock = 0; // Reset days since dock
     // Per-contract inspection tracking: wasInspected flag is on each contract, no global reset needed
 
+    // === BALANCE: Docking fee ===
+    const dockFee = calculateDockingFee(gs, this.nearbyIsland);
+    if (dockFee > 0) {
+        gs.player.gold = Math.max(0, gs.player.gold - dockFee);
+        this.ui.toast('Docking Fee', '-' + dockFee + 'g');
+    }
+
+    // === BALANCE: Record port visit for cooldown system ===
+    recordPortVisit(gs, this.nearbyIsland);
+
+    // === BALANCE: Bounty decay at friendly ports ===
+    const isFriendly = isl.faction === gs.player.faction || isl.faction === 'neutral';
+    decayBounty(gs, true, isFriendly);
+    // Heat also decays faster when docked at friendly
+    decayHeatBalanced(gs, true, isFriendly);
+
     // Heat changes on dock
     const islFaction = isl.faction;
     if (islFaction === 'english' || islFaction === 'eitc') {
@@ -3363,7 +4058,12 @@ dock() {
     this.ui.updateHUD(gs); this.ui.showTrade(this.nearbyIsland, gs); this.save();
 }
 
-undock() { this.gameState.isDocked = false; this.ui.closeTrade(); }
+undock() {
+    // === BALANCE: Reset trade fatigue when leaving port ===
+    resetTradeFatigue(this.gameState);
+    this.gameState.isDocked = false;
+    this.ui.closeTrade();
+}
 
 buyBest() {
     const gs = this.gameState, iid = gs.currentIsland; if (!iid) return;
@@ -3391,13 +4091,29 @@ sellBest() {
 
 buyUpgrade(id) {
     const gs = this.gameState, u = CONFIG.upgrades[id];
-    if (!u || gs.player.upgrades[id] || gs.player.gold < u.cost) return false;
-    gs.player.gold -= u.cost;
+    if (!u || gs.player.upgrades[id]) return false;
+
+    // === BALANCE: Upgrade costs scale with player power ===
+    const prog = CONFIG.balance.progression;
+    const costMult = getPowerScaling(gs, 1.0, prog.upgradeCostPowerMult, 1.0, prog.upgradeCostMax);
+    const scaledCost = Math.floor(u.cost * costMult);
+
+    if (gs.player.gold < scaledCost) return false;
+    gs.player.gold -= scaledCost;
     gs.player.upgrades[id] = true;
     this.ui.toast('Upgrade!', u.name);
     this.ui.updateHUD(gs);
     this.save();
     return true;
+}
+
+// Helper to get scaled upgrade cost for display
+getUpgradeCost(id) {
+    const gs = this.gameState, u = CONFIG.upgrades[id];
+    if (!u) return 0;
+    const prog = CONFIG.balance.progression;
+    const costMult = getPowerScaling(gs, 1.0, prog.upgradeCostPowerMult, 1.0, prog.upgradeCostMax);
+    return Math.floor(u.cost * costMult);
 }
 
 // Save throttling with dirty flag - prevents excessive localStorage writes
