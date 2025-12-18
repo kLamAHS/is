@@ -1547,22 +1547,26 @@ return Math.floor(base);
 }
 
 // ==================== RISK & VALUE HELPERS ====================
-// Estimate cargo value using current island prices or base prices
+// Estimate cargo value using recorded prices or base prices
+// IMPORTANT: Do NOT call calcPrice here - it causes circular dependency:
+// estimateCargoValue → calcPrice → calcTariff → getTitleModifiers → getTitleTier → getTitleTrackValue → getNetWorth → estimateCargoValue
 function estimateCargoValue(gs) {
 let value = 0;
 const iid = gs.currentIsland;
 Object.entries(gs.player.cargo).forEach(([gid, qty]) => {
 let price = CONFIG.goods[gid].basePrice;
-// Use current island pricing if docked, else use last known or base
-if (iid && gs.islands[iid]) {
-price = calcPrice(gid, iid, gs);
+// Use recorded prices only - never call calcPrice to avoid circular dependency
+if (iid && gs.player.visitedIslands?.[iid]?.lastPrices?.[gid]) {
+    // Use last recorded price for current island
+    price = gs.player.visitedIslands[iid].lastPrices[gid];
 } else if (gs.player.visitedIslands) {
-// Use any known price
-for (const vid of Object.keys(gs.player.visitedIslands)) {
-const lp = gs.player.visitedIslands[vid]?.lastPrices?.[gid];
-if (lp) { price = lp; break; }
+    // Use any known recorded price from visited islands
+    for (const vid of Object.keys(gs.player.visitedIslands)) {
+        const lp = gs.player.visitedIslands[vid]?.lastPrices?.[gid];
+        if (lp) { price = lp; break; }
+    }
 }
-}
+// Falls back to CONFIG.goods[gid].basePrice if no recorded prices
 value += price * qty;
 });
 return value;
