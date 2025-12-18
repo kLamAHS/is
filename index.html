@@ -19,6 +19,7 @@
             --font-display: 'Cinzel', serif; --font-body: 'Crimson Text', Georgia, serif;
             --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --space-xl: 32px;
             --touch-min: 48px; --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+            --action-stack-h: 200px; --action-stack-bottom: 20px;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
@@ -90,6 +91,17 @@
     #heat-indicator.med .heat-fill { background: var(--gold-dark); }
     #heat-indicator.high .heat-fill { background: var(--blood-red); }
 
+    /* Contract tracker chip */
+    #contract-tracker { position: fixed; top: 190px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; cursor: pointer; pointer-events: auto; max-width: 130px; border-left: 3px solid var(--gold); }
+    #contract-tracker.hidden { display: none; }
+    #contract-tracker .contract-title { font-family: var(--font-display); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+    #contract-tracker .contract-meta { color: var(--ink-light); font-size: 0.6rem; }
+
+    /* Season/World indicator */
+    #world-indicator { position: fixed; top: 220px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.6rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; }
+    #world-indicator.storm-season { border-left: 3px solid var(--sea-medium); }
+    #world-indicator.crackdown { border-left: 3px solid var(--blood-red); }
+
     #compass { position: fixed; top: 50px; right: var(--space-sm); display: flex; flex-direction: column; align-items: center; gap: var(--space-xs); z-index: 10; }
     .compass-ring { width: 60px; height: 60px; border-radius: 50%; background: var(--card-bg); border: 3px solid var(--wood); position: relative; box-shadow: var(--shadow-light); }
     .compass-needle { position: absolute; top: 50%; left: 50%; width: 3px; height: 24px; background: linear-gradient(180deg, var(--blood-red) 50%, var(--ink) 50%); transform-origin: center bottom; transform: translate(-50%, -100%); border-radius: 2px; transition: transform 0.3s var(--ease-out); }
@@ -109,7 +121,7 @@
     #joystick-stick { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, var(--parchment) 0%, var(--gold-dark) 100%); border: 3px solid var(--wood); box-shadow: 0 4px 8px rgba(0,0,0,0.4); left: 50%; top: 50%; transform: translate(-50%, -50%); }
     #joystick-stick.active { box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 0 15px rgba(201,162,39,0.5); }
 
-    #action-buttons { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+    #action-buttons { position: absolute; bottom: var(--action-stack-bottom); right: 20px; display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
     .action-btn { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--wood); font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
     .action-btn:active { transform: scale(0.95); }
     #btn-dock { background: linear-gradient(180deg, var(--sea-light) 0%, var(--sea-medium) 100%); color: white; }
@@ -124,7 +136,8 @@
     .wind-boost { color: #1e7d34; font-size: 0.6rem; }
     .wind-penalty { color: var(--blood-red); font-size: 0.6rem; }
 
-    #island-indicator { position: absolute; bottom: 150px; right: 20px; background: var(--card-bg); padding: 6px 12px; border-radius: 8px; font-family: var(--font-display); font-size: 0.75rem; box-shadow: var(--shadow-light); text-align: right; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+    /* Fixed: island indicator positioned above action buttons */
+    #island-indicator { position: absolute; bottom: calc(var(--action-stack-bottom) + var(--action-stack-h) + 15px); right: 20px; background: var(--card-bg); padding: 6px 12px; border-radius: 8px; font-family: var(--font-display); font-size: 0.75rem; box-shadow: var(--shadow-light); text-align: right; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
     #island-indicator.visible { opacity: 1; }
 
     #event-toast { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: var(--card-bg); padding: var(--space-sm) var(--space-md); border-radius: 8px; display: flex; align-items: center; gap: var(--space-sm); box-shadow: var(--shadow); z-index: 20; animation: slideDown 0.3s var(--ease-out); max-width: calc(100% - 40px); }
@@ -153,6 +166,7 @@
     .trade-tab { flex: 1; padding: var(--space-sm); background: transparent; border: none; font-family: var(--font-display); font-size: 0.75rem; cursor: pointer; color: var(--ink-light); position: relative; }
     .trade-tab.active { color: var(--ink); }
     .trade-tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--gold); }
+    .trade-tab .tab-badge { display: inline-block; background: var(--blood-red); color: white; font-size: 0.55rem; padding: 1px 4px; border-radius: 8px; margin-left: 2px; vertical-align: top; }
 
     .trade-panel { padding: var(--space-sm); max-height: 40vh; overflow-y: auto; }
     .goods-list { display: flex; flex-direction: column; gap: var(--space-xs); }
@@ -178,6 +192,29 @@
 
     .trade-footer { padding: var(--space-sm) var(--space-md); border-top: 2px solid var(--parchment-dark); display: flex; justify-content: space-between; align-items: center; }
     .player-stats { display: flex; gap: var(--space-md); font-size: 0.8rem; }
+
+    /* Contract cards */
+    .contract-card { background: rgba(255,255,255,0.6); border: 2px solid var(--parchment-dark); border-radius: 8px; padding: var(--space-sm); margin-bottom: var(--space-sm); }
+    .contract-card.active { border-color: var(--gold); background: rgba(201,162,39,0.1); }
+    .contract-card.tracked { border-color: var(--sea-medium); box-shadow: 0 0 8px rgba(74,138,154,0.4); }
+    .contract-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-xs); }
+    .contract-type { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: var(--ink-light); color: var(--parchment); }
+    .contract-type.delivery { background: var(--sea-medium); }
+    .contract-type.smuggling { background: var(--blood-red); }
+    .contract-type.courier { background: var(--gold-dark); }
+    .contract-type.supply { background: #1e7d34; }
+    .contract-type.faction { background: var(--pirates); }
+    .contract-title { font-family: var(--font-display); font-size: 0.85rem; flex: 1; margin-right: var(--space-xs); }
+    .contract-deadline { font-size: 0.7rem; color: var(--ink-light); }
+    .contract-deadline.urgent { color: var(--blood-red); font-weight: 600; }
+    .contract-details { font-size: 0.75rem; color: var(--ink-light); margin-bottom: var(--space-xs); }
+    .contract-rewards { display: flex; gap: var(--space-sm); font-size: 0.75rem; margin-bottom: var(--space-xs); }
+    .contract-reward { display: flex; align-items: center; gap: 2px; }
+    .contract-reward.gold { color: var(--gold-dark); }
+    .contract-reward.rep { color: var(--sea-medium); }
+    .contract-actions { display: flex; gap: var(--space-xs); }
+    .contract-actions button { flex: 1; }
+    .contract-empty { text-align: center; color: var(--ink-light); padding: var(--space-lg); font-style: italic; }
 
     .logbook-section { margin-bottom: var(--space-md); }
     .logbook-section h4 { font-family: var(--font-display); font-size: 0.85rem; margin-bottom: var(--space-xs); color: var(--ink-light); }
@@ -225,6 +262,18 @@
     .risk-high { color: var(--blood-red); }
     .menu-buttons { display: flex; flex-direction: column; gap: var(--space-xs); margin-bottom: var(--space-md); }
 
+    /* Titles section */
+    .title-item { display: flex; justify-content: space-between; align-items: center; padding: var(--space-xs) var(--space-sm); background: rgba(255,255,255,0.5); border-radius: 4px; margin-bottom: 2px; font-size: 0.8rem; }
+    .title-name { font-family: var(--font-display); }
+    .title-tier { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: var(--gold); color: var(--ink); }
+    .title-tier.tier-0 { background: var(--ink-light); color: var(--parchment); }
+    .title-tier.tier-1 { background: #cd7f32; color: white; }
+    .title-tier.tier-2 { background: #c0c0c0; color: var(--ink); }
+    .title-tier.tier-3 { background: var(--gold); color: var(--ink); }
+    .title-tier.tier-4 { background: #b9f2ff; color: var(--ink); }
+    .title-tier.tier-5 { background: var(--blood-red); color: white; }
+    .title-progress { font-size: 0.65rem; color: var(--ink-light); }
+
     .pirate-content, .encounter-content, .warning-content { padding: var(--space-lg); text-align: center; }
     .pirate-icon, .encounter-icon, .warning-icon { font-size: 3rem; margin-bottom: var(--space-sm); }
     .pirate-icon { animation: shake 0.5s ease-in-out infinite; }
@@ -255,12 +304,13 @@
     .map-info { text-align: center; margin-top: var(--space-sm); font-size: 0.75rem; color: var(--ink-light); }
 
     @media (max-height: 500px) and (orientation: landscape) {
+        :root { --action-stack-h: 160px; --action-stack-bottom: 10px; }
         #mobile-controls { height: 140px; }
         #joystick-zone { width: 100px; height: 100px; bottom: 10px; left: 10px; }
         #joystick-base { width: 100px; height: 100px; }
         #joystick-stick { width: 40px; height: 40px; }
         .action-btn { width: 50px; height: 50px; font-size: 1.2rem; }
-        #action-buttons { bottom: 10px; right: 10px; gap: 8px; }
+        #action-buttons { bottom: var(--action-stack-bottom); right: 10px; gap: 8px; }
     }
 </style>
 
@@ -291,6 +341,8 @@
     <div id="cargo-summary"><div class="cargo-header"><span>📦 Cargo</span><span id="cargo-count">0/50</span></div><div id="cargo-preview"></div></div>
     <div id="wind-indicator"><span id="wind-arrow">💨</span><span id="wind-strength">Calm</span></div>
     <div id="heat-indicator" class="low"><span>🔥</span><div class="heat-bar"><div class="heat-fill" id="heat-fill"></div></div><span id="heat-label">0</span></div>
+    <div id="contract-tracker" class="hidden"><span>📜</span><span class="contract-title" id="tracker-title">--</span><span class="contract-meta" id="tracker-meta">--</span></div>
+    <div id="world-indicator"><span id="world-icon">🌤️</span><span id="world-status">Fair Winds</span></div>
     <div id="compass">
         <div class="compass-ring">
             <div class="compass-needle" id="compass-needle"></div>
@@ -318,11 +370,13 @@
         <div class="trade-tabs">
             <button class="trade-tab active" data-tab="buy">Buy</button>
             <button class="trade-tab" data-tab="sell">Sell</button>
+            <button class="trade-tab" data-tab="contracts">📜 Jobs<span class="tab-badge hidden" id="contracts-badge">0</span></button>
             <button class="trade-tab" data-tab="logbook">📖 Log</button>
             <button class="trade-tab" data-tab="shipyard">🔧 Ship</button>
         </div>
         <div class="trade-panel" id="buy-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="buy-best-btn">💰 Buy Best</button></div><div class="goods-list" id="buy-goods-list"></div></div>
         <div class="trade-panel hidden" id="sell-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="sell-best-btn">💰 Sell Best</button></div><div class="goods-list" id="sell-goods-list"></div></div>
+        <div class="trade-panel hidden" id="contracts-panel"><div class="logbook-section"><h4>📋 Available Contracts</h4><div id="available-contracts"></div></div><div class="logbook-section"><h4>📌 Active Contracts (<span id="active-count">0</span>/3)</h4><div id="active-contracts"></div></div></div>
         <div class="trade-panel hidden" id="logbook-panel"><div class="logbook-section"><h4>💡 Deal Spotlight</h4><div id="spotlight-list"></div></div><div class="logbook-section"><h4>📜 Price History</h4><select class="island-select" id="logbook-island-select"></select><div id="logbook-prices"></div></div></div>
         <div class="trade-panel hidden" id="shipyard-panel"><div id="upgrades-list"></div></div>
         <div class="trade-footer"><div class="player-stats"><span>🪙 <span id="trade-gold">1000</span></span><span>📦 <span id="trade-cargo">0/50</span></span></div><button class="btn-primary" id="leave-port-btn">Set Sail</button></div>
@@ -343,6 +397,8 @@
     <div class="modal-content menu-content">
         <h2>Captain's Log</h2>
         <div class="menu-section"><h3>Reputation</h3><div class="reputation-bars"><div class="rep-item"><span>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Navy</span><div class="rep-bar"><div class="rep-fill" id="rep-english"></div></div><span class="rep-value" id="rep-english-val">0</span></div><div class="rep-item"><span>⚓ EITC</span><div class="rep-bar"><div class="rep-fill" id="rep-eitc"></div></div><span class="rep-value" id="rep-eitc-val">0</span></div><div class="rep-item"><span>🏴‍☠️ Pirates</span><div class="rep-bar"><div class="rep-fill" id="rep-pirates"></div></div><span class="rep-value" id="rep-pirates-val">0</span></div></div></div>
+        <div class="menu-section"><h3>Titles</h3><div id="titles-list"></div></div>
+        <div class="menu-section"><h3>World Status</h3><div class="ship-stats"><div class="stat-row"><span>Season</span><span id="menu-season">Fair</span></div><div class="stat-row"><span>Crackdown</span><span id="menu-crackdown">None</span></div><div class="stat-row"><span>Regional Event</span><span id="menu-regional">None</span></div></div></div>
         <div class="menu-section"><h3>Ship</h3><div class="ship-stats"><div class="stat-row"><span>Speed</span><span id="ship-speed">1.0x</span></div><div class="stat-row"><span>Cargo</span><span id="ship-cargo-cap">50</span></div><div class="stat-row"><span>Supply/Day</span><span id="ship-supply-rate">1</span></div><div class="stat-row"><span>Upgrades</span><span id="ship-upgrades">None</span></div></div></div>
         <div class="menu-section"><h3>Wind & Risk</h3><div class="ship-stats"><div class="stat-row"><span>Wind</span><span id="menu-wind-dir">N Calm</span></div><div class="stat-row"><span>Wind Change</span><span id="menu-wind-change">5d</span></div><div class="stat-row"><span>Route Risk</span><span id="menu-route-risk">Low</span></div><div class="stat-row"><span>Heat</span><span id="menu-heat">0</span></div></div></div>
         <div class="menu-buttons"><button class="btn-secondary" id="save-btn">💾 Save</button><button class="btn-secondary" id="new-game-btn">🔄 New Game</button></div>
@@ -355,6 +411,8 @@
 <div id="encounter-modal" class="modal hidden"><div class="modal-content encounter-content"><div class="encounter-icon" id="encounter-icon">🌊</div><h2 id="encounter-title">Event</h2><p id="encounter-desc">Description</p><div id="encounter-result"></div><div class="encounter-options" id="encounter-options"></div></div></div>
 
 <div id="warning-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="warning-icon">⚠️</div><h2 id="warning-title">Warning</h2><p id="warning-text">Message</p><button class="btn-primary" id="warning-dismiss">Continue</button></div></div>
+
+<div id="title-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="title-icon">🏆</div><h2 id="title-earned-name">Title Earned!</h2><p id="title-earned-desc">You have proven yourself worthy.</p><button class="btn-primary" id="title-dismiss">Continue</button></div></div>
 
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
@@ -427,10 +485,49 @@ cons: ['-8% speed', '-3 capacity'],
 effects: { tributeReduction: 0.4, goldProtection: 0.3, speedPenalty: 0.08, capacityPenalty: 3 }
 }
 },
+// TITLES - endless progression tiers
+titles: {
+merchant: {
+    name: 'Merchant',
+    icon: '💰',
+    thresholds: [500, 2000, 5000, 15000, 50000], // net worth
+    tierNames: ['Peddler', 'Trader', 'Merchant', 'Magnate', 'Tycoon', 'Legend'],
+    effects: { repGainMult: 0.02 } // +2% per tier
+},
+smuggler: {
+    name: 'Smuggler',
+    icon: '🏴‍☠️',
+    thresholds: [5, 20, 50, 100, 200], // lifetime contraband traded
+    tierNames: ['Runner', 'Smuggler', 'Kingpin', 'Shadow Lord', 'Ghost', 'Phantom'],
+    effects: { repLossReduction: 0.04, tributeReduction: 0.03 } // per tier
+},
+voyager: {
+    name: 'Voyager',
+    icon: '🧭',
+    thresholds: [10, 30, 75, 150, 300], // days sailed
+    tierNames: ['Deckhand', 'Sailor', 'Voyager', 'Navigator', 'Admiral', 'Legend'],
+    effects: { inspectionReduction: 0.02 } // per tier
+}
+},
+// CONTRACT TYPES
+contractTypes: {
+delivery: { name: 'Delivery', icon: '📦', baseReward: 100, repReward: 5, riskMult: 1.0 },
+smuggling: { name: 'Smuggling', icon: '🏴‍☠️', baseReward: 200, repReward: -5, riskMult: 1.8, heatGain: 15 },
+courier: { name: 'Courier', icon: '✉️', baseReward: 80, repReward: 8, riskMult: 0.8 },
+supply: { name: 'Supply Run', icon: '🍖', baseReward: 60, repReward: 3, riskMult: 0.6 },
+faction: { name: 'Faction Work', icon: '⚔️', baseReward: 50, repReward: 15, riskMult: 1.2 }
+},
 events: [
 { id: 'festival', name: 'Festival', desc: 'Luxury demand up!', duration: 3, affects: ['luxury'], multiplier: 1.5 },
 { id: 'shortage', name: 'Shortage', desc: 'Prices up!', duration: 4, affects: ['commodity'], multiplier: 1.4 },
 { id: 'surplus', name: 'Surplus', desc: 'Prices down!', duration: 3, affects: ['commodity'], multiplier: 0.7 }
+],
+// REGIONAL EVENTS for living world
+regionalEvents: [
+{ id: 'trade_boom', name: 'Trade Boom', desc: 'All prices up 20%', duration: 5, categoryMult: { commodity: 1.2, luxury: 1.2, contraband: 1.1 } },
+{ id: 'pirate_activity', name: 'Pirate Activity', desc: 'Contraband prices soar', duration: 4, categoryMult: { commodity: 1.0, luxury: 1.0, contraband: 1.5 } },
+{ id: 'naval_blockade', name: 'Naval Blockade', desc: 'Commodity shortage', duration: 4, categoryMult: { commodity: 1.4, luxury: 1.1, contraband: 0.8 } },
+{ id: 'merchant_fair', name: 'Merchant Fair', desc: 'Luxury demand high', duration: 3, categoryMult: { commodity: 0.9, luxury: 1.4, contraband: 1.0 } }
 ],
 encounters: {
 storm: { name: 'Storm!', icon: '🌊', desc: 'A violent storm approaches!', baseChance: 0.04 },
@@ -443,7 +540,10 @@ startingGold: 1000, startingSupplies: 30, baseCargoCapacity: 50, baseShipSpeed: 
 baseSupplyRate: 1, dockDistance: 35, islandCollisionRadius: 25,
 pirateEncounterChance: 0.08, windChangeDays: 5,
 heatDecayPerDay: 2, heatGainContraband: 8, heatGainDockEnglishEITC: 5,
-highMarginThreshold: 15 // minimum profit/weight to glow
+highMarginThreshold: 15, // minimum profit/weight to glow
+maxActiveContracts: 3, contractBoardSize: 5, contractRefreshDays: 3,
+seasonCycleDays: 20, stormSeasonStart: 13, stormSeasonEnd: 18,
+crackdownDecayPerDay: 2, crackdownMaxLevel: 100
 }
 };
 
@@ -454,6 +554,455 @@ const WIND_DIRS = [
 { name: 'W', angle: 270, v: { x: -1, z: 0 } }, { name: 'NW', angle: 315, v: { x: -0.7, z: -0.7 } }
 ];
 const WIND_STR = [{ name: 'Calm', m: 0 }, { name: 'Light', m: 0.15 }, { name: 'Moderate', m: 0.25 }, { name: 'Strong', m: 0.4 }];
+
+// ==================== TITLE SYSTEM ====================
+function getTitleTier(trackId, gs) {
+    const track = CONFIG.titles[trackId];
+    if (!track) return 0;
+    const value = getTitleTrackValue(trackId, gs);
+    let tier = 0;
+    for (let i = 0; i < track.thresholds.length; i++) {
+        if (value >= track.thresholds[i]) tier = i + 1;
+        else break;
+    }
+    // Beyond last threshold: scale infinitely
+    if (tier >= track.thresholds.length) {
+        const lastThreshold = track.thresholds[track.thresholds.length - 1];
+        const extraTiers = Math.floor((value - lastThreshold) / (lastThreshold * 0.5));
+        tier = track.thresholds.length + extraTiers;
+    }
+    return tier;
+}
+
+function getTitleTrackValue(trackId, gs) {
+    switch (trackId) {
+        case 'merchant': return getNetWorth(gs);
+        case 'smuggler': return gs.player.stats?.contrabandTraded || 0;
+        case 'voyager': return gs.player.days || 0;
+        default: return 0;
+    }
+}
+
+function getTitleName(trackId, tier) {
+    const track = CONFIG.titles[trackId];
+    if (!track) return 'Unknown';
+    if (tier < track.tierNames.length) return track.tierNames[tier];
+    return track.tierNames[track.tierNames.length - 1] + ' ' + (tier - track.tierNames.length + 2);
+}
+
+function getNextThreshold(trackId, gs) {
+    const track = CONFIG.titles[trackId];
+    if (!track) return null;
+    const value = getTitleTrackValue(trackId, gs);
+    for (const t of track.thresholds) {
+        if (value < t) return t;
+    }
+    // Beyond last: calculate next scaling threshold
+    const lastThreshold = track.thresholds[track.thresholds.length - 1];
+    const extraTiers = Math.floor((value - lastThreshold) / (lastThreshold * 0.5)) + 1;
+    return lastThreshold + extraTiers * (lastThreshold * 0.5);
+}
+
+function getTitleModifiers(gs) {
+    const mods = {
+        repGainMult: 1.0,      // Multiplier for rep gains
+        repLossReduction: 0,   // % reduction in rep losses
+        inspectionReduction: 0, // % reduction in inspection chance
+        tributeReduction: 0,   // % reduction in tribute costs
+        tariffReduction: 0     // % reduction in tariffs
+    };
+
+    for (const [trackId, track] of Object.entries(CONFIG.titles)) {
+        const tier = getTitleTier(trackId, gs);
+        if (tier > 0 && track.effects) {
+            if (track.effects.repGainMult) mods.repGainMult += track.effects.repGainMult * tier;
+            if (track.effects.repLossReduction) mods.repLossReduction += track.effects.repLossReduction * tier;
+            if (track.effects.inspectionReduction) mods.inspectionReduction += track.effects.inspectionReduction * tier;
+            if (track.effects.tributeReduction) mods.tributeReduction += track.effects.tributeReduction * tier;
+            if (track.effects.tariffReduction) mods.tariffReduction += track.effects.tariffReduction * tier;
+        }
+    }
+
+    // Faction standing bonuses
+    for (const faction of ['english', 'eitc', 'pirates']) {
+        const rep = gs.player.reputation[faction] || 0;
+        if (rep > 50) mods.tariffReduction += 0.05; // High standing = better tariffs
+    }
+
+    // Cap modifiers
+    mods.repLossReduction = Math.min(0.5, mods.repLossReduction); // Max 50% reduction
+    mods.inspectionReduction = Math.min(0.5, mods.inspectionReduction);
+    mods.tributeReduction = Math.min(0.4, mods.tributeReduction);
+    mods.tariffReduction = Math.min(0.2, mods.tariffReduction);
+
+    return mods;
+}
+
+function updateTitles(gs, showToast = null) {
+    if (!gs.player.titles) gs.player.titles = {};
+
+    for (const trackId of Object.keys(CONFIG.titles)) {
+        const oldTier = gs.player.titles[trackId] || 0;
+        const newTier = getTitleTier(trackId, gs);
+
+        if (newTier > oldTier) {
+            gs.player.titles[trackId] = newTier;
+            if (showToast) {
+                const track = CONFIG.titles[trackId];
+                showToast(track.icon, getTitleName(trackId, newTier), `${track.name} title earned!`);
+            }
+        }
+    }
+}
+
+// ==================== REPUTATION SYSTEM ====================
+function applyRepChange(gs, faction, delta, source = null) {
+    const mods = getTitleModifiers(gs);
+
+    // Apply modifiers
+    if (delta > 0) {
+        delta = Math.round(delta * mods.repGainMult);
+    } else if (delta < 0) {
+        delta = Math.round(delta * (1 - mods.repLossReduction));
+    }
+
+    // Apply change with clamping
+    const oldRep = gs.player.reputation[faction] || 0;
+    gs.player.reputation[faction] = Math.max(-100, Math.min(100, oldRep + delta));
+
+    // Track stats
+    if (!gs.player.stats) gs.player.stats = {};
+    if (!gs.player.stats.repChanges) gs.player.stats.repChanges = {};
+    if (!gs.player.stats.repChanges[faction]) gs.player.stats.repChanges[faction] = { gained: 0, lost: 0 };
+
+    if (delta > 0) gs.player.stats.repChanges[faction].gained += delta;
+    else if (delta < 0) gs.player.stats.repChanges[faction].lost += Math.abs(delta);
+
+    return gs.player.reputation[faction] - oldRep;
+}
+
+// ==================== CONTRACT SYSTEM ====================
+let contractIdCounter = 1;
+
+function generateContractId() {
+    return 'c_' + (contractIdCounter++) + '_' + Date.now().toString(36);
+}
+
+function generateContractsForIsland(gs, iid) {
+    const contracts = [];
+    const island = CONFIG.islands[iid];
+    if (!island) return contracts;
+
+    const numContracts = 3 + Math.floor(Math.random() * (CONFIG.settings.contractBoardSize - 2));
+    const otherIslands = Object.keys(CONFIG.islands).filter(id => id !== iid);
+
+    for (let i = 0; i < numContracts; i++) {
+        const destId = otherIslands[Math.floor(Math.random() * otherIslands.length)];
+        const dest = CONFIG.islands[destId];
+        const dist = getIslandDistance(island.position, dest.position);
+        const baseDays = Math.ceil(dist / 30);
+
+        // Pick contract type based on island faction
+        const types = ['delivery', 'courier', 'supply'];
+        if (island.faction === 'pirates' || dest.faction === 'pirates') types.push('smuggling', 'smuggling');
+        if (island.faction !== 'neutral') types.push('faction');
+
+        const typeId = types[Math.floor(Math.random() * types.length)];
+        const type = CONFIG.contractTypes[typeId];
+
+        // Calculate rewards based on distance, urgency, risk
+        const urgency = 0.8 + Math.random() * 0.4; // 0.8-1.2
+        const deadline = Math.max(2, Math.floor(baseDays * (1.5 + (1 - urgency) * 2)));
+        const riskFactor = type.riskMult * (1 + getRouteRiskBetween(gs, iid, destId) * 0.5);
+
+        let goldReward = Math.floor(type.baseReward * (1 + dist / 100) * riskFactor * urgency);
+        let repReward = type.repReward;
+        let repFaction = island.faction !== 'neutral' ? island.faction : (Math.random() > 0.5 ? 'english' : 'eitc');
+
+        // Contract-specific requirements
+        let requirement = null;
+        let goodId = null;
+        let qty = 0;
+
+        if (typeId === 'delivery') {
+            const goods = Object.keys(CONFIG.goods).filter(g => CONFIG.goods[g].category !== 'contraband');
+            goodId = goods[Math.floor(Math.random() * goods.length)];
+            qty = 3 + Math.floor(Math.random() * 8);
+            requirement = { type: 'deliver', goodId, qty };
+        } else if (typeId === 'smuggling') {
+            goodId = 'gunpowder';
+            qty = 2 + Math.floor(Math.random() * 5);
+            requirement = { type: 'deliver', goodId, qty };
+            repFaction = 'pirates';
+            goldReward = Math.floor(goldReward * 1.5);
+        } else if (typeId === 'courier') {
+            requirement = { type: 'reach', noInspection: Math.random() > 0.5 };
+        } else if (typeId === 'supply') {
+            requirement = { type: 'supplies', minSupplies: 10 + Math.floor(Math.random() * 10) };
+        } else if (typeId === 'faction') {
+            requirement = { type: 'reach' };
+            goldReward = Math.floor(goldReward * 0.6);
+            repReward = Math.floor(repReward * 1.5);
+        }
+
+        contracts.push({
+            id: generateContractId(),
+            typeId,
+            title: generateContractTitle(typeId, goodId, dest.name),
+            fromIsland: iid,
+            toIsland: destId,
+            deadline,
+            requirement,
+            rewards: { gold: goldReward, rep: repReward, repFaction },
+            dayAccepted: null,
+            status: 'available'
+        });
+    }
+
+    return contracts;
+}
+
+function generateContractTitle(typeId, goodId, destName) {
+    const good = goodId ? CONFIG.goods[goodId] : null;
+    switch (typeId) {
+        case 'delivery': return `Deliver ${good?.name || 'goods'} to ${destName}`;
+        case 'smuggling': return `Smuggle cargo to ${destName}`;
+        case 'courier': return `Urgent dispatch to ${destName}`;
+        case 'supply': return `Supply run to ${destName}`;
+        case 'faction': return `Official business at ${destName}`;
+        default: return `Contract to ${destName}`;
+    }
+}
+
+function getIslandDistance(pos1, pos2) {
+    return Math.sqrt((pos1.x - pos2.x) ** 2 + (pos1.z - pos2.z) ** 2);
+}
+
+function getRouteRiskBetween(gs, fromId, toId) {
+    const from = CONFIG.islands[fromId];
+    const to = CONFIG.islands[toId];
+    let risk = 0;
+    if (to.faction === 'pirates') risk += 0.3;
+    if (from.faction === 'pirates') risk += 0.2;
+    return Math.min(1, risk);
+}
+
+function acceptContract(gs, contractId) {
+    const active = gs.player.contracts.active || [];
+    if (active.length >= CONFIG.settings.maxActiveContracts) return false;
+
+    // Find contract in any board
+    for (const iid of Object.keys(gs.world.boards)) {
+        const board = gs.world.boards[iid];
+        const idx = board.contracts.findIndex(c => c.id === contractId);
+        if (idx !== -1) {
+            const contract = board.contracts.splice(idx, 1)[0];
+            contract.dayAccepted = gs.player.days;
+            contract.status = 'active';
+            active.push(contract);
+            gs.player.contracts.active = active;
+            return true;
+        }
+    }
+    return false;
+}
+
+function abandonContract(gs, contractId) {
+    const idx = gs.player.contracts.active.findIndex(c => c.id === contractId);
+    if (idx === -1) return false;
+
+    const contract = gs.player.contracts.active.splice(idx, 1)[0];
+    contract.status = 'abandoned';
+    gs.player.contracts.failed.push(contract);
+
+    // Small rep penalty
+    applyRepChange(gs, contract.rewards.repFaction, -3, 'abandon_contract');
+
+    if (gs.player.trackedContractId === contractId) {
+        gs.player.trackedContractId = null;
+    }
+
+    return true;
+}
+
+function evaluateContractsOnDock(gs, iid) {
+    const completed = [];
+    const toRemove = [];
+
+    for (const contract of gs.player.contracts.active) {
+        if (contract.toIsland !== iid) continue;
+
+        let success = false;
+        const req = contract.requirement;
+
+        if (req.type === 'deliver') {
+            const have = gs.player.cargo[req.goodId] || 0;
+            if (have >= req.qty) {
+                gs.player.cargo[req.goodId] = have - req.qty;
+                if (gs.player.cargo[req.goodId] <= 0) delete gs.player.cargo[req.goodId];
+                success = true;
+
+                // Track contraband for smuggler title
+                if (CONFIG.goods[req.goodId]?.category === 'contraband') {
+                    if (!gs.player.stats) gs.player.stats = {};
+                    gs.player.stats.contrabandTraded = (gs.player.stats.contrabandTraded || 0) + req.qty;
+                }
+            }
+        } else if (req.type === 'reach') {
+            if (req.noInspection && gs.player.inspectionTriggeredThisContract) {
+                success = false;
+            } else {
+                success = true;
+            }
+        } else if (req.type === 'supplies') {
+            if (gs.player.supplies >= req.minSupplies) {
+                success = true;
+            }
+        } else {
+            success = true;
+        }
+
+        if (success) {
+            completed.push(contract);
+            toRemove.push(contract.id);
+        }
+    }
+
+    // Remove completed from active
+    gs.player.contracts.active = gs.player.contracts.active.filter(c => !toRemove.includes(c.id));
+
+    // Award rewards
+    for (const contract of completed) {
+        gs.player.gold += contract.rewards.gold;
+        applyRepChange(gs, contract.rewards.repFaction, contract.rewards.rep, 'contract_complete');
+        contract.status = 'completed';
+        gs.player.contracts.completed.push(contract);
+
+        // Track stats
+        if (!gs.player.stats) gs.player.stats = {};
+        gs.player.stats.contractsCompleted = (gs.player.stats.contractsCompleted || 0) + 1;
+
+        // Smuggling increases crackdown
+        if (contract.typeId === 'smuggling') {
+            gs.world.crackdown.level = Math.min(
+                CONFIG.settings.crackdownMaxLevel,
+                (gs.world.crackdown.level || 0) + 15
+            );
+        }
+
+        if (gs.player.trackedContractId === contract.id) {
+            gs.player.trackedContractId = null;
+        }
+    }
+
+    return completed;
+}
+
+function expireContracts(gs) {
+    const expired = [];
+    const toRemove = [];
+
+    for (const contract of gs.player.contracts.active) {
+        const daysElapsed = gs.player.days - contract.dayAccepted;
+        if (daysElapsed > contract.deadline) {
+            expired.push(contract);
+            toRemove.push(contract.id);
+        }
+    }
+
+    gs.player.contracts.active = gs.player.contracts.active.filter(c => !toRemove.includes(c.id));
+
+    for (const contract of expired) {
+        contract.status = 'failed';
+        gs.player.contracts.failed.push(contract);
+        applyRepChange(gs, contract.rewards.repFaction, -Math.abs(contract.rewards.rep), 'contract_failed');
+
+        if (gs.player.trackedContractId === contract.id) {
+            gs.player.trackedContractId = null;
+        }
+    }
+
+    return expired;
+}
+
+function getTrackedContract(gs) {
+    if (!gs.player.trackedContractId) return null;
+    return gs.player.contracts.active.find(c => c.id === gs.player.trackedContractId);
+}
+
+function refreshContractBoard(gs, iid) {
+    if (!gs.world.boards) gs.world.boards = {};
+
+    const board = gs.world.boards[iid];
+    const shouldRefresh = !board ||
+        (gs.player.days - board.dayGenerated) >= CONFIG.settings.contractRefreshDays ||
+        board.contracts.length === 0;
+
+    if (shouldRefresh) {
+        gs.world.boards[iid] = {
+            dayGenerated: gs.player.days,
+            contracts: generateContractsForIsland(gs, iid)
+        };
+    }
+
+    return gs.world.boards[iid];
+}
+
+// ==================== LIVING WORLD SYSTEM ====================
+function tickWorldStatePerDay(gs) {
+    if (!gs.world) gs.world = {};
+
+    // Season cycle
+    gs.world.seasonDay = ((gs.world.seasonDay || 1) % CONFIG.settings.seasonCycleDays) + 1;
+
+    // Crackdown decay
+    if (gs.world.crackdown) {
+        gs.world.crackdown.level = Math.max(0, (gs.world.crackdown.level || 0) - CONFIG.settings.crackdownDecayPerDay);
+    }
+
+    // Regional event management
+    if (gs.world.regionalEvent) {
+        gs.world.regionalEvent.daysRemaining--;
+        if (gs.world.regionalEvent.daysRemaining <= 0) {
+            gs.world.regionalEvent = null;
+        }
+    }
+
+    // Chance to spawn new regional event
+    if (!gs.world.regionalEvent && Math.random() < 0.05) {
+        const event = CONFIG.regionalEvents[Math.floor(Math.random() * CONFIG.regionalEvents.length)];
+        gs.world.regionalEvent = {
+            id: event.id,
+            name: event.name,
+            desc: event.desc,
+            categoryMult: { ...event.categoryMult },
+            daysRemaining: event.duration,
+            affectedIslands: getRandomIslandSubset(3 + Math.floor(Math.random() * 3))
+        };
+    }
+}
+
+function getRandomIslandSubset(count) {
+    const islands = Object.keys(CONFIG.islands);
+    const shuffled = islands.sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, islands.length));
+}
+
+function isStormSeason(gs) {
+    const day = gs.world?.seasonDay || 1;
+    return day >= CONFIG.settings.stormSeasonStart && day <= CONFIG.settings.stormSeasonEnd;
+}
+
+function getCrackdownLevel(gs) {
+    return gs.world?.crackdown?.level || 0;
+}
+
+function getSeasonLabel(gs) {
+    if (isStormSeason(gs)) return { label: 'Storm Season', icon: '🌧️', class: 'storm-season' };
+    const day = gs.world?.seasonDay || 1;
+    if (day < CONFIG.settings.stormSeasonStart) return { label: 'Fair Winds', icon: '🌤️', class: '' };
+    return { label: 'Calm Seas', icon: '☀️', class: '' };
+}
 
 // ==================== SHIP STAT HELPERS ====================
 // Returns effective ship speed factoring in upgrades
@@ -555,6 +1104,9 @@ function calcTributeCost(gs, base) {
 if (gs.player.upgrades?.vault) base *= (1 - CONFIG.upgrades.vault.effects.tributeReduction);
 const fc = CONFIG.factions[gs.player.faction];
 if (fc.tributeMult) base *= fc.tributeMult;
+// Title modifiers
+const mods = getTitleModifiers(gs);
+base *= (1 - mods.tributeReduction);
 return Math.floor(base);
 }
 
@@ -578,6 +1130,10 @@ if (lp) { price = lp; break; }
 value += price * qty;
 });
 return value;
+}
+
+function getNetWorth(gs) {
+    return gs.player.gold + estimateCargoValue(gs);
 }
 
 // Route risk score (0-1): influenced by cargo value, faction, destination, heat
@@ -654,6 +1210,13 @@ let bias = m.preference === 'exports' ? 0.8 : m.preference === 'imports' ? 1.2 :
 const tariff = calcTariff(gs.player.faction, isl.faction, gs);
 let evMult = 1;
 if (isl.activeEvent) { const ev = CONFIG.events.find(e => e.id === isl.activeEvent.id); if (ev?.affects.includes(g.category)) evMult = ev.multiplier; }
+
+// Regional event multiplier
+if (gs.world?.regionalEvent?.affectedIslands?.includes(iid)) {
+    const catMult = gs.world.regionalEvent.categoryMult[g.category];
+    if (catMult) evMult *= catMult;
+}
+
 let fBonus = 1;
 if (gs.player.faction === 'eitc') fBonus = 0.95;
 if (gs.player.faction === 'pirates' && g.category === 'contraband') fBonus *= 0.5;
@@ -669,6 +1232,9 @@ if (if_ === 'neutral' || pf === if_) return 1;
 const rep = gs.player.reputation[if_] || 0;
 let t = 1 + (CONFIG.factions[if_]?.taxRate || 0);
 if (rep < -50) t += 0.3; else if (rep < -20) t += 0.15; else if (rep > 50) t -= 0.1;
+// Title modifier
+const mods = getTitleModifiers(gs);
+t *= (1 - mods.tariffReduction);
 return Math.max(0.9, Math.min(2, t));
 }
 
@@ -695,7 +1261,12 @@ if (gs.player.cargo[gid] <= 0) delete gs.player.cargo[gid];
 gs.islands[iid].markets[gid].supply += qty;
 recordPrice(gid, iid, price, gs);
 // Heat for selling contraband
-if (g.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband);
+if (g.category === 'contraband') {
+    addHeat(gs, CONFIG.settings.heatGainContraband);
+    // Track for smuggler title
+    if (!gs.player.stats) gs.player.stats = {};
+    gs.player.stats.contrabandTraded = (gs.player.stats.contrabandTraded || 0) + qty;
+}
 return { success: true, revenue: price * qty };
 }
 
@@ -791,10 +1362,23 @@ player: {
 faction, gold: CONFIG.settings.startingGold, days: 1, supplies: CONFIG.settings.startingSupplies,
 cargo: {}, position: getSafeSpawn(), reputation: { ...fc.startingRep },
 visitedIslands: {}, purchaseHistory: {}, upgrades: {}, destinationIslandId: null,
-heat: 0, daysSinceDock: 0
+heat: 0, daysSinceDock: 0,
+// New fields
+titles: {},
+stats: { contrabandTraded: 0, contractsCompleted: 0, repChanges: {} },
+contracts: { active: [], completed: [], failed: [] },
+trackedContractId: null,
+tokens: 0,
+inspectionTriggeredThisContract: false
 },
 islands,
 wind: { direction: Math.floor(Math.random() * 8), strength: Math.floor(Math.random() * 4), daysUntilChange: CONFIG.settings.windChangeDays },
+world: {
+    seasonDay: 1,
+    crackdown: { level: 0 },
+    regionalEvent: null,
+    boards: {}
+},
 currentIsland: null, isDocked: false
 };
 }
@@ -808,6 +1392,28 @@ if (gs.player.heat === undefined) gs.player.heat = 0;
 if (gs.player.daysSinceDock === undefined) gs.player.daysSinceDock = 0;
 if (!gs.wind) gs.wind = { direction: Math.floor(Math.random() * 8), strength: Math.floor(Math.random() * 4), daysUntilChange: 5 };
 if (gs.isDocked && !gs.currentIsland) gs.isDocked = false;
+
+// New migrations for contracts/titles/world
+if (!gs.player.titles) gs.player.titles = {};
+if (!gs.player.stats) gs.player.stats = { contrabandTraded: 0, contractsCompleted: 0, repChanges: {} };
+if (!gs.player.stats.contrabandTraded) gs.player.stats.contrabandTraded = 0;
+if (!gs.player.stats.contractsCompleted) gs.player.stats.contractsCompleted = 0;
+if (!gs.player.stats.repChanges) gs.player.stats.repChanges = {};
+if (!gs.player.contracts) gs.player.contracts = { active: [], completed: [], failed: [] };
+if (!gs.player.contracts.active) gs.player.contracts.active = [];
+if (!gs.player.contracts.completed) gs.player.contracts.completed = [];
+if (!gs.player.contracts.failed) gs.player.contracts.failed = [];
+if (gs.player.trackedContractId === undefined) gs.player.trackedContractId = null;
+if (gs.player.tokens === undefined) gs.player.tokens = 0;
+if (gs.player.inspectionTriggeredThisContract === undefined) gs.player.inspectionTriggeredThisContract = false;
+
+// World state
+if (!gs.world) gs.world = {};
+if (gs.world.seasonDay === undefined) gs.world.seasonDay = 1;
+if (!gs.world.crackdown) gs.world.crackdown = { level: 0 };
+if (gs.world.regionalEvent === undefined) gs.world.regionalEvent = null;
+if (!gs.world.boards) gs.world.boards = {};
+
 return gs;
 }
 
@@ -892,13 +1498,13 @@ end() { this.active = false; this.stick.classList.remove('active'); this.stick.s
 class UI {
 constructor(game) { this.game = game; this.el = {}; this.cache(); this.bind(); }
 cache() {
-['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','buy-panel','sell-panel','logbook-panel','shipyard-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label'].forEach(id => this.el[id] = document.getElementById(id));
+['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss'].forEach(id => this.el[id] = document.getElementById(id));
 this.el.tradeTabs = document.querySelectorAll('.trade-tab'); this.el.factionCards = document.querySelectorAll('.faction-card');
 }
 bind() {
 this.el.factionCards.forEach(c => c.addEventListener('click', () => { this.el.factionCards.forEach(x => x.classList.remove('selected')); c.classList.add('selected'); this.el['continue-btn'].classList.remove('hidden'); this.game.selectedFaction = c.dataset.faction; }));
 this.el['continue-btn']?.addEventListener('click', () => { if (this.game.selectedFaction) this.game.startGame(this.game.selectedFaction); });
-this.el.tradeTabs.forEach(tab => tab.addEventListener('click', () => { this.el.tradeTabs.forEach(t => t.classList.remove('active')); tab.classList.add('active'); ['buy','sell','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== tab.dataset.tab)); if (tab.dataset.tab === 'logbook') this.renderLogbook(); if (tab.dataset.tab === 'shipyard') this.renderShipyard(); }));
+this.el.tradeTabs.forEach(tab => tab.addEventListener('click', () => { this.el.tradeTabs.forEach(t => t.classList.remove('active')); tab.classList.add('active'); ['buy','sell','contracts','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== tab.dataset.tab)); if (tab.dataset.tab === 'logbook') this.renderLogbook(); if (tab.dataset.tab === 'shipyard') this.renderShipyard(); if (tab.dataset.tab === 'contracts') this.renderContracts(); }));
 this.el['close-trade']?.addEventListener('click', () => this.closeTrade());
 this.el['leave-port-btn']?.addEventListener('click', () => { this.closeTrade(); this.game.undock(); });
 this.el['btn-dock']?.addEventListener('click', () => this.game.dock());
@@ -913,9 +1519,11 @@ this.el['pay-tribute']?.addEventListener('click', () => this.game.payTribute());
 this.el['fight-pirates']?.addEventListener('click', () => this.game.fight());
 this.el['pirate-pass']?.addEventListener('click', () => { this.el['pirate-modal'].classList.add('hidden'); this.toast('Parley', 'Safe passage'); });
 this.el['warning-dismiss']?.addEventListener('click', () => this.el['warning-modal'].classList.add('hidden'));
+this.el['title-dismiss']?.addEventListener('click', () => this.el['title-modal'].classList.add('hidden'));
 this.el['buy-best-btn']?.addEventListener('click', () => this.game.buyBest());
 this.el['sell-best-btn']?.addEventListener('click', () => this.game.sellBest());
 this.el['logbook-island-select']?.addEventListener('change', e => this.renderLogPrices(e.target.value));
+this.el['contract-tracker']?.addEventListener('click', () => { if (this.game.gameState?.isDocked) { this.el.tradeTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'contracts')); ['buy','sell','contracts','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== 'contracts')); this.renderContracts(); } });
 }
 showLoading(p) { document.querySelector('.loading-progress').style.width = p + '%'; }
 hideLoading() { this.el['loading-screen'].classList.add('hidden'); }
@@ -923,34 +1531,34 @@ showFaction() { this.el['faction-screen'].classList.remove('hidden'); }
 hideFaction() { this.el['faction-screen'].classList.add('hidden'); }
 showGame() { this.el['game-container'].classList.remove('hidden'); }
 updateHUD(gs) {
-    this.el['gold-value'].textContent = gs.player.gold.toLocaleString(); 
-    this.el['day-value'].textContent = gs.player.days; 
+    this.el['gold-value'].textContent = gs.player.gold.toLocaleString();
+    this.el['day-value'].textContent = gs.player.days;
     this.el['supplies-value'].textContent = gs.player.supplies;
-    const f = CONFIG.factions[gs.player.faction]; 
-    this.el['faction-icon'].textContent = f.icon; 
-    this.el['faction-name'].textContent = f.name; 
+    const f = CONFIG.factions[gs.player.faction];
+    this.el['faction-icon'].textContent = f.icon;
+    this.el['faction-name'].textContent = f.name;
     this.el['faction-badge'].className = gs.player.faction;
     this.el['cargo-count'].textContent = `${getCargoUsed(gs)}/${getCargoCapacity(gs)}`;
 
     // Cargo preview with smart high-margin glow
     const prev = this.el['cargo-preview']; prev.innerHTML = '';
     const highMargin = getHighMarginGoods(gs);
-    Object.entries(gs.player.cargo).forEach(([gid, qty]) => { 
+    Object.entries(gs.player.cargo).forEach(([gid, qty]) => {
         const g = CONFIG.goods[gid];
         const isContraband = g.category === 'contraband';
         const isHM = highMargin.has(gid);
-        for (let i = 0; i < Math.min(qty, 8); i++) { 
-            const d = document.createElement('span'); 
-            d.className = 'cargo-dot' + (isContraband ? ' contraband' : isHM ? ' high-margin' : ''); 
-            prev.appendChild(d); 
-        } 
+        for (let i = 0; i < Math.min(qty, 8); i++) {
+            const d = document.createElement('span');
+            d.className = 'cargo-dot' + (isContraband ? ' contraband' : isHM ? ' high-margin' : '');
+            prev.appendChild(d);
+        }
     });
 
     // Wind
-    if (gs.wind) { 
-        const wd = WIND_DIRS[gs.wind.direction], ws = WIND_STR[gs.wind.strength]; 
-        this.el['wind-arrow'].style.transform = `rotate(${wd.angle}deg)`; 
-        this.el['wind-strength'].textContent = `${ws.name} ${wd.name}`; 
+    if (gs.wind) {
+        const wd = WIND_DIRS[gs.wind.direction], ws = WIND_STR[gs.wind.strength];
+        this.el['wind-arrow'].style.transform = `rotate(${wd.angle}deg)`;
+        this.el['wind-strength'].textContent = `${ws.name} ${wd.name}`;
     }
 
     // Heat indicator
@@ -958,53 +1566,106 @@ updateHUD(gs) {
     this.el['heat-fill'].style.width = heat + '%';
     this.el['heat-label'].textContent = heat;
     this.el['heat-indicator'].className = heat < 30 ? 'low' : heat < 60 ? 'med' : 'high';
+
+    // Contract tracker
+    this.updateContractTracker(gs);
+
+    // World indicator
+    this.updateWorldIndicator(gs);
+}
+
+updateContractTracker(gs) {
+    const tracked = getTrackedContract(gs);
+    if (tracked) {
+        this.el['contract-tracker'].classList.remove('hidden');
+        this.el['tracker-title'].textContent = tracked.title.substring(0, 15) + (tracked.title.length > 15 ? '...' : '');
+        const daysLeft = tracked.deadline - (gs.player.days - tracked.dayAccepted);
+        const dest = CONFIG.islands[tracked.toIsland];
+        const dist = getIslandDistance(gs.player.position, dest.position);
+        this.el['tracker-meta'].textContent = `${daysLeft}d left · ~${Math.ceil(dist/30)}d`;
+    } else {
+        this.el['contract-tracker'].classList.add('hidden');
+    }
+}
+
+updateWorldIndicator(gs) {
+    const season = getSeasonLabel(gs);
+    const crackdown = getCrackdownLevel(gs);
+
+    this.el['world-icon'].textContent = season.icon;
+
+    if (crackdown > 50) {
+        this.el['world-status'].textContent = 'Crackdown!';
+        this.el['world-indicator'].className = 'crackdown';
+    } else if (season.class === 'storm-season') {
+        this.el['world-status'].textContent = season.label;
+        this.el['world-indicator'].className = season.class;
+    } else {
+        this.el['world-status'].textContent = season.label;
+        this.el['world-indicator'].className = '';
+    }
 }
 
 updateCompass(h, gs) {
-    if (gs?.player?.destinationIslandId) {
-        const d = CONFIG.islands[gs.player.destinationIslandId], dx = d.position.x - gs.player.position.x, dz = d.position.z - gs.player.position.z, a = Math.atan2(dx, -dz);
+    // Check for tracked contract destination first
+    const tracked = getTrackedContract(gs);
+    const destId = tracked?.toIsland || gs?.player?.destinationIslandId;
+
+    if (destId) {
+        const d = CONFIG.islands[destId], dx = d.position.x - gs.player.position.x, dz = d.position.z - gs.player.position.z, a = Math.atan2(dx, -dz);
         this.el['compass-needle'].style.transform = `translate(-50%, -100%) rotate(${a * 180 / Math.PI}deg)`;
         this.el['compass-dest-marker'].classList.remove('hidden');
-        this.el['destination-info'].classList.remove('hidden'); 
-        this.el['dest-name'].textContent = d.name; 
+        this.el['destination-info'].classList.remove('hidden');
+        this.el['dest-name'].textContent = d.name;
         this.el['dest-distance'].textContent = `~${Math.ceil(Math.sqrt(dx*dx+dz*dz)/30)}d`;
     } else {
         this.el['compass-needle'].style.transform = `translate(-50%, -100%) rotate(${h * 180 / Math.PI}deg)`;
-        this.el['compass-dest-marker'].classList.add('hidden'); 
+        this.el['compass-dest-marker'].classList.add('hidden');
         this.el['destination-info'].classList.add('hidden');
     }
 }
 
-updateSpeed(s, we) { 
-    this.el['speed-fill'].style.width = s * 100 + '%'; 
-    this.el['wind-effect'].textContent = we?.label || ''; 
-    this.el['wind-effect'].className = we?.mult > 1 ? 'wind-boost' : we?.mult < 1 ? 'wind-penalty' : ''; 
+updateSpeed(s, we) {
+    this.el['speed-fill'].style.width = s * 100 + '%';
+    this.el['wind-effect'].textContent = we?.label || '';
+    this.el['wind-effect'].className = we?.mult > 1 ? 'wind-boost' : we?.mult < 1 ? 'wind-penalty' : '';
 }
 
 updateNearby(isl, dist) {
-    if (isl) { 
-        this.el['island-indicator'].classList.add('visible'); 
-        this.el['nearby-island-name'].textContent = isl.name; 
-        this.el['nearby-island-faction'].textContent = CONFIG.factions[isl.faction]?.name || 'Neutral'; 
-        this.el['nearby-island-dist'].textContent = dist < CONFIG.settings.dockDistance ? '⚓ Dock' : Math.round(dist) + 'm'; 
-        this.el['btn-dock'].classList.toggle('available', dist < CONFIG.settings.dockDistance); 
+    if (isl) {
+        this.el['island-indicator'].classList.add('visible');
+        this.el['nearby-island-name'].textContent = isl.name;
+        this.el['nearby-island-faction'].textContent = CONFIG.factions[isl.faction]?.name || 'Neutral';
+        this.el['nearby-island-dist'].textContent = dist < CONFIG.settings.dockDistance ? '⚓ Dock' : Math.round(dist) + 'm';
+        this.el['btn-dock'].classList.toggle('available', dist < CONFIG.settings.dockDistance);
     }
     else { this.el['island-indicator'].classList.remove('visible'); this.el['btn-dock'].classList.remove('available'); }
 }
 
 showTrade(iid, gs) {
-    const isl = gs.islands[iid]; 
+    const isl = gs.islands[iid];
     this.el['trade-island-name'].textContent = isl.name;
-    this.el['trade-island-faction'].textContent = CONFIG.factions[isl.faction]?.name || 'Neutral'; 
+    this.el['trade-island-faction'].textContent = CONFIG.factions[isl.faction]?.name || 'Neutral';
     this.el['trade-island-faction'].className = 'faction-tag ' + isl.faction;
-    const t = calcTariff(gs.player.faction, isl.faction, gs), tp = Math.round((t - 1) * 100); 
+    const t = calcTariff(gs.player.faction, isl.faction, gs), tp = Math.round((t - 1) * 100);
     this.el['trade-tariff'].textContent = tp > 0 ? '+' + tp + '%' : 'No Tariff';
-    recordAllPrices(iid, gs); 
-    this.renderBuy(iid, gs); 
-    this.renderSell(iid, gs); 
+    recordAllPrices(iid, gs);
+    this.renderBuy(iid, gs);
+    this.renderSell(iid, gs);
     this.updateFooter(gs);
-    this.el.tradeTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'buy')); 
-    ['buy','sell','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== 'buy'));
+
+    // Update contracts badge
+    const board = gs.world.boards[iid];
+    const availableCount = board?.contracts?.length || 0;
+    if (availableCount > 0) {
+        this.el['contracts-badge'].textContent = availableCount;
+        this.el['contracts-badge'].classList.remove('hidden');
+    } else {
+        this.el['contracts-badge'].classList.add('hidden');
+    }
+
+    this.el.tradeTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'buy'));
+    ['buy','sell','contracts','logbook','shipyard'].forEach(p => this.el[p+'-panel'].classList.toggle('hidden', p !== 'buy'));
     this.el['trade-modal'].classList.remove('hidden');
 }
 
@@ -1015,7 +1676,7 @@ renderBuy(iid, gs) {
         const check = canCarryMore(gid, 1, gs);
         const canBuy = m.supply > 0 && price <= gs.player.gold && check.canCarry;
 
-        const item = document.createElement('div'); 
+        const item = document.createElement('div');
         item.className = 'good-item' + (!canBuy && check.reason ? ' blocked' : '');
         item.innerHTML = `
             <div class="good-info">
@@ -1026,10 +1687,10 @@ renderBuy(iid, gs) {
             <div class="good-details">Stock:${m.supply} Wt:${g.weight} ${check.reason && !canBuy ? `<span class="block-reason">${check.reason}</span>` : ''}</div>
             <div class="good-actions"><button class="qty-btn buy" ${!canBuy ? 'disabled' : ''}>+</button></div>
         `;
-        item.querySelector('.qty-btn').addEventListener('click', () => { 
-            if (buyGood(gid, 1, iid, gs).success) { 
-                this.renderBuy(iid, gs); this.renderSell(iid, gs); this.updateFooter(gs); this.game.save(); 
-            } 
+        item.querySelector('.qty-btn').addEventListener('click', () => {
+            if (buyGood(gid, 1, iid, gs).success) {
+                this.renderBuy(iid, gs); this.renderSell(iid, gs); this.updateFooter(gs); this.game.save();
+            }
         });
         list.appendChild(item);
     });
@@ -1045,6 +1706,125 @@ renderSell(iid, gs) {
         item.querySelector('.qty-btn').addEventListener('click', () => { if (sellGood(gid, 1, iid, gs).success) { this.renderBuy(iid, gs); this.renderSell(iid, gs); this.updateFooter(gs); this.game.save(); } });
         list.appendChild(item);
     });
+}
+
+renderContracts() {
+    const gs = this.game.gameState;
+    const iid = gs.currentIsland;
+    if (!iid) return;
+
+    // Refresh board if needed
+    refreshContractBoard(gs, iid);
+    const board = gs.world.boards[iid];
+
+    // Render available contracts
+    const availEl = this.el['available-contracts'];
+    if (board.contracts.length === 0) {
+        availEl.innerHTML = '<div class="contract-empty">No contracts available. Check back later!</div>';
+    } else {
+        availEl.innerHTML = board.contracts.map(c => this.renderContractCard(c, gs, 'available')).join('');
+        availEl.querySelectorAll('.accept-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (acceptContract(gs, btn.dataset.id)) {
+                    this.renderContracts();
+                    this.updateContractTracker(gs);
+                    this.toast('Contract Accepted', 'Check your active contracts');
+                    this.game.save();
+                } else {
+                    this.toast('Cannot Accept', 'Max 3 active contracts');
+                }
+            });
+        });
+    }
+
+    // Render active contracts
+    const activeEl = this.el['active-contracts'];
+    this.el['active-count'].textContent = gs.player.contracts.active.length;
+
+    if (gs.player.contracts.active.length === 0) {
+        activeEl.innerHTML = '<div class="contract-empty">No active contracts</div>';
+    } else {
+        activeEl.innerHTML = gs.player.contracts.active.map(c => this.renderContractCard(c, gs, 'active')).join('');
+        activeEl.querySelectorAll('.track-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                gs.player.trackedContractId = gs.player.trackedContractId === btn.dataset.id ? null : btn.dataset.id;
+                this.renderContracts();
+                this.updateContractTracker(gs);
+                this.game.save();
+            });
+        });
+        activeEl.querySelectorAll('.abandon-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (confirm('Abandon this contract? You will lose reputation.')) {
+                    abandonContract(gs, btn.dataset.id);
+                    this.renderContracts();
+                    this.updateContractTracker(gs);
+                    this.toast('Contract Abandoned', '-3 reputation');
+                    this.game.save();
+                }
+            });
+        });
+    }
+}
+
+renderContractCard(contract, gs, mode) {
+    const type = CONFIG.contractTypes[contract.typeId];
+    const dest = CONFIG.islands[contract.toIsland];
+    const isTracked = gs.player.trackedContractId === contract.id;
+
+    let daysLeft = contract.deadline;
+    let progress = '';
+
+    if (mode === 'active') {
+        daysLeft = contract.deadline - (gs.player.days - contract.dayAccepted);
+        if (contract.requirement.type === 'deliver') {
+            const have = gs.player.cargo[contract.requirement.goodId] || 0;
+            const need = contract.requirement.qty;
+            progress = `<div class="contract-details">📦 ${CONFIG.goods[contract.requirement.goodId].icon} ${have}/${need}</div>`;
+        }
+    }
+
+    const deadlineClass = daysLeft <= 2 ? 'urgent' : '';
+    const cardClass = mode === 'active' ? 'active' : '';
+    const trackedClass = isTracked ? 'tracked' : '';
+
+    let actions = '';
+    if (mode === 'available') {
+        const canAccept = gs.player.contracts.active.length < CONFIG.settings.maxActiveContracts;
+        actions = `<button class="btn-small ${canAccept ? 'btn-primary' : 'btn-secondary'} accept-btn" data-id="${contract.id}" ${canAccept ? '' : 'disabled'}>Accept</button>`;
+    } else {
+        actions = `
+            <button class="btn-small ${isTracked ? 'btn-primary' : 'btn-secondary'} track-btn" data-id="${contract.id}">${isTracked ? '✓ Tracked' : 'Track'}</button>
+            <button class="btn-small btn-secondary abandon-btn" data-id="${contract.id}">✕</button>
+        `;
+    }
+
+    let requirementText = '';
+    if (contract.requirement.type === 'deliver') {
+        const good = CONFIG.goods[contract.requirement.goodId];
+        requirementText = `Deliver ${contract.requirement.qty}x ${good.icon} ${good.name}`;
+    } else if (contract.requirement.type === 'reach') {
+        requirementText = contract.requirement.noInspection ? 'Reach without inspection' : 'Reach destination';
+    } else if (contract.requirement.type === 'supplies') {
+        requirementText = `Arrive with ${contract.requirement.minSupplies}+ supplies`;
+    }
+
+    return `
+        <div class="contract-card ${cardClass} ${trackedClass}">
+            <div class="contract-header">
+                <span class="contract-title">${contract.title}</span>
+                <span class="contract-type ${contract.typeId}">${type.icon} ${type.name}</span>
+            </div>
+            <div class="contract-details">📍 ${dest.name} · ${requirementText}</div>
+            ${progress}
+            <div class="contract-deadline ${deadlineClass}">⏱️ ${daysLeft} days left</div>
+            <div class="contract-rewards">
+                <span class="contract-reward gold">🪙 ${contract.rewards.gold}g</span>
+                <span class="contract-reward rep">${contract.rewards.rep > 0 ? '+' : ''}${contract.rewards.rep} ${contract.rewards.repFaction} rep</span>
+            </div>
+            <div class="contract-actions">${actions}</div>
+        </div>
+    `;
 }
 
 renderLogbook() {
@@ -1088,56 +1868,104 @@ closeTrade() { this.el['trade-modal'].classList.add('hidden'); }
 showMenu() {
     const gs = this.game.gameState;
     ['english','eitc','pirates'].forEach(f => { const r = gs.player.reputation[f] || 0; this.el['rep-' + f].style.width = (r + 100) / 2 + '%'; this.el['rep-' + f].className = 'rep-fill' + (r < -30 ? ' hostile' : r > 30 ? ' friendly' : ''); this.el['rep-' + f + '-val'].textContent = r; });
-    this.el['ship-speed'].textContent = getShipSpeed(gs).toFixed(2) + 'x'; 
+    this.el['ship-speed'].textContent = getShipSpeed(gs).toFixed(2) + 'x';
     this.el['ship-cargo-cap'].textContent = getCargoCapacity(gs);
     this.el['ship-supply-rate'].textContent = getSupplyRate(gs).toFixed(1);
     const upgs = Object.keys(gs.player.upgrades).filter(k => gs.player.upgrades[k]).map(k => CONFIG.upgrades[k]?.name);
     this.el['ship-upgrades'].textContent = upgs.length ? upgs.join(', ') : 'None';
-    if (gs.wind) { 
-        this.el['menu-wind-dir'].textContent = WIND_DIRS[gs.wind.direction].name + ' ' + WIND_STR[gs.wind.strength].name; 
-        this.el['menu-wind-change'].textContent = gs.wind.daysUntilChange + 'd'; 
+    if (gs.wind) {
+        this.el['menu-wind-dir'].textContent = WIND_DIRS[gs.wind.direction].name + ' ' + WIND_STR[gs.wind.strength].name;
+        this.el['menu-wind-change'].textContent = gs.wind.daysUntilChange + 'd';
     }
     // Risk
     const risk = getRouteRisk(gs), rl = getRiskLabel(risk);
     this.el['menu-route-risk'].textContent = rl.label;
     this.el['menu-route-risk'].className = rl.class;
     this.el['menu-heat'].textContent = (gs.player.heat || 0) + '/100';
+
+    // Titles
+    this.renderTitles(gs);
+
+    // World status
+    const season = getSeasonLabel(gs);
+    this.el['menu-season'].textContent = `${season.icon} ${season.label} (Day ${gs.world?.seasonDay || 1}/${CONFIG.settings.seasonCycleDays})`;
+
+    const crackdown = getCrackdownLevel(gs);
+    this.el['menu-crackdown'].textContent = crackdown > 0 ? `Level ${crackdown}` : 'None';
+    this.el['menu-crackdown'].className = crackdown > 50 ? 'risk-high' : crackdown > 25 ? 'risk-med' : '';
+
+    const regional = gs.world?.regionalEvent;
+    this.el['menu-regional'].textContent = regional ? `${regional.name} (${regional.daysRemaining}d)` : 'None';
+
     this.el['menu-modal'].classList.remove('hidden');
+}
+
+renderTitles(gs) {
+    const titlesEl = this.el['titles-list'];
+    titlesEl.innerHTML = Object.entries(CONFIG.titles).map(([trackId, track]) => {
+        const tier = getTitleTier(trackId, gs);
+        const name = getTitleName(trackId, tier);
+        const value = getTitleTrackValue(trackId, gs);
+        const nextThreshold = getNextThreshold(trackId, gs);
+        const tierClass = `tier-${Math.min(tier, 5)}`;
+
+        return `
+            <div class="title-item">
+                <div>
+                    <span class="title-name">${track.icon} ${track.name}</span>
+                    <span class="title-tier ${tierClass}">${name}</span>
+                </div>
+                <span class="title-progress">${Math.floor(value)}/${nextThreshold}</span>
+            </div>
+        `;
+    }).join('');
 }
 
 showMap() {
     const c = this.el['map-container'], gs = this.game.gameState; c.innerHTML = '';
     const minX = -220, maxX = 240, minZ = -180, maxZ = 160, toP = (v, mn, mx) => (v - mn) / (mx - mn) * 100;
-    if (gs.player.destinationIslandId) {
-        const d = CONFIG.islands[gs.player.destinationIslandId], px = toP(gs.player.position.x, minX, maxX), py = toP(gs.player.position.z, minZ, maxZ), dx = toP(d.position.x, minX, maxX), dy = toP(d.position.z, minZ, maxZ);
+
+    // Show course to tracked contract or manual destination
+    const tracked = getTrackedContract(gs);
+    const destId = tracked?.toIsland || gs.player.destinationIslandId;
+
+    if (destId) {
+        const d = CONFIG.islands[destId], px = toP(gs.player.position.x, minX, maxX), py = toP(gs.player.position.z, minZ, maxZ), dx = toP(d.position.x, minX, maxX), dy = toP(d.position.z, minZ, maxZ);
         const len = Math.sqrt((dx-px)**2 + (dy-py)**2), ang = Math.atan2(dy-py, dx-px) * 180 / Math.PI;
         const line = document.createElement('div'); line.className = 'map-course-line'; line.style.cssText = `left:${px}%;top:${py}%;width:${len}%;transform:rotate(${ang}deg)`; c.appendChild(line);
     }
     Object.entries(CONFIG.islands).forEach(([id, isl]) => {
-        const dot = document.createElement('div'); dot.className = 'map-island ' + isl.faction + (id === gs.player.destinationIslandId ? ' selected' : '');
+        const dot = document.createElement('div'); dot.className = 'map-island ' + isl.faction + (id === destId ? ' selected' : '');
         dot.style.cssText = `left:${toP(isl.position.x, minX, maxX)}%;top:${toP(isl.position.z, minZ, maxZ)}%`; dot.textContent = isl.name[0]; dot.title = isl.name;
         dot.addEventListener('click', () => { gs.player.destinationIslandId = id; this.showMap(); this.toast('Course', isl.name); });
         c.appendChild(dot);
     });
     const p = document.createElement('div'); p.className = 'map-player'; p.style.cssText = `left:${toP(gs.player.position.x, minX, maxX)}%;top:${toP(gs.player.position.z, minZ, maxZ)}%`; c.appendChild(p);
-    this.el['map-info'].textContent = gs.player.destinationIslandId ? 'Course: ' + CONFIG.islands[gs.player.destinationIslandId].name : 'Click island';
+    this.el['map-info'].textContent = destId ? 'Course: ' + CONFIG.islands[destId].name : 'Click island';
     this.el['map-modal'].classList.remove('hidden');
 }
 
 showPirate(cost, parley) { this.el['tribute-cost'].textContent = cost + 'g'; this.el['pirate-pass'].classList.toggle('hidden', !parley); this.el['pirate-modal'].classList.remove('hidden'); }
 closePirate() { this.el['pirate-modal'].classList.add('hidden'); }
 
+showTitleEarned(icon, name, desc) {
+    this.el['title-icon'].textContent = icon;
+    this.el['title-earned-name'].textContent = name;
+    this.el['title-earned-desc'].textContent = desc;
+    this.el['title-modal'].classList.remove('hidden');
+}
+
 showEncounter(enc, opts, result) {
     this.el['encounter-icon'].textContent = enc.icon; this.el['encounter-title'].textContent = enc.name; this.el['encounter-desc'].textContent = enc.desc;
-    if (result) { 
-        this.el['encounter-result'].innerHTML = `<div class="encounter-${result.positive ? 'reward' : 'penalty'}">${result.text}</div>`; 
-        this.el['encounter-options'].innerHTML = '<button class="btn-primary" id="enc-close">OK</button>'; 
-        document.getElementById('enc-close').addEventListener('click', () => this.el['encounter-modal'].classList.add('hidden')); 
+    if (result) {
+        this.el['encounter-result'].innerHTML = `<div class="encounter-${result.positive ? 'reward' : 'penalty'}">${result.text}</div>`;
+        this.el['encounter-options'].innerHTML = '<button class="btn-primary" id="enc-close">OK</button>';
+        document.getElementById('enc-close').addEventListener('click', () => this.el['encounter-modal'].classList.add('hidden'));
     }
-    else { 
-        this.el['encounter-result'].innerHTML = ''; 
-        this.el['encounter-options'].innerHTML = opts.map((o, i) => `<button class="btn-${o.style || 'secondary'}" data-i="${i}">${o.label}</button>`).join(''); 
-        this.el['encounter-options'].querySelectorAll('button').forEach(b => b.addEventListener('click', () => opts[b.dataset.i].action())); 
+    else {
+        this.el['encounter-result'].innerHTML = '';
+        this.el['encounter-options'].innerHTML = opts.map((o, i) => `<button class="btn-${o.style || 'secondary'}" data-i="${i}">${o.label}</button>`).join('');
+        this.el['encounter-options'].querySelectorAll('button').forEach(b => b.addEventListener('click', () => opts[b.dataset.i].action()));
     }
     this.el['encounter-modal'].classList.remove('hidden');
 }
@@ -1173,7 +2001,7 @@ update(dt) {
         gs.player.position.x = Math.max(-250, Math.min(250, gs.player.position.x + md.x * spd));
         gs.player.position.z = Math.max(-200, Math.min(200, gs.player.position.z + md.z * spd));
         this.ui.updateSpeed(this.joystick.magnitude * we.mult, we); this.ui.updateCompass(this.joystick.angle, gs);
-        this.lastDayTick += dt * 1000; 
+        this.lastDayTick += dt * 1000;
         if (this.lastDayTick > 5000) { this.advanceDay(); this.lastDayTick = 0; this.checkEncounters(); }
     } else { this.ui.updateSpeed(0, null); this.ui.updateCompass(0, gs); }
 }
@@ -1185,7 +2013,7 @@ checkNearby() {
 }
 
 advanceDay() {
-    const gs = this.gameState; 
+    const gs = this.gameState;
     gs.player.days++;
     gs.player.daysSinceDock = (gs.player.daysSinceDock || 0) + 1;
 
@@ -1200,42 +2028,63 @@ advanceDay() {
 
     simMarketDay(gs);
 
+    // Tick world state
+    tickWorldStatePerDay(gs);
+
+    // Check contract expirations
+    const expired = expireContracts(gs);
+    if (expired.length > 0) {
+        this.ui.toast('Contract Failed', `${expired.length} contract(s) expired!`);
+    }
+
+    // Update titles
+    const oldTitles = { ...gs.player.titles };
+    updateTitles(gs, (icon, name, desc) => {
+        this.ui.showTitleEarned(icon, name, desc);
+    });
+
     // Wind changes
-    if (gs.wind) { 
-        gs.wind.daysUntilChange--; 
-        if (gs.wind.daysUntilChange <= 0) { 
-            gs.wind.direction = Math.floor(Math.random() * 8); 
-            gs.wind.strength = Math.floor(Math.random() * 4); 
-            gs.wind.daysUntilChange = CONFIG.settings.windChangeDays; 
-            this.ui.toast('Wind', WIND_STR[gs.wind.strength].name + ' ' + WIND_DIRS[gs.wind.direction].name); 
-        } 
+    if (gs.wind) {
+        gs.wind.daysUntilChange--;
+        if (gs.wind.daysUntilChange <= 0) {
+            gs.wind.direction = Math.floor(Math.random() * 8);
+            gs.wind.strength = Math.floor(Math.random() * 4);
+            gs.wind.daysUntilChange = CONFIG.settings.windChangeDays;
+            this.ui.toast('Wind', WIND_STR[gs.wind.strength].name + ' ' + WIND_DIRS[gs.wind.direction].name);
+        }
     }
 
     this.ui.updateHUD(gs);
     if (gs.player.supplies <= 5 && gs.player.supplies > 0) this.ui.showWarning('🍖', 'Low Supplies!', 'Dock soon!');
-    else if (gs.player.supplies <= 0) { gs.player.supplies = 0; this.ui.showWarning('💀', 'Game Over', 'Crew mutinied!'); }
+    else if (gs.player.supplies <= 0) { gs.player.supplies = 0; this.ui.showWarning('💀', 'Stranded!', 'Find port fast!'); }
 }
 
 checkEncounters() {
     const gs = this.gameState, fc = CONFIG.factions[gs.player.faction];
     const risk = getRouteRisk(gs);
     const cargoVal = estimateCargoValue(gs);
+    const mods = getTitleModifiers(gs);
 
     // Pirate encounters scale with cargo value and faction
     const pirateBase = CONFIG.settings.pirateEncounterChance * (fc.pirateChanceMult || 1);
     const pirateChance = pirateBase * (1 + risk * 0.5); // +50% at max risk
     if (Math.random() < pirateChance) { this.triggerPirate(); return; }
 
-    // Inspection encounter - scales with heat and proximity to English/EITC waters
+    // Inspection encounter - scales with heat, crackdown, and proximity to English/EITC waters
     if (isNearHostileWaters(gs) || gs.player.heat > 30) {
         let inspectChance = CONFIG.encounters.inspection.baseChance * (1 + gs.player.heat / 100);
+        // Crackdown increases inspection chance
+        inspectChance *= (1 + getCrackdownLevel(gs) / 100);
         // Smuggler compartments reduce chance
         if (gs.player.upgrades?.smugglerCompartments) inspectChance *= (1 - CONFIG.upgrades.smugglerCompartments.effects.inspectionReduction);
+        // Title modifiers
+        inspectChance *= (1 - mods.inspectionReduction);
         if (Math.random() < inspectChance) { this.triggerInspection(); return; }
     }
 
-    // Storm - slight increase with days at sea
-    const stormChance = CONFIG.encounters.storm.baseChance * (1 + gs.player.daysSinceDock / 30);
+    // Storm - slight increase with days at sea and during storm season
+    let stormChance = CONFIG.encounters.storm.baseChance * (1 + gs.player.daysSinceDock / 30);
+    if (isStormSeason(gs)) stormChance *= 2;
     if (Math.random() < stormChance) { this.triggerStorm(); return; }
 
     // Merchant/wreck - slightly more common when risk is low (reward safe play)
@@ -1244,52 +2093,54 @@ checkEncounters() {
     if (Math.random() < CONFIG.encounters.wreckSalvage.baseChance * safeBonus) { this.triggerWreck(); return; }
 }
 
-triggerPirate() { 
+triggerPirate() {
     const gs = this.gameState;
     const baseCost = Math.floor(gs.player.gold * 0.1) + 50;
     const cost = calcTributeCost(gs, baseCost);
-    this.ui.showPirate(cost, gs.player.faction === 'pirates'); 
+    this.ui.showPirate(cost, gs.player.faction === 'pirates');
 }
 
-payTribute() { 
+payTribute() {
     const gs = this.gameState;
     const baseCost = Math.floor(gs.player.gold * 0.1) + 50;
     const cost = calcTributeCost(gs, baseCost);
-    if (gs.player.gold >= cost) { 
-        gs.player.gold -= cost; 
-        this.ui.closePirate(); 
-        this.ui.toast('Paid', '-' + cost + 'g'); 
-    } else { 
-        this.loseCargo(calcCargoLoss(gs, 0.3)); 
-        this.ui.closePirate(); 
-        this.ui.toast('Plundered!', 'Lost cargo'); 
-    } 
-    this.ui.updateHUD(gs); 
+    if (gs.player.gold >= cost) {
+        gs.player.gold -= cost;
+        this.ui.closePirate();
+        this.ui.toast('Paid', '-' + cost + 'g');
+    } else {
+        this.loseCargo(calcCargoLoss(gs, 0.3));
+        this.ui.closePirate();
+        this.ui.toast('Plundered!', 'Lost cargo');
+    }
+    this.ui.updateHUD(gs);
 }
 
-fight() { 
-    const gs = this.gameState; 
-    this.ui.closePirate(); 
-    if (Math.random() < 0.5) { 
-        const r = 50 + Math.floor(Math.random() * 100); 
-        gs.player.gold += r; 
-        this.ui.toast('Victory!', '+' + r + 'g'); 
-    } else { 
+fight() {
+    const gs = this.gameState;
+    this.ui.closePirate();
+    if (Math.random() < 0.5) {
+        const r = 50 + Math.floor(Math.random() * 100);
+        gs.player.gold += r;
+        // Pirate reputation boost
+        applyRepChange(gs, 'pirates', 5, 'fight_win');
+        this.ui.toast('Victory!', '+' + r + 'g');
+    } else {
         this.loseCargo(calcCargoLoss(gs, 0.5));
         // Also lose some gold (protected by vault)
         const goldLoss = calcGoldLoss(gs, Math.floor(gs.player.gold * 0.1));
         gs.player.gold = Math.max(0, gs.player.gold - goldLoss);
-        this.ui.toast('Defeated', 'Lost cargo & gold'); 
-    } 
-    this.ui.updateHUD(gs); 
+        this.ui.toast('Defeated', 'Lost cargo & gold');
+    }
+    this.ui.updateHUD(gs);
 }
 
-loseCargo(frac) { 
-    const gs = this.gameState; 
-    Object.keys(gs.player.cargo).forEach(gid => { 
-        gs.player.cargo[gid] -= Math.ceil(gs.player.cargo[gid] * frac); 
-        if (gs.player.cargo[gid] <= 0) delete gs.player.cargo[gid]; 
-    }); 
+loseCargo(frac) {
+    const gs = this.gameState;
+    Object.keys(gs.player.cargo).forEach(gid => {
+        gs.player.cargo[gid] -= Math.ceil(gs.player.cargo[gid] * frac);
+        if (gs.player.cargo[gid] <= 0) delete gs.player.cargo[gid];
+    });
 }
 
 // INSPECTION ENCOUNTER
@@ -1297,6 +2148,12 @@ triggerInspection() {
     const gs = this.gameState, enc = CONFIG.encounters.inspection;
     const contrabandQty = getContrabandCount(gs);
     const hasContraband = contrabandQty > 0;
+
+    // Mark inspection for courier contracts
+    gs.player.inspectionTriggeredThisContract = true;
+
+    // Crackdown increases
+    gs.world.crackdown.level = Math.min(CONFIG.settings.crackdownMaxLevel, (gs.world.crackdown.level || 0) + 5);
 
     // If no contraband, just a warning
     if (!hasContraband) {
@@ -1316,7 +2173,7 @@ triggerInspection() {
     }
 
     this.ui.showEncounter(enc, [
-        { 
+        {
             label: `💰 Pay Fine (${fine}g)`, style: 'danger',
             action: () => {
                 if (gs.player.gold >= fine) {
@@ -1326,18 +2183,20 @@ triggerInspection() {
                 } else {
                     // Can't pay - lose all contraband and reputation hit
                     this.confiscateContraband(gs);
-                    gs.player.reputation.english = Math.max(-100, (gs.player.reputation.english || 0) - 10);
-                    gs.player.reputation.eitc = Math.max(-100, (gs.player.reputation.eitc || 0) - 10);
+                    applyRepChange(gs, 'english', -10, 'inspection_caught');
+                    applyRepChange(gs, 'eitc', -10, 'inspection_caught');
                     addHeat(gs, 20);
                     this.ui.showEncounter(enc, [], { positive: false, text: 'No gold! All contraband seized. Reputation damaged.' });
                 }
                 // Confiscate contraband regardless
                 this.confiscateContraband(gs);
+                // Increase crackdown
+                gs.world.crackdown.level = Math.min(CONFIG.settings.crackdownMaxLevel, (gs.world.crackdown.level || 0) + 10);
                 this.ui.updateHUD(gs);
             }
         },
-        { 
-            label: '🏃 Flee!', 
+        {
+            label: '🏃 Flee!',
             action: () => {
                 if (Math.random() < 0.4) {
                     // Escaped
@@ -1348,9 +2207,10 @@ triggerInspection() {
                     this.confiscateContraband(gs);
                     const penalty = Math.floor(gs.player.gold * 0.15);
                     gs.player.gold = Math.max(0, gs.player.gold - penalty);
-                    gs.player.reputation.english = Math.max(-100, (gs.player.reputation.english || 0) - 15);
-                    gs.player.reputation.eitc = Math.max(-100, (gs.player.reputation.eitc || 0) - 15);
+                    applyRepChange(gs, 'english', -15, 'inspection_fled');
+                    applyRepChange(gs, 'eitc', -15, 'inspection_fled');
                     addHeat(gs, 25);
+                    gs.world.crackdown.level = Math.min(CONFIG.settings.crackdownMaxLevel, (gs.world.crackdown.level || 0) + 15);
                     this.ui.showEncounter(enc, [], { positive: false, text: `Caught fleeing! Lost ${penalty}g and all contraband. Major reputation hit.` });
                 }
                 this.ui.updateHUD(gs);
@@ -1370,20 +2230,20 @@ confiscateContraband(gs) {
 triggerStorm() {
     const gs = this.gameState, enc = CONFIG.encounters.storm;
     this.ui.showEncounter(enc, [
-        { label: '🌊 Ride out', action: () => { 
-            const l = 2 + Math.floor(Math.random() * 3); 
-            gs.player.supplies = Math.max(0, gs.player.supplies - l); 
-            if (Math.random() < 0.3) { 
-                this.loseCargo(calcCargoLoss(gs, 0.15)); 
-                this.ui.showEncounter(enc, [], { positive: false, text: `Lost ${l} supplies + cargo!` }); 
-            } else 
-                this.ui.showEncounter(enc, [], { positive: false, text: `Lost ${l} supplies` }); 
-            this.ui.updateHUD(gs); 
+        { label: '🌊 Ride out', action: () => {
+            const l = 2 + Math.floor(Math.random() * 3);
+            gs.player.supplies = Math.max(0, gs.player.supplies - l);
+            if (Math.random() < 0.3) {
+                this.loseCargo(calcCargoLoss(gs, 0.15));
+                this.ui.showEncounter(enc, [], { positive: false, text: `Lost ${l} supplies + cargo!` });
+            } else
+                this.ui.showEncounter(enc, [], { positive: false, text: `Lost ${l} supplies` });
+            this.ui.updateHUD(gs);
         } },
-        { label: '⚓ Wait (safe)', style: 'primary', action: () => { 
-            gs.player.supplies--; gs.player.days++; 
-            this.ui.showEncounter(enc, [], { positive: true, text: 'Waited safely. Lost 1 day.' }); 
-            this.ui.updateHUD(gs); 
+        { label: '⚓ Wait (safe)', style: 'primary', action: () => {
+            gs.player.supplies--; gs.player.days++;
+            this.ui.showEncounter(enc, [], { positive: true, text: 'Waited safely. Lost 1 day.' });
+            this.ui.updateHUD(gs);
         } }
     ]);
 }
@@ -1391,17 +2251,17 @@ triggerStorm() {
 triggerMerchant() {
     const gs = this.gameState, enc = CONFIG.encounters.adriftMerchant, gids = Object.keys(CONFIG.goods), gid = gids[Math.floor(Math.random() * gids.length)], g = CONFIG.goods[gid], qty = 3 + Math.floor(Math.random() * 5), price = Math.floor(g.basePrice * 0.6), total = price * qty;
     this.ui.showEncounter({ ...enc, desc: `Offers ${qty}x ${g.name} for ${price}g each (${total}g)` }, [
-        { label: `💰 Buy (${total}g)`, style: 'primary', action: () => { 
+        { label: `💰 Buy (${total}g)`, style: 'primary', action: () => {
             const check = canCarryMore(gid, qty, gs);
-            if (gs.player.gold >= total && check.canCarry) { 
-                gs.player.gold -= total; 
-                gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty; 
-                gs.player.purchaseHistory[gid] = price; 
+            if (gs.player.gold >= total && check.canCarry) {
+                gs.player.gold -= total;
+                gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
+                gs.player.purchaseHistory[gid] = price;
                 if (g.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband);
-                this.ui.showEncounter(enc, [], { positive: true, text: `Bought ${qty}x ${g.name}!` }); 
-            } else 
-                this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'Not enough gold!' }); 
-            this.ui.updateHUD(gs); 
+                this.ui.showEncounter(enc, [], { positive: true, text: `Bought ${qty}x ${g.name}!` });
+            } else
+                this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'Not enough gold!' });
+            this.ui.updateHUD(gs);
         } },
         { label: '👋 Pass', action: () => this.ui.closeEncounter() }
     ]);
@@ -1410,28 +2270,28 @@ triggerMerchant() {
 triggerWreck() {
     const gs = this.gameState, enc = CONFIG.encounters.wreckSalvage;
     this.ui.showEncounter(enc, [
-        { label: '🔍 Investigate', style: 'primary', action: () => { 
-            const r = Math.random(); 
-            if (r < 0.4) { 
-                const s = 3 + Math.floor(Math.random() * 5); 
-                gs.player.supplies = Math.min(30, gs.player.supplies + s); 
-                this.ui.showEncounter(enc, [], { positive: true, text: `Found ${s} supplies!` }); 
-            } else if (r < 0.7) { 
-                const g = 20 + Math.floor(Math.random() * 50); 
-                gs.player.gold += g; 
-                this.ui.showEncounter(enc, [], { positive: true, text: `Found ${g} gold!` }); 
-            } else if (r < 0.9) { 
+        { label: '🔍 Investigate', style: 'primary', action: () => {
+            const r = Math.random();
+            if (r < 0.4) {
+                const s = 3 + Math.floor(Math.random() * 5);
+                gs.player.supplies = Math.min(30, gs.player.supplies + s);
+                this.ui.showEncounter(enc, [], { positive: true, text: `Found ${s} supplies!` });
+            } else if (r < 0.7) {
+                const g = 20 + Math.floor(Math.random() * 50);
+                gs.player.gold += g;
+                this.ui.showEncounter(enc, [], { positive: true, text: `Found ${g} gold!` });
+            } else if (r < 0.9) {
                 const gids = Object.keys(CONFIG.goods), gid = gids[Math.floor(Math.random() * gids.length)], good = CONFIG.goods[gid], q = 1 + Math.floor(Math.random() * 3);
                 const check = canCarryMore(gid, q, gs);
-                if (check.canCarry) { 
-                    gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + q; 
+                if (check.canCarry) {
+                    gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + q;
                     if (good.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband / 2);
-                    this.ui.showEncounter(enc, [], { positive: true, text: `Salvaged ${q}x ${good.name}!` }); 
-                } else 
-                    this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'No room!' }); 
-            } else 
-                this.ui.showEncounter(enc, [], { positive: false, text: 'Nothing useful...' }); 
-            this.ui.updateHUD(gs); 
+                    this.ui.showEncounter(enc, [], { positive: true, text: `Salvaged ${q}x ${good.name}!` });
+                } else
+                    this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'No room!' });
+            } else
+                this.ui.showEncounter(enc, [], { positive: false, text: 'Nothing useful...' });
+            this.ui.updateHUD(gs);
         } },
         { label: '🚢 Sail on', action: () => this.ui.closeEncounter() }
     ]);
@@ -1442,9 +2302,10 @@ dock() {
     const gs = this.gameState, pp = gs.player.position, isl = CONFIG.islands[this.nearbyIsland];
     if (Math.sqrt((isl.position.x - pp.x)**2 + (isl.position.z - pp.z)**2) > CONFIG.settings.dockDistance) { this.ui.toast('Too Far', 'Get closer!'); return; }
 
-    gs.isDocked = true; 
+    gs.isDocked = true;
     gs.currentIsland = this.nearbyIsland;
     gs.player.daysSinceDock = 0; // Reset days since dock
+    gs.player.inspectionTriggeredThisContract = false; // Reset for courier contracts
 
     // Heat changes on dock
     const islFaction = isl.faction;
@@ -1458,6 +2319,21 @@ dock() {
         gs.player.heat = Math.max(0, (gs.player.heat || 0) - 10);
     }
 
+    // Evaluate contracts
+    const completedContracts = evaluateContractsOnDock(gs, this.nearbyIsland);
+    if (completedContracts.length > 0) {
+        const totalGold = completedContracts.reduce((sum, c) => sum + c.rewards.gold, 0);
+        this.ui.toast('Contract Complete!', `+${totalGold}g earned`);
+    }
+
+    // Refresh contract board
+    refreshContractBoard(gs, this.nearbyIsland);
+
+    // Update titles
+    updateTitles(gs, (icon, name, desc) => {
+        this.ui.showTitleEarned(icon, name, desc);
+    });
+
     // Resupply
     const cost = 2, maxBuy = Math.min(30 - gs.player.supplies, Math.floor(gs.player.gold / cost));
     if (maxBuy > 0 && gs.player.supplies < 15) { const b = Math.min(maxBuy, 15); gs.player.gold -= b * cost; gs.player.supplies += b; this.ui.toast('Resupplied', '+' + b); }
@@ -1469,16 +2345,16 @@ undock() { this.gameState.isDocked = false; this.ui.closeTrade(); }
 buyBest() {
     const gs = this.gameState, iid = gs.currentIsland; if (!iid) return;
     const deals = calcDeals(gs, iid);
-    for (const d of deals) { 
+    for (const d of deals) {
         const g = CONFIG.goods[d.gid], m = gs.islands[iid].markets[d.gid];
         const check = canCarryMore(d.gid, 1, gs);
-        const max = Math.min(Math.floor(gs.player.gold / d.buyPrice), Math.floor((getCargoCapacity(gs) - getCargoUsed(gs)) / g.weight), m.supply); 
-        if (max > 0 && check.canCarry) { 
-            for (let i = 0; i < max; i++) if (!buyGood(d.gid, 1, iid, gs).success) break; 
-            this.ui.toast('Bought', g.name); 
-            this.ui.renderBuy(iid, gs); this.ui.renderSell(iid, gs); this.ui.updateFooter(gs); this.save(); 
-            return; 
-        } 
+        const max = Math.min(Math.floor(gs.player.gold / d.buyPrice), Math.floor((getCargoCapacity(gs) - getCargoUsed(gs)) / g.weight), m.supply);
+        if (max > 0 && check.canCarry) {
+            for (let i = 0; i < max; i++) if (!buyGood(d.gid, 1, iid, gs).success) break;
+            this.ui.toast('Bought', g.name);
+            this.ui.renderBuy(iid, gs); this.ui.renderSell(iid, gs); this.ui.updateFooter(gs); this.save();
+            return;
+        }
     }
     this.ui.toast('No Deals', 'Visit more ports');
 }
@@ -1490,38 +2366,38 @@ sellBest() {
     if (best) { const g = CONFIG.goods[best], qty = gs.player.cargo[best]; for (let i = 0; i < qty; i++) if (!sellGood(best, 1, iid, gs).success) break; this.ui.toast('Sold', g.name); this.ui.renderBuy(iid, gs); this.ui.renderSell(iid, gs); this.ui.updateFooter(gs); this.save(); }
 }
 
-buyUpgrade(id) { 
-    const gs = this.gameState, u = CONFIG.upgrades[id]; 
-    if (!u || gs.player.upgrades[id] || gs.player.gold < u.cost) return false; 
-    gs.player.gold -= u.cost; 
-    gs.player.upgrades[id] = true; 
-    this.ui.toast('Upgrade!', u.name); 
-    this.ui.updateHUD(gs); 
-    this.save(); 
-    return true; 
+buyUpgrade(id) {
+    const gs = this.gameState, u = CONFIG.upgrades[id];
+    if (!u || gs.player.upgrades[id] || gs.player.gold < u.cost) return false;
+    gs.player.gold -= u.cost;
+    gs.player.upgrades[id] = true;
+    this.ui.toast('Upgrade!', u.name);
+    this.ui.updateHUD(gs);
+    this.save();
+    return true;
 }
 
 save() { localStorage.setItem('merchantSeasSave', JSON.stringify(this.gameState)); }
-load() { 
-    try { 
-        this.gameState = migrateState(JSON.parse(localStorage.getItem('merchantSeasSave'))); 
-        this.ui.hideFaction(); this.ui.showGame(); 
-        this.scene = new SceneManager(document.getElementById('game-canvas')); 
-        this.joystick = new Joystick(); 
-        this.ui.updateHUD(this.gameState); 
-        return true; 
-    } catch { return false; } 
+load() {
+    try {
+        this.gameState = migrateState(JSON.parse(localStorage.getItem('merchantSeasSave')));
+        this.ui.hideFaction(); this.ui.showGame();
+        this.scene = new SceneManager(document.getElementById('game-canvas'));
+        this.joystick = new Joystick();
+        this.ui.updateHUD(this.gameState);
+        return true;
+    } catch { return false; }
 }
 start() { this.lastTime = performance.now(); this.animate(); }
-animate() { 
-    requestAnimationFrame(() => this.animate()); 
-    if (!this.scene || !this.gameState) return; 
-    const now = performance.now(), dt = (now - this.lastTime) / 1000; 
-    this.lastTime = now; 
-    this.update(dt); 
-    this.scene.updateShip(this.gameState.player.position, this.joystick?.active ? this.joystick.angle : null); 
-    this.scene.updateCamera(this.gameState.player.position); 
-    this.scene.render(); 
+animate() {
+    requestAnimationFrame(() => this.animate());
+    if (!this.scene || !this.gameState) return;
+    const now = performance.now(), dt = (now - this.lastTime) / 1000;
+    this.lastTime = now;
+    this.update(dt);
+    this.scene.updateShip(this.gameState.player.position, this.joystick?.active ? this.joystick.angle : null);
+    this.scene.updateCamera(this.gameState.player.position);
+    this.scene.render();
 }
 
 }
