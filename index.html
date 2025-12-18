@@ -4745,23 +4745,28 @@ renderQuestlines() {
             }
         });
     } else {
-        // Show available questlines with tier filtering
-        // Calculate highest completed tier
-        const completedTiers = new Set();
+        // Show available questlines with tier filtering (per-faction progression)
+        // Calculate highest completed tier PER FACTION
+        const completedTiersByFaction = {};
         Object.entries(gs.player.questlineProgress || {}).forEach(([qid, prog]) => {
             if (prog.completed) {
                 const q = CONFIG.questlines[qid];
-                if (q?.tier) completedTiers.add(q.tier);
+                if (q?.tier && q?.faction) {
+                    const faction = q.faction;
+                    completedTiersByFaction[faction] = Math.max(completedTiersByFaction[faction] || 0, q.tier);
+                }
             }
         });
-        const highestTier = completedTiers.size > 0 ? Math.max(...completedTiers) : 0;
 
         const availableQuests = Object.entries(CONFIG.questlines).filter(([id, q]) => {
             // Already completed - can't repeat
             if (gs.player.questlineProgress[id]?.completed) return false;
-            // Check tier requirements
+            // Check tier requirements - must have completed previous tier OF SAME FACTION
             const requiredTier = q.requires || 0;
-            if (requiredTier > highestTier) return false;
+            if (requiredTier > 0) {
+                const factionProgress = completedTiersByFaction[q.faction] || 0;
+                if (requiredTier > factionProgress) return false;
+            }
             return true;
         });
 
