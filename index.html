@@ -3128,35 +3128,9 @@ function getChaseDuration(gs) {
     return Math.max(chase.minDuration, Math.min(chase.maxDuration, duration));
 }
 
-// ==================== LIVING SEA: EXPLORATION SYSTEM ====================
-function discoverCove(gs, coveId) {
-    if (!gs.player.discoveredCoves.includes(coveId)) {
-        gs.player.discoveredCoves.push(coveId);
-        return true;
-    }
-    return false;
-}
-
-function hasCoveDiscovered(gs, coveId) {
-    return gs.player.discoveredCoves?.includes(coveId) || false;
-}
-
-function addChartFragment(gs) {
-    gs.player.chartFragments = (gs.player.chartFragments || 0) + 1;
-
-    // Check if we can discover a new cove
-    const undiscovered = Object.keys(CONFIG.hiddenCoves).filter(id => !hasCoveDiscovered(gs, id));
-    if (undiscovered.length > 0 && gs.player.chartFragments >= 3) {
-        gs.player.chartFragments -= 3;
-        const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
-        discoverCove(gs, coveId);
-        return { discovered: true, coveId };
-    }
-    return { discovered: false };
-}
-
+// ==================== LIVING SEA: COVE RUMORS ====================
 function getCoveRumor(gs) {
-    const undiscovered = Object.keys(CONFIG.hiddenCoves).filter(id => !hasCoveDiscovered(gs, id));
+    const undiscovered = Object.keys(CONFIG.hiddenCoves).filter(id => !isCoveDiscovered(gs, id));
     if (undiscovered.length === 0) return null;
 
     const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
