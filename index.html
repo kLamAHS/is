@@ -5125,14 +5125,15 @@ closeTrade() { this.el['trade-modal'].classList.add('hidden'); }
 // ==================== LIVING SEA: Cove UI ====================
 showCove(coveId, gs) {
     const cove = CONFIG.hiddenCoves[coveId];
-    if (!cove) return;
+    if (!cove || !cove.services || !Array.isArray(cove.services)) return;
 
-    this.el['cove-icon'].textContent = cove.icon;
-    this.el['cove-name'].textContent = cove.name;
-    this.el['cove-desc'].textContent = cove.desc;
+    this.el['cove-icon'].textContent = cove.icon || '🏴‍☠️';
+    this.el['cove-name'].textContent = cove.name || 'Hidden Cove';
+    this.el['cove-desc'].textContent = cove.desc || '';
 
     // Build service buttons
     const servicesEl = this.el['cove-services'];
+    if (!servicesEl) return;
     servicesEl.innerHTML = '';
 
     const serviceLabels = {
