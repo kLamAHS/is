@@ -423,6 +423,8 @@
 
 <div id="title-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="title-icon">🏆</div><h2 id="title-earned-name">Title Earned!</h2><p id="title-earned-desc">You have proven yourself worthy.</p><button class="btn-primary" id="title-dismiss">Continue</button></div></div>
 
+<div id="contract-complete-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="contract-complete-icon">📜</div><h2 id="contract-complete-title">Contract Complete!</h2><p id="contract-complete-desc">You've fulfilled the contract.</p><div id="contract-complete-rewards"></div><button class="btn-primary" id="contract-complete-dismiss">Collect Rewards</button></div></div>
+
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
 
@@ -544,16 +546,16 @@ adriftMerchant: { name: 'Adrift Merchant', icon: '🚢', desc: 'A merchant offer
 wreckSalvage: { name: 'Wreckage', icon: '⚓', desc: 'Floating debris. Investigate?', baseChance: 0.03 },
 inspection: { name: 'Inspection!', icon: '🔍', desc: 'Naval patrol demands to search your vessel!', baseChance: 0.05 },
 // === LIVING SEA ENCOUNTERS ===
-desperateMerchant: { name: 'The Desperate Merchant', icon: '😰', desc: 'A damaged trader hails you. They\'re out of supplies and offer their cargo at half price-but taking it means they\'ll die at sea.', baseChance: 0.02 },
-driftingMarket: { name: 'The Drifting Market', icon: '🛒', desc: 'The Free Merchants-no flags, no tariffs, no promises. They\'re packing up. Last chance.', baseChance: 0.0 }, // Triggered by drift entity
+desperateMerchant: { name: 'The Desperate Merchant', icon: '😰', desc: 'A damaged trader hails you. They\'re out of supplies and offer their cargo at half price—but taking it means they\'ll die at sea.', baseChance: 0.02 },
+driftingMarket: { name: 'The Drifting Market', icon: '🛒', desc: 'The Free Merchants—no flags, no tariffs, no promises. They\'re packing up. Last chance.', baseChance: 0.0 }, // Triggered by drift entity
 blockadeRunner: { name: 'The Blockade Runner', icon: '🏃', desc: 'A smuggler offers to guide you through a blockaded port for a fee.', baseChance: 0.02 },
 stormsEye: { name: 'The Storm\'s Eye', icon: '🌀', desc: 'Mid-storm, you find a pocket of calm with a wrecked ship.', baseChance: 0.0 }, // Triggered during storms
 pirateFleetEncounter: { name: 'Pirate Armada!', icon: '🏴‍☠️', desc: 'A pirate fleet surrounds you! Multiple ships demand tribute.', baseChance: 0.0 }, // Triggered by drift entity
-convoyEncounter: { name: 'Navy Convoy', icon: '⚓', desc: 'You\'ve entered Navy convoy waters. They offer protection-if you submit to inspection.', baseChance: 0.0 } // Triggered by drift entity
+convoyEncounter: { name: 'Navy Convoy', icon: '⚓', desc: 'You\'ve entered Navy convoy waters. They offer protection—if you submit to inspection.', baseChance: 0.0 } // Triggered by drift entity
 },
 // PORT STATES - dynamic port conditions
 portStates: {
-    prosperous: { name: 'Prosperous', icon: '🏛️', desc: 'Fat and happy-and they\'ll inspect every crate.', inspectMult: 1.5, tariffMult: 1.2, priceMult: 0.9, supplyMult: 1.3 },
+    prosperous: { name: 'Prosperous', icon: '🏛️', desc: 'Fat and happy—and they\'ll inspect every crate.', inspectMult: 1.5, tariffMult: 1.2, priceMult: 0.9, supplyMult: 1.3 },
     struggling: { name: 'Struggling', icon: '📉', desc: 'They need goods. They\'ll overlook... irregularities.', inspectMult: 0.5, tariffMult: 0.8, priceMult: 1.2, supplyMult: 0.7 },
     blockaded: { name: 'Blockaded', icon: '⛔', desc: 'Nothing gets in. Nothing gets out. Officially.', inspectMult: 2.0, tariffMult: 1.5, priceMult: 2.5, supplyMult: 0.2, smugglerBonus: 2.0 },
     lawless: { name: 'Lawless', icon: '💀', desc: 'No law here. Watch your back.', inspectMult: 0, tariffMult: 0, priceMult: 1.1, supplyMult: 0.8, pirateRisk: 0.15 },
@@ -580,7 +582,7 @@ rumorTemplates: [
     { template: 'Navy\'s hunting something big near {island}.', type: 'convoy', accuracy: 0.8 },
     { template: '{island} hasn\'t seen a supply ship in weeks.', type: 'shortage', accuracy: 0.85 },
     { template: 'Floating market was seen drifting toward {direction}.', type: 'market', accuracy: 0.7 },
-    { template: 'Storm season\'s coming early-old sailors feel it.', type: 'weather', accuracy: 0.6 },
+    { template: 'Storm season\'s coming early—old sailors feel it.', type: 'weather', accuracy: 0.6 },
     { template: 'The Company\'s convoy left {island} heavy-laden.', type: 'convoy', accuracy: 0.75 },
     { template: 'Pirates took three ships near {island}.', type: 'pirates', accuracy: 0.9 },
     { template: 'Merchant named Voss made a fortune in {good} last week.', type: 'price', accuracy: 0.7 },
@@ -1938,6 +1940,7 @@ this.el['fight-pirates']?.addEventListener('click', () => this.game.fight());
 this.el['pirate-pass']?.addEventListener('click', () => { this.el['pirate-modal'].classList.add('hidden'); this.toast('Parley', 'Safe passage'); });
 this.el['warning-dismiss']?.addEventListener('click', () => this.el['warning-modal'].classList.add('hidden'));
 this.el['title-dismiss']?.addEventListener('click', () => this.el['title-modal'].classList.add('hidden'));
+this.el['contract-complete-dismiss']?.addEventListener('click', () => this.el['contract-complete-modal'].classList.add('hidden'));
 this.el['buy-best-btn']?.addEventListener('click', () => this.game.buyBest());
 this.el['sell-best-btn']?.addEventListener('click', () => this.game.sellBest());
 this.el['logbook-island-select']?.addEventListener('change', e => this.renderLogPrices(e.target.value));
@@ -2213,6 +2216,8 @@ renderContracts() {
 renderContractCard(contract, gs, mode) {
     const type = CONFIG.contractTypes[contract.typeId];
     const dest = CONFIG.islands[contract.toIsland];
+    if (!type || !dest) return ''; // Safety check
+
     const isTracked = gs.player.trackedContractId === contract.id;
 
     let daysLeft = contract.deadline;
@@ -2220,10 +2225,13 @@ renderContractCard(contract, gs, mode) {
 
     if (mode === 'active') {
         daysLeft = contract.deadline - (gs.player.days - contract.dayAccepted);
-        if (contract.requirement.type === 'deliver') {
-            const have = gs.player.cargo[contract.requirement.goodId] || 0;
-            const need = contract.requirement.qty;
-            progress = `<div class="contract-details">📦 ${CONFIG.goods[contract.requirement.goodId].icon} ${have}/${need}</div>`;
+        if (contract.requirement?.type === 'deliver' && contract.requirement.goodId) {
+            const good = CONFIG.goods[contract.requirement.goodId];
+            if (good) {
+                const have = gs.player.cargo[contract.requirement.goodId] || 0;
+                const need = contract.requirement.qty;
+                progress = `<div class="contract-details">📦 ${good.icon} ${have}/${need}</div>`;
+            }
         }
     }
 
@@ -2243,12 +2251,16 @@ renderContractCard(contract, gs, mode) {
     }
 
     let requirementText = '';
-    if (contract.requirement.type === 'deliver') {
+    if (contract.requirement?.type === 'deliver' && contract.requirement.goodId) {
         const good = CONFIG.goods[contract.requirement.goodId];
-        requirementText = `Deliver ${contract.requirement.qty}x ${good.icon} ${good.name}`;
-    } else if (contract.requirement.type === 'reach') {
+        if (good) {
+            requirementText = `Deliver ${contract.requirement.qty}x ${good.icon} ${good.name}`;
+        } else {
+            requirementText = `Deliver ${contract.requirement.qty}x goods`;
+        }
+    } else if (contract.requirement?.type === 'reach') {
         requirementText = contract.requirement.noInspection ? 'Reach without inspection' : 'Reach destination';
-    } else if (contract.requirement.type === 'supplies') {
+    } else if (contract.requirement?.type === 'supplies') {
         requirementText = `Arrive with ${contract.requirement.minSupplies}+ supplies`;
     }
 
@@ -2414,6 +2426,33 @@ showTitleEarned(icon, name, desc) {
     this.el['title-modal'].classList.remove('hidden');
 }
 
+showContractComplete(contracts) {
+    if (!contracts || contracts.length === 0) return;
+
+    const totalGold = contracts.reduce((sum, c) => sum + c.rewards.gold, 0);
+    const repChanges = {};
+    for (const c of contracts) {
+        const faction = c.rewards.repFaction;
+        repChanges[faction] = (repChanges[faction] || 0) + c.rewards.rep;
+    }
+
+    const contractNames = contracts.map(c => c.title).join(', ');
+    const repText = Object.entries(repChanges)
+        .map(([f, r]) => `${r > 0 ? '+' : ''}${r} ${f}`)
+        .join(', ');
+
+    this.el['contract-complete-icon'].textContent = contracts.length > 1 ? '📜📜' : '📜';
+    this.el['contract-complete-title'].textContent = contracts.length > 1 ? `${contracts.length} Contracts Complete!` : 'Contract Complete!';
+    this.el['contract-complete-desc'].textContent = contractNames;
+    this.el['contract-complete-rewards'].innerHTML = `
+        <div style="margin-top:10px;text-align:center">
+            <div style="font-size:1.2rem;color:var(--gold-dark);font-weight:bold">🪙 +${totalGold}g</div>
+            <div style="font-size:0.9rem;color:var(--ink-light);margin-top:4px">${repText} reputation</div>
+        </div>
+    `;
+    this.el['contract-complete-modal'].classList.remove('hidden');
+}
+
 showEncounter(enc, opts, result) {
     this.el['encounter-icon'].textContent = enc.icon; this.el['encounter-title'].textContent = enc.name; this.el['encounter-desc'].textContent = enc.desc;
     if (result) {
@@ -2438,10 +2477,35 @@ toast(title, desc) { this.el['event-title'].textContent = title; this.el['event-
 class Game {
 constructor() { this.gameState = null; this.scene = null; this.ui = null; this.joystick = null; this.selectedFaction = null; this.nearbyIsland = null; this.lastDayTick = 0; this.init(); }
 async init() {
-    this.ui = new UI(this);
-    for (let i = 0; i <= 100; i += 20) { this.ui.showLoading(i); await new Promise(r => setTimeout(r, 80)); }
-    const save = localStorage.getItem('merchantSeasSave');
-    setTimeout(() => { this.ui.hideLoading(); if (save && confirm('Continue?')) { this.load(); this.start(); } else this.ui.showFaction(); }, 300);
+    try {
+        this.ui = new UI(this);
+        for (let i = 0; i <= 100; i += 20) { this.ui.showLoading(i); await new Promise(r => setTimeout(r, 80)); }
+        const save = localStorage.getItem('merchantSeasSave');
+        setTimeout(() => {
+            try {
+                this.ui.hideLoading();
+                if (save && confirm('Continue saved game?')) {
+                    if (!this.load()) {
+                        // Load failed, start fresh
+                        localStorage.removeItem('merchantSeasSave');
+                        this.ui.showFaction();
+                    } else {
+                        this.start();
+                    }
+                } else {
+                    this.ui.showFaction();
+                }
+            } catch (e) {
+                console.error('Init error:', e);
+                this.ui.hideLoading();
+                this.ui.showFaction();
+            }
+        }, 300);
+    } catch (e) {
+        console.error('Game initialization error:', e);
+        document.getElementById('loading-screen')?.classList.add('hidden');
+        document.getElementById('faction-screen')?.classList.remove('hidden');
+    }
 }
 
 startGame(faction) {
@@ -3151,8 +3215,7 @@ dock() {
     // Evaluate contracts
     const completedContracts = evaluateContractsOnDock(gs, this.nearbyIsland);
     if (completedContracts.length > 0) {
-        const totalGold = completedContracts.reduce((sum, c) => sum + c.rewards.gold, 0);
-        this.ui.toast('Contract Complete!', `+${totalGold}g earned`);
+        this.ui.showContractComplete(completedContracts);
     }
 
     // Refresh contract board
@@ -3231,7 +3294,32 @@ animate() {
 
 }
 
-window.addEventListener('DOMContentLoaded', () => { window.game = new Game(); });
+window.addEventListener('DOMContentLoaded', () => {
+    try {
+        window.game = new Game();
+    } catch (e) {
+        console.error('Failed to create game:', e);
+        document.getElementById('loading-screen')?.classList.add('hidden');
+        document.getElementById('faction-screen')?.classList.remove('hidden');
+    }
+});
+
+// Fallback: if still loading after 10 seconds, force show faction screen
+setTimeout(() => {
+    const loading = document.getElementById('loading-screen');
+    if (loading && !loading.classList.contains('hidden')) {
+        console.warn('Loading timeout - forcing faction screen');
+        loading.classList.add('hidden');
+        document.getElementById('faction-screen')?.classList.remove('hidden');
+    }
+}, 10000);
+
+// Global error handler
+window.onerror = function(msg, url, line, col, error) {
+    console.error('Global error:', msg, 'at', url, line);
+    document.getElementById('loading-screen')?.classList.add('hidden');
+    return false;
+};
 </script>
 
 </body>
