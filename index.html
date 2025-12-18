@@ -2671,10 +2671,9 @@ function addChartFragment(gs) {
 
     // Auto-reveal cove when 3 fragments collected
     if (gs.player.chartFragments >= 3) {
-        const revealed = useChartFragments(gs);
-        if (revealed) {
-            const coveId = Object.entries(CONFIG.hiddenCoves).find(([id, c]) => c.name === revealed.name)?.[0];
-            return { discovered: true, coveId };
+        const result = useChartFragments(gs);
+        if (result) {
+            return { discovered: true, coveId: result.coveId };
         }
     }
     return { discovered: false };
@@ -2696,7 +2695,7 @@ function useChartFragments(gs) {
     // Reveal random cove
     const coveId = undiscovered[Math.floor(Math.random() * undiscovered.length)];
     discoverCove(gs, coveId);
-    return CONFIG.hiddenCoves[coveId];
+    return { coveId, cove: CONFIG.hiddenCoves[coveId] };
 }
 
 function getCoveByPosition(gs, radius = 40) {
