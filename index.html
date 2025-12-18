@@ -2668,7 +2668,16 @@ function getChartFragments(gs) {
 function addChartFragment(gs) {
     if (!gs.player.chartFragments) gs.player.chartFragments = 0;
     gs.player.chartFragments++;
-    return gs.player.chartFragments;
+
+    // Auto-reveal cove when 3 fragments collected
+    if (gs.player.chartFragments >= 3) {
+        const revealed = useChartFragments(gs);
+        if (revealed) {
+            const coveId = Object.entries(CONFIG.hiddenCoves).find(([id, c]) => c.name === revealed.name)?.[0];
+            return { discovered: true, coveId };
+        }
+    }
+    return { discovered: false };
 }
 
 function canRevealCove(gs) {
