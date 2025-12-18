@@ -124,7 +124,7 @@
         <div class="menu-section"><h3>World Status</h3><div class="ship-stats"><div class="stat-row"><span>Season</span><span id="menu-season">Fair</span></div><div class="stat-row"><span>Crackdown</span><span id="menu-crackdown">None</span></div><div class="stat-row"><span>Regional Event</span><span id="menu-regional">None</span></div></div></div>
         <div class="menu-section"><h3>Ship</h3><div class="ship-stats"><div class="stat-row"><span>Speed</span><span id="ship-speed">1.0x</span></div><div class="stat-row"><span>Cargo</span><span id="ship-cargo-cap">50</span></div><div class="stat-row"><span>Supply/Day</span><span id="ship-supply-rate">1</span></div><div class="stat-row"><span>Upgrades</span><span id="ship-upgrades">None</span></div></div></div>
         <div class="menu-section"><h3>Wind & Risk</h3><div class="ship-stats"><div class="stat-row"><span>Wind</span><span id="menu-wind-dir">N Calm</span></div><div class="stat-row"><span>Wind Change</span><span id="menu-wind-change">5d</span></div><div class="stat-row"><span>Route Risk</span><span id="menu-route-risk">Low</span></div><div class="stat-row"><span>Heat</span><span id="menu-heat">0</span></div></div></div>
-        <div class="menu-buttons"><button class="btn-secondary" id="save-btn">💾 Save</button><button class="btn-secondary" id="new-game-btn">🔄 New Game</button></div>
+        <div class="menu-buttons"><button class="btn-secondary" id="leaderboard-btn">🏆 Leaderboard</button><button class="btn-secondary" id="save-btn">💾 Save</button><button class="btn-secondary" id="new-game-btn">🔄 New Game</button></div>
         <button class="btn-primary" id="close-menu">Continue</button>
     </div>
 </div>
@@ -168,6 +168,32 @@
 <div id="title-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="title-icon">🏆</div><h2 id="title-earned-name">Title Earned!</h2><p id="title-earned-desc">You have proven yourself worthy.</p><button class="btn-primary" id="title-dismiss">Continue</button></div></div>
 
 <div id="contract-complete-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="contract-complete-icon">📜</div><h2 id="contract-complete-title">Contract Complete!</h2><p id="contract-complete-desc">You've fulfilled the contract.</p><div id="contract-complete-rewards"></div><button class="btn-primary" id="contract-complete-dismiss">Collect Rewards</button></div></div>
+
+<div id="leaderboard-modal" class="modal hidden">
+    <div class="modal-content leaderboard-content">
+        <div class="modal-header">
+            <h2>Global Leaderboard</h2>
+            <button class="modal-close" id="close-leaderboard">✕</button>
+        </div>
+        <div class="leaderboard-player-section">
+            <div class="player-name-input">
+                <label for="player-name">Your Name:</label>
+                <input type="text" id="player-name" placeholder="Enter captain name" maxlength="20">
+                <button class="btn-secondary btn-small" id="save-player-name">Save</button>
+            </div>
+            <div class="player-stats-summary" id="player-stats-summary"></div>
+        </div>
+        <div class="leaderboard-tabs" id="leaderboard-tabs"></div>
+        <div class="leaderboard-list" id="leaderboard-list">
+            <div class="leaderboard-loading">Loading scores...</div>
+        </div>
+        <div class="leaderboard-actions">
+            <button class="btn-secondary" id="refresh-leaderboard">🔄 Refresh</button>
+            <button class="btn-primary" id="submit-scores">📤 Submit My Scores</button>
+        </div>
+        <div class="leaderboard-status" id="leaderboard-status"></div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>

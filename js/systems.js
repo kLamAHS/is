@@ -2231,6 +2231,10 @@ function completeQuestline(gs) {
     gs.player.questlineProgress[questlineId].completed = true;
     gs.player.activeQuestline = null;
 
+    // Track questlines completed for leaderboard
+    if (!gs.player.stats) gs.player.stats = {};
+    gs.player.stats.questlinesCompleted = (gs.player.stats.questlinesCompleted || 0) + 1;
+
     return { success: true, completed: true, rewards };
 }
 
@@ -2728,6 +2732,9 @@ const purchasePrice = gs.player.purchaseHistory[gid] || 0;
 const profit = (price - purchasePrice) * qty;
 if (profit > 0) {
     metaRecordTrade(gs, gid, profit);
+    // Track total profit for leaderboard
+    if (!gs.player.stats) gs.player.stats = {};
+    gs.player.stats.totalProfit = (gs.player.stats.totalProfit || 0) + profit;
 }
 
 // === LIVING SEA: Apply faction influence ===
@@ -2849,7 +2856,7 @@ visitedIslands: {}, purchaseHistory: {}, upgrades: {}, destinationIslandId: null
 heat: 0, daysSinceDock: 0,
 // New fields
 titles: {},
-stats: { contrabandTraded: 0, contractsCompleted: 0, repChanges: {}, chasesEscaped: 0, huntersDefeated: 0 },
+stats: { contrabandTraded: 0, contractsCompleted: 0, questlinesCompleted: 0, totalProfit: 0, repChanges: {}, chasesEscaped: 0, huntersDefeated: 0 },
 contracts: { active: [], completed: [], failed: [] },
 trackedContractId: null,
 tokens: 0,
@@ -2927,6 +2934,8 @@ if (!gs.player.titles) gs.player.titles = {};
 if (!gs.player.stats) gs.player.stats = { contrabandTraded: 0, contractsCompleted: 0, repChanges: {} };
 if (!gs.player.stats.contrabandTraded) gs.player.stats.contrabandTraded = 0;
 if (!gs.player.stats.contractsCompleted) gs.player.stats.contractsCompleted = 0;
+if (!gs.player.stats.questlinesCompleted) gs.player.stats.questlinesCompleted = 0;
+if (!gs.player.stats.totalProfit) gs.player.stats.totalProfit = 0;
 if (!gs.player.stats.repChanges) gs.player.stats.repChanges = {};
 if (!gs.player.contracts) gs.player.contracts = { active: [], completed: [], failed: [] };
 if (!gs.player.contracts.active) gs.player.contracts.active = [];

@@ -1337,6 +1337,151 @@ closeEncounter() { this.el['encounter-modal'].classList.add('hidden'); }
 showWarning(icon, title, text) { this.el['warning-icon'].textContent = icon; this.el['warning-title'].textContent = title; this.el['warning-text'].textContent = text; this.el['warning-modal'].classList.remove('hidden'); }
 toast(title, desc) { this.el['event-title'].textContent = title; this.el['event-desc'].textContent = desc; this.el['event-toast'].classList.remove('hidden'); setTimeout(() => this.el['event-toast'].classList.add('hidden'), 3000); }
 
+// ==================== LEADERBOARD UI ====================
+initLeaderboard(leaderboard) {
+    this.leaderboard = leaderboard;
+
+    // Cache leaderboard elements
+    this.el['leaderboard-modal'] = document.getElementById('leaderboard-modal');
+    this.el['leaderboard-tabs'] = document.getElementById('leaderboard-tabs');
+    this.el['leaderboard-list'] = document.getElementById('leaderboard-list');
+    this.el['leaderboard-status'] = document.getElementById('leaderboard-status');
+    this.el['leaderboard-btn'] = document.getElementById('leaderboard-btn');
+    this.el['leaderboard-close'] = document.getElementById('leaderboard-close');
+    this.el['leaderboard-name'] = document.getElementById('leaderboard-name');
+    this.el['leaderboard-name-btn'] = document.getElementById('leaderboard-name-btn');
+    this.el['leaderboard-submit'] = document.getElementById('leaderboard-submit');
+
+    // Bind events
+    this.el['leaderboard-btn']?.addEventListener('click', () => this.showLeaderboard());
+    this.el['leaderboard-close']?.addEventListener('click', () => this.closeLeaderboard());
+    this.el['leaderboard-name-btn']?.addEventListener('click', () => this.setLeaderboardName());
+    this.el['leaderboard-submit']?.addEventListener('click', () => this.submitToLeaderboard());
+
+    // Set saved name
+    if (leaderboard.getPlayerName()) {
+        this.el['leaderboard-name'].value = leaderboard.getPlayerName();
+    }
+}
+
+async showLeaderboard() {
+    if (!this.leaderboard) return;
+
+    this.el['leaderboard-modal'].classList.remove('hidden');
+
+    // Render tabs
+    const categories = this.leaderboard.getCategories();
+    this.el['leaderboard-tabs'].innerHTML = Object.entries(categories).map(([id, cat], i) =>
+        `<button class="leaderboard-tab${i === 0 ? ' active' : ''}" data-category="${id}">${cat.icon} ${cat.name}</button>`
+    ).join('');
+
+    // Bind tab clicks
+    this.el['leaderboard-tabs'].querySelectorAll('.leaderboard-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            this.el['leaderboard-tabs'].querySelectorAll('.leaderboard-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            this.loadLeaderboardCategory(tab.dataset.category);
+        });
+    });
+
+    // Load first category
+    const firstCategory = Object.keys(categories)[0];
+    await this.loadLeaderboardCategory(firstCategory);
+}
+
+async loadLeaderboardCategory(categoryId) {
+    if (!this.leaderboard) return;
+
+    this.el['leaderboard-list'].innerHTML = '<div class="leaderboard-loading">Loading...</div>';
+
+    const result = await this.leaderboard.getTopScores(categoryId, 10);
+    const category = this.leaderboard.getCategories()[categoryId];
+
+    if (!result.success || result.scores.length === 0) {
+        this.el['leaderboard-list'].innerHTML = `
+            <div class="leaderboard-empty">
+                <p>No scores yet!</p>
+                <p style="font-size:0.8rem;opacity:0.7">Be the first to submit your score.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const playerName = this.leaderboard.getPlayerName();
+    this.el['leaderboard-list'].innerHTML = result.scores.map((score, i) => {
+        const isPlayer = score.name === playerName;
+        const rankIcons = ['🥇', '🥈', '🥉'];
+        const rankIcon = rankIcons[i] || `#${i + 1}`;
+        const factionIcon = CONFIG.factions[score.faction]?.icon || '⚓';
+
+        return `
+            <div class="leaderboard-entry${isPlayer ? ' player' : ''}">
+                <span class="leaderboard-rank">${rankIcon}</span>
+                <span class="leaderboard-name">${factionIcon} ${score.name}</span>
+                <span class="leaderboard-score">${category.format(score.score)}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+setLeaderboardName() {
+    if (!this.leaderboard) return;
+
+    const name = this.el['leaderboard-name'].value.trim();
+    if (!name) {
+        this.setLeaderboardStatus('Please enter a name', 'error');
+        return;
+    }
+
+    const sanitized = this.leaderboard.setPlayerName(name);
+    this.el['leaderboard-name'].value = sanitized;
+    this.setLeaderboardStatus(`Name set to "${sanitized}"`, 'success');
+}
+
+async submitToLeaderboard() {
+    if (!this.leaderboard || !this.game.gameState) return;
+
+    if (!this.leaderboard.getPlayerName()) {
+        this.setLeaderboardStatus('Please set your name first', 'error');
+        return;
+    }
+
+    if (!this.leaderboard.isAvailable()) {
+        this.setLeaderboardStatus('Leaderboard not configured', 'error');
+        return;
+    }
+
+    this.setLeaderboardStatus('Submitting scores...', '');
+
+    const results = await this.leaderboard.submitAllScores(this.game.gameState);
+
+    const successCount = Object.values(results).filter(r => r.success).length;
+    const totalCount = Object.keys(results).length;
+
+    if (successCount === totalCount) {
+        this.setLeaderboardStatus('All scores submitted!', 'success');
+    } else if (successCount > 0) {
+        this.setLeaderboardStatus(`${successCount}/${totalCount} scores submitted`, 'success');
+    } else {
+        this.setLeaderboardStatus('Failed to submit scores', 'error');
+    }
+
+    // Refresh the current view
+    const activeTab = this.el['leaderboard-tabs'].querySelector('.leaderboard-tab.active');
+    if (activeTab) {
+        await this.loadLeaderboardCategory(activeTab.dataset.category);
+    }
+}
+
+setLeaderboardStatus(message, type) {
+    this.el['leaderboard-status'].textContent = message;
+    this.el['leaderboard-status'].className = 'leaderboard-status ' + type;
+}
+
+closeLeaderboard() {
+    this.el['leaderboard-modal'].classList.add('hidden');
+}
+
 }
 
 export { UI };
