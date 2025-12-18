@@ -99,6 +99,20 @@
     #bounty-indicator.infamous { border-left: 3px solid #c33; animation: bounty-pulse 1s ease-in-out infinite; }
     @keyframes bounty-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
+    /* Notoriety indicator - Meta Pressure System */
+    #notoriety-indicator { position: fixed; top: 205px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 0.5s ease; }
+    #notoriety-indicator.visible { opacity: 1; }
+    #notoriety-indicator.low { border-left: 3px solid #5a7; }
+    #notoriety-indicator.rising { border-left: 3px solid #da5; }
+    #notoriety-indicator.high { border-left: 3px solid #e73; }
+    #notoriety-indicator.notorious { border-left: 3px solid #c33; animation: notoriety-pulse 3s ease-in-out infinite; }
+    @keyframes notoriety-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+    #notoriety-indicator .notoriety-bar { width: 35px; height: 4px; background: var(--parchment-dark); border-radius: 2px; overflow: hidden; }
+    #notoriety-indicator .notoriety-fill { height: 100%; background: #5a7; transition: width 0.5s, background 0.5s; }
+    #notoriety-indicator.rising .notoriety-fill { background: #da5; }
+    #notoriety-indicator.high .notoriety-fill { background: #e73; }
+    #notoriety-indicator.notorious .notoriety-fill { background: #c33; }
+
     /* Contract tracker chip */
     #contract-tracker { position: fixed; top: 215px; left: var(--space-sm); background: var(--card-bg); padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; box-shadow: var(--shadow-light); z-index: 10; display: flex; align-items: center; gap: 4px; cursor: pointer; pointer-events: auto; max-width: 130px; border-left: 3px solid var(--gold); }
     #contract-tracker.hidden { display: none; }
@@ -515,6 +529,7 @@
     <div id="wind-indicator"><span id="wind-arrow">💨</span><span id="wind-strength">Calm</span></div>
     <div id="heat-indicator" class="low"><span>🔥</span><div class="heat-bar"><div class="heat-fill" id="heat-fill"></div></div><span id="heat-label">0</span></div>
     <div id="bounty-indicator" class="clean"><span>⚖️</span><span id="bounty-level">Clean</span></div>
+    <div id="notoriety-indicator" title="How predictable your trading patterns have become"><span>👁️</span><div class="notoriety-bar"><div class="notoriety-fill" id="notoriety-fill"></div></div><span id="notoriety-label">Unseen</span></div>
     <div id="contract-tracker" class="hidden"><span>📜</span><span class="contract-title" id="tracker-title">--</span><span class="contract-meta" id="tracker-meta">--</span></div>
     <div id="world-indicator"><span id="world-icon">🌤️</span><span id="world-status">Fair Winds</span></div>
     <div id="ship-condition">
@@ -1106,6 +1121,88 @@ balance: {
     }
 },
 
+// ==================== META PRESSURE SYSTEM ====================
+// Detects and softly punishes repetitive "meta" behavior patterns
+// Makes the world feel alive and responsive to player strategies
+metaPressure: {
+    enabled: true,
+    windowSize: 30,                    // Number of recent events to track
+    decayPerDay: 0.02,                 // Bias scores decay 2% per day with variety
+
+    // Thresholds - if top item share exceeds this, bias starts building
+    thresholds: {
+        route: 0.30,                   // 30% of routes are same = starts bias
+        good: 0.35,                    // 35% of trades are same good
+        port: 0.30,                    // 30% of visits to same port
+        faction: 0.45                  // 45% of interactions in same faction's territory
+    },
+
+    // Effect caps - maximum additional penalties from meta pressure
+    caps: {
+        pirateChance: 0.25,            // +25% max pirate encounter chance
+        stormChance: 0.20,             // +20% max storm chance on route
+        priceReduction: 0.20,          // -20% max sell price for oversold good
+        saturationMult: 1.5,           // 1.5x faster market saturation
+        dockFeeIncrease: 0.30,         // +30% max dock fee at over-visited ports
+        inspectionChance: 0.15         // +15% max inspection chance
+    },
+
+    // Milestones for player feedback (as pressure crosses these values)
+    feedbackMilestones: [0.3, 0.5, 0.7, 0.9],
+
+    // Flavor text for world adaptation notifications
+    flavorText: {
+        route: {
+            rising: [
+                'Pirates have noted your regular course...',
+                'Lookouts report ships watching your usual lanes.',
+                'Your route has become... predictable.'
+            ],
+            peak: [
+                'Every pirate on the sea knows where to find you.',
+                'Your lanes are crawling with opportunists.',
+                'The seas grow dangerous along your path.'
+            ]
+        },
+        good: {
+            rising: [
+                'Markets are flooded with your preferred cargo...',
+                'Merchants grumble about your saturation tactics.',
+                'Supply is catching up with your demand.'
+            ],
+            peak: [
+                'Nobody wants more of what you\'re selling.',
+                'The market groans under the weight of your goods.',
+                'Buyers scatter when they see your sail.'
+            ]
+        },
+        port: {
+            rising: [
+                'Dock fees are rising at your favorite port...',
+                'Officials grow suspicious of your frequent visits.',
+                'The harbormaster knows you by name now.'
+            ],
+            peak: [
+                'They\'ve learned all your tricks here.',
+                'Every official has their hand out when you dock.',
+                'Perhaps try a different port for a while.'
+            ]
+        },
+        faction: {
+            rising: [
+                'The authorities have noticed your patterns...',
+                'Patrols are being redirected to watch you.',
+                'Your activities have drawn official attention.'
+            ],
+            peak: [
+                'They\'ve assigned someone to track your movements.',
+                'The crackdown intensifies wherever you sail.',
+                'Perhaps diversify your allegiances.'
+            ]
+        }
+    }
+},
+
 // ==================== LIVING SEA UPDATE CONFIG ====================
 // Save version for migration
 saveVersion: 2,
@@ -1608,6 +1705,353 @@ function getBountyLevel(gs) {
     return 'clean';
 }
 
+// ==================== META PRESSURE SYSTEM ====================
+// Detects repetitive player behavior and applies soft adaptive pressure
+
+// Initialize or reset meta pressure for a game state
+function metaInit(gs) {
+    if (!gs.player.meta) {
+        gs.player.meta = {
+            recentRoutes: [],
+            recentGoods: [],
+            recentPorts: [],
+            recentFactions: [],
+            routeCounts: {},
+            goodCounts: {},
+            portCounts: {},
+            factionCounts: {},
+            pressure: { route: 0, good: 0, port: 0, faction: 0, total: 0 },
+            lastPort: null,
+            lastMilestones: { route: 0, good: 0, port: 0, faction: 0 },
+            lastUpdateDay: 0
+        };
+    }
+    return gs.player.meta;
+}
+
+// Helper: clamp value between 0 and 1
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+// Helper: add to rolling window and maintain frequency counts
+function metaAddToWindow(arr, counts, value, maxSize) {
+    arr.push(value);
+    counts[value] = (counts[value] || 0) + 1;
+
+    // Trim window to max size
+    while (arr.length > maxSize) {
+        const removed = arr.shift();
+        counts[removed]--;
+        if (counts[removed] <= 0) delete counts[removed];
+    }
+}
+
+// Helper: calculate bias score for a category
+function metaCalcBias(counts, threshold, windowLen) {
+    if (windowLen === 0) return 0;
+
+    // Find top item share
+    let topCount = 0;
+    for (const key in counts) {
+        if (counts[key] > topCount) topCount = counts[key];
+    }
+
+    const topShare = topCount / windowLen;
+
+    // If under threshold, no bias
+    if (topShare <= threshold) return 0;
+
+    // Scale from threshold to 1.0
+    return clamp01((topShare - threshold) / (1 - threshold));
+}
+
+// Helper: get the most frequent item in a counts object
+function metaGetTopItem(counts) {
+    let topItem = null, topCount = 0;
+    for (const key in counts) {
+        if (counts[key] > topCount) {
+            topCount = counts[key];
+            topItem = key;
+        }
+    }
+    return topItem;
+}
+
+// Record a route (called when player docks at a new port)
+function metaRecordRoute(gs, fromPort, toPort) {
+    if (!CONFIG.metaPressure.enabled) return;
+    const meta = metaInit(gs);
+
+    // Create route key (normalized: alphabetical order for bidirectional routes)
+    const routeKey = [fromPort, toPort].sort().join('>');
+
+    metaAddToWindow(
+        meta.recentRoutes,
+        meta.routeCounts,
+        routeKey,
+        CONFIG.metaPressure.windowSize
+    );
+
+    // Also record the destination port
+    const island = CONFIG.islands[toPort];
+    if (island) {
+        metaAddToWindow(
+            meta.recentPorts,
+            meta.portCounts,
+            toPort,
+            CONFIG.metaPressure.windowSize
+        );
+
+        // Record faction interaction
+        metaAddToWindow(
+            meta.recentFactions,
+            meta.factionCounts,
+            island.faction,
+            CONFIG.metaPressure.windowSize
+        );
+    }
+
+    // Update last port for next route calculation
+    meta.lastPort = toPort;
+
+    // Recalculate pressures
+    metaRecalcPressure(gs);
+}
+
+// Record a trade (called when selling goods for profit)
+function metaRecordTrade(gs, goodId, profit) {
+    if (!CONFIG.metaPressure.enabled) return;
+    if (profit <= 0) return; // Only track profitable trades
+
+    const meta = metaInit(gs);
+
+    metaAddToWindow(
+        meta.recentGoods,
+        meta.goodCounts,
+        goodId,
+        CONFIG.metaPressure.windowSize
+    );
+
+    // Recalculate pressures
+    metaRecalcPressure(gs);
+}
+
+// Recalculate all pressure scores
+function metaRecalcPressure(gs) {
+    const meta = metaInit(gs);
+    const cfg = CONFIG.metaPressure;
+
+    // Calculate each bias
+    meta.pressure.route = metaCalcBias(
+        meta.routeCounts,
+        cfg.thresholds.route,
+        meta.recentRoutes.length
+    );
+
+    meta.pressure.good = metaCalcBias(
+        meta.goodCounts,
+        cfg.thresholds.good,
+        meta.recentGoods.length
+    );
+
+    meta.pressure.port = metaCalcBias(
+        meta.portCounts,
+        cfg.thresholds.port,
+        meta.recentPorts.length
+    );
+
+    meta.pressure.faction = metaCalcBias(
+        meta.factionCounts,
+        cfg.thresholds.faction,
+        meta.recentFactions.length
+    );
+
+    // Total is weighted max of individual pressures
+    meta.pressure.total = Math.max(
+        meta.pressure.route,
+        meta.pressure.good,
+        meta.pressure.port * 0.8, // Port pressure weighted slightly less
+        meta.pressure.faction * 0.7 // Faction pressure weighted less
+    );
+}
+
+// Daily update: apply decay if player shows variety
+function metaUpdateDaily(gs, showToast = null) {
+    if (!CONFIG.metaPressure.enabled) return;
+    const meta = metaInit(gs);
+    const cfg = CONFIG.metaPressure;
+
+    // Only update once per day
+    if (meta.lastUpdateDay >= gs.player.days) return;
+    meta.lastUpdateDay = gs.player.days;
+
+    // Apply decay to pressure scores (represents world forgetting)
+    const decayRate = cfg.decayPerDay;
+    meta.pressure.route = Math.max(0, meta.pressure.route - decayRate);
+    meta.pressure.good = Math.max(0, meta.pressure.good - decayRate);
+    meta.pressure.port = Math.max(0, meta.pressure.port - decayRate);
+    meta.pressure.faction = Math.max(0, meta.pressure.faction - decayRate);
+
+    // Recalculate total
+    meta.pressure.total = Math.max(
+        meta.pressure.route,
+        meta.pressure.good,
+        meta.pressure.port * 0.8,
+        meta.pressure.faction * 0.7
+    );
+
+    // Check for milestone notifications
+    if (showToast) {
+        metaCheckMilestones(gs, showToast);
+    }
+}
+
+// Check if pressure crossed a milestone and show feedback
+function metaCheckMilestones(gs, showToast) {
+    const meta = metaInit(gs);
+    const cfg = CONFIG.metaPressure;
+    const milestones = cfg.feedbackMilestones;
+
+    const categories = ['route', 'good', 'port', 'faction'];
+
+    for (const cat of categories) {
+        const pressure = meta.pressure[cat];
+        const lastMilestone = meta.lastMilestones[cat] || 0;
+
+        // Find the highest milestone we've crossed
+        let crossedMilestone = 0;
+        for (const m of milestones) {
+            if (pressure >= m && m > lastMilestone) {
+                crossedMilestone = m;
+            }
+        }
+
+        if (crossedMilestone > 0) {
+            meta.lastMilestones[cat] = crossedMilestone;
+
+            // Get flavor text
+            const texts = cfg.flavorText[cat];
+            if (texts) {
+                const isHigh = pressure >= 0.7;
+                const pool = isHigh ? texts.peak : texts.rising;
+                const msg = pool[Math.floor(Math.random() * pool.length)];
+                showToast('World Adapts', msg);
+            }
+        }
+
+        // Reset milestone if pressure drops
+        if (pressure < milestones[0] && lastMilestone > 0) {
+            meta.lastMilestones[cat] = 0;
+        }
+    }
+}
+
+// Get modifiers based on current meta pressure for game systems
+// context: { route: "PortA>PortB", good: "rum", port: "portRoyal", faction: "english" }
+function metaGetModifiers(gs, context = {}) {
+    if (!CONFIG.metaPressure.enabled) {
+        return {
+            pirateChanceMult: 1,
+            stormChanceMult: 1,
+            priceMultSell: 1,
+            saturationMult: 1,
+            dockFeeMult: 1,
+            inspectionChanceMult: 1
+        };
+    }
+
+    const meta = metaInit(gs);
+    const cfg = CONFIG.metaPressure;
+    const caps = cfg.caps;
+
+    let mods = {
+        pirateChanceMult: 1,
+        stormChanceMult: 1,
+        priceMultSell: 1,
+        saturationMult: 1,
+        dockFeeMult: 1,
+        inspectionChanceMult: 1
+    };
+
+    // Route-based modifiers (pirates and storms on that specific route)
+    if (context.route) {
+        const routeKey = context.route.includes('>') ? context.route : null;
+        if (routeKey && meta.routeCounts[routeKey]) {
+            const routeShare = meta.routeCounts[routeKey] / Math.max(1, meta.recentRoutes.length);
+            if (routeShare > cfg.thresholds.route) {
+                const intensity = clamp01((routeShare - cfg.thresholds.route) / (1 - cfg.thresholds.route));
+                mods.pirateChanceMult += intensity * caps.pirateChance;
+                mods.stormChanceMult += intensity * caps.stormChance;
+            }
+        }
+    }
+
+    // Good-based modifiers (prices for that good)
+    if (context.good && meta.goodCounts[context.good]) {
+        const goodShare = meta.goodCounts[context.good] / Math.max(1, meta.recentGoods.length);
+        if (goodShare > cfg.thresholds.good) {
+            const intensity = clamp01((goodShare - cfg.thresholds.good) / (1 - cfg.thresholds.good));
+            mods.priceMultSell -= intensity * caps.priceReduction;
+            mods.saturationMult += intensity * (caps.saturationMult - 1);
+        }
+    }
+
+    // Port-based modifiers (dock fees and inspection at that port)
+    if (context.port && meta.portCounts[context.port]) {
+        const portShare = meta.portCounts[context.port] / Math.max(1, meta.recentPorts.length);
+        if (portShare > cfg.thresholds.port) {
+            const intensity = clamp01((portShare - cfg.thresholds.port) / (1 - cfg.thresholds.port));
+            mods.dockFeeMult += intensity * caps.dockFeeIncrease;
+            mods.inspectionChanceMult += intensity * caps.inspectionChance;
+        }
+    }
+
+    // Faction-based modifiers (inspection in that faction's territory)
+    if (context.faction && meta.factionCounts[context.faction]) {
+        const factionShare = meta.factionCounts[context.faction] / Math.max(1, meta.recentFactions.length);
+        if (factionShare > cfg.thresholds.faction) {
+            const intensity = clamp01((factionShare - cfg.thresholds.faction) / (1 - cfg.thresholds.faction));
+            mods.inspectionChanceMult += intensity * caps.inspectionChance * 0.5; // Stacks partially
+        }
+    }
+
+    return mods;
+}
+
+// Get a summary of current meta pressure for UI display
+function metaGetSummary(gs) {
+    const meta = metaInit(gs);
+
+    // Determine primary pressure type
+    const pressures = [
+        { type: 'route', value: meta.pressure.route },
+        { type: 'good', value: meta.pressure.good },
+        { type: 'port', value: meta.pressure.port },
+        { type: 'faction', value: meta.pressure.faction }
+    ].sort((a, b) => b.value - a.value);
+
+    const primary = pressures[0];
+
+    // Get the top item causing the pressure
+    let topItem = null;
+    switch (primary.type) {
+        case 'route': topItem = metaGetTopItem(meta.routeCounts); break;
+        case 'good': topItem = metaGetTopItem(meta.goodCounts); break;
+        case 'port': topItem = metaGetTopItem(meta.portCounts); break;
+        case 'faction': topItem = metaGetTopItem(meta.factionCounts); break;
+    }
+
+    return {
+        total: meta.pressure.total,
+        primary: primary.type,
+        primaryValue: primary.value,
+        topItem,
+        route: meta.pressure.route,
+        good: meta.pressure.good,
+        port: meta.pressure.port,
+        faction: meta.pressure.faction
+    };
+}
+
 // ==================== DEMAND SATURATION SYSTEM ====================
 function getMarketSaturation(gs, iid, gid) {
     if (!CONFIG.balance.demandSaturation.enabled) return 0;
@@ -1618,7 +2062,10 @@ function addMarketSaturation(gs, iid, gid, qty) {
     if (!CONFIG.balance.demandSaturation.enabled) return;
     if (!gs.world.saturation) gs.world.saturation = {};
     if (!gs.world.saturation[iid]) gs.world.saturation[iid] = {};
-    gs.world.saturation[iid][gid] = (gs.world.saturation[iid][gid] || 0) + qty;
+    // === META PRESSURE: Good bias makes saturation ramp faster ===
+    const metaMods = metaGetModifiers(gs, { good: gid });
+    const effectiveQty = Math.ceil(qty * metaMods.saturationMult);
+    gs.world.saturation[iid][gid] = (gs.world.saturation[iid][gid] || 0) + effectiveQty;
 }
 
 function decayMarketSaturation(gs) {
@@ -1712,6 +2159,9 @@ function calculateDockingFee(gs, iid) {
         const rep = gs.player.reputation?.[isl.faction] || 0;
         if (rep < -20) fee += up.dockingFeeHostile;
     }
+    // === META PRESSURE: Port bias increases dock fees (they've learned to charge you more) ===
+    const metaMods = metaGetModifiers(gs, { port: iid });
+    fee = Math.ceil(fee * metaMods.dockFeeMult);
     return fee;
 }
 
@@ -3783,6 +4233,10 @@ if (gs.player.upgrades?.smugglerCompartments && g?.category === 'contraband') {
     bonus *= (1 + CONFIG.upgrades.smugglerCompartments.effects.contrabandProfitBonus);
 }
 
+// === META PRESSURE: Good bias reduces prices (markets flooded with your favorite goods) ===
+const metaMods = metaGetModifiers(gs, { good: gid });
+bonus *= metaMods.priceMultSell;
+
 return Math.max(1, Math.round(base * bonus));
 }
 
@@ -3863,6 +4317,13 @@ addMarketSaturation(gs, iid, gid, qty);
 
 // === BALANCE: Track trade fatigue ===
 addTradeFatigue(gs, iid);
+
+// === META PRESSURE: Record profitable trade ===
+const purchasePrice = gs.player.purchaseHistory[gid] || 0;
+const profit = (price - purchasePrice) * qty;
+if (profit > 0) {
+    metaRecordTrade(gs, gid, profit);
+}
 
 // === LIVING SEA: Apply faction influence ===
 applyTradeInfluence(gs, iid, gs.player.faction);
@@ -4002,7 +4463,28 @@ covesTreasured: [],
 destinationCoveId: null,
 activeQuestline: null,
 questlineProgress: {},
-huntersDefeated: []
+huntersDefeated: [],
+// Meta Pressure tracking
+meta: {
+    recentRoutes: [],      // Last N route keys "PortA>PortB"
+    recentGoods: [],       // Last N main profit goods traded
+    recentPorts: [],       // Last N port IDs visited
+    recentFactions: [],    // Last N faction territories interacted with
+    routeCounts: {},       // Frequency map for routes in window
+    goodCounts: {},        // Frequency map for goods in window
+    portCounts: {},        // Frequency map for ports in window
+    factionCounts: {},     // Frequency map for factions in window
+    pressure: {            // Current pressure scores (0-1)
+        route: 0,
+        good: 0,
+        port: 0,
+        faction: 0,
+        total: 0
+    },
+    lastPort: null,        // Track last port for route recording
+    lastMilestones: { route: 0, good: 0, port: 0, faction: 0 }, // Track feedback milestones
+    lastUpdateDay: 0       // Day of last pressure update
+}
 },
 islands,
 wind: { direction: Math.floor(Math.random() * 8), strength: Math.floor(Math.random() * 4), daysUntilChange: CONFIG.settings.windChangeDays },
@@ -4111,6 +4593,35 @@ if (!gs.player.huntersDefeated) gs.player.huntersDefeated = [];
 if (!gs.player.stats.chasesEscaped) gs.player.stats.chasesEscaped = 0;
 if (!gs.player.stats.huntersDefeated) gs.player.stats.huntersDefeated = 0;
 
+// Meta Pressure system migration
+if (!gs.player.meta) {
+    gs.player.meta = {
+        recentRoutes: [],
+        recentGoods: [],
+        recentPorts: [],
+        recentFactions: [],
+        routeCounts: {},
+        goodCounts: {},
+        portCounts: {},
+        factionCounts: {},
+        pressure: { route: 0, good: 0, port: 0, faction: 0, total: 0 },
+        lastPort: null,
+        lastMilestones: { route: 0, good: 0, port: 0, faction: 0 },
+        lastUpdateDay: 0
+    };
+}
+// Ensure all meta pressure sub-fields exist (for partial migrations)
+if (!gs.player.meta.pressure) gs.player.meta.pressure = { route: 0, good: 0, port: 0, faction: 0, total: 0 };
+if (!gs.player.meta.lastMilestones) gs.player.meta.lastMilestones = { route: 0, good: 0, port: 0, faction: 0 };
+if (!gs.player.meta.recentRoutes) gs.player.meta.recentRoutes = [];
+if (!gs.player.meta.recentGoods) gs.player.meta.recentGoods = [];
+if (!gs.player.meta.recentPorts) gs.player.meta.recentPorts = [];
+if (!gs.player.meta.recentFactions) gs.player.meta.recentFactions = [];
+if (!gs.player.meta.routeCounts) gs.player.meta.routeCounts = {};
+if (!gs.player.meta.goodCounts) gs.player.meta.goodCounts = {};
+if (!gs.player.meta.portCounts) gs.player.meta.portCounts = {};
+if (!gs.player.meta.factionCounts) gs.player.meta.factionCounts = {};
+
 // World war fronts
 if (!gs.world.islandInfluence) gs.world.islandInfluence = {};
 if (!gs.world.activeBlockades) gs.world.activeBlockades = [];
@@ -4203,7 +4714,7 @@ end() { this.active = false; this.stick.classList.remove('active'); this.stick.s
 class UI {
 constructor(game) { this.game = game; this.el = {}; this.cache(); this.bind(); }
 cache() {
-['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','bounty-indicator','bounty-level','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers','tavern-rumors','questline-section','questline-content','chart-fragments','fragments-count','cove-modal','cove-icon','cove-name','cove-desc','cove-services','close-cove'].forEach(id => this.el[id] = document.getElementById(id));
+['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','bounty-indicator','bounty-level','notoriety-indicator','notoriety-fill','notoriety-label','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers','tavern-rumors','questline-section','questline-content','chart-fragments','fragments-count','cove-modal','cove-icon','cove-name','cove-desc','cove-services','close-cove'].forEach(id => this.el[id] = document.getElementById(id));
 this.el.tradeTabs = document.querySelectorAll('.trade-tab'); this.el.factionCards = document.querySelectorAll('.faction-card');
 }
 bind() {
@@ -4284,6 +4795,9 @@ updateHUD(gs) {
     this.el['bounty-level'].textContent = bountyLabels[bountyLevel];
     this.el['bounty-indicator'].className = bountyLevel;
 
+    // Notoriety indicator - Meta Pressure System
+    this.updateNotorietyIndicator(gs);
+
     // Ship condition - Living Sea Update
     this.updateShipCondition(gs);
 
@@ -4322,6 +4836,55 @@ updateContractTracker(gs) {
     } else {
         this.el['contract-tracker'].classList.add('hidden');
     }
+}
+
+updateNotorietyIndicator(gs) {
+    const ind = this.el['notoriety-indicator'];
+    const fill = this.el['notoriety-fill'];
+    const label = this.el['notoriety-label'];
+    if (!ind || !fill || !label) return;
+
+    // Get meta pressure summary
+    const summary = typeof metaGetSummary === 'function' ? metaGetSummary(gs) : null;
+    if (!summary || !CONFIG.metaPressure?.enabled) {
+        ind.classList.remove('visible');
+        return;
+    }
+
+    const total = summary.totalPressure || 0;
+    // Only show indicator if there's some notoriety
+    if (total < 0.1) {
+        ind.classList.remove('visible');
+        return;
+    }
+
+    ind.classList.add('visible');
+    fill.style.width = Math.round(total * 100) + '%';
+
+    // Determine level and label
+    let level = 'low';
+    let labelText = 'Watched';
+    if (total >= 0.7) {
+        level = 'notorious';
+        labelText = 'Notorious';
+    } else if (total >= 0.5) {
+        level = 'high';
+        labelText = 'Known';
+    } else if (total >= 0.3) {
+        level = 'rising';
+        labelText = 'Noted';
+    }
+
+    label.textContent = labelText;
+    ind.className = 'visible ' + level;
+
+    // Build tooltip with flavor text
+    const tips = [];
+    if (summary.routeBias > 0.2) tips.push('Routes predictable');
+    if (summary.goodBias > 0.2) tips.push('Trading patterns noticed');
+    if (summary.portBias > 0.2) tips.push('Port habits known');
+    if (summary.factionBias > 0.2) tips.push('Affiliations watched');
+    ind.title = tips.length > 0 ? tips.join(' • ') : 'How predictable your trading patterns have become';
 }
 
 updateShipCondition(gs) {
@@ -5614,6 +6177,9 @@ advanceDay() {
     // Market saturation recovers
     decayMarketSaturation(gs);
 
+    // Meta pressure daily decay and milestone checks
+    metaUpdateDaily(gs, (title, msg) => this.ui.toast(title, msg));
+
     simMarketDay(gs);
 
     // Tick world state
@@ -5653,6 +6219,17 @@ checkEncounters() {
     const cargoVal = estimateCargoValue(gs);
     const mods = getTitleModifiers(gs);
     const seasonMods = getSeasonModifiers(gs);
+
+    // === META PRESSURE: Calculate route-based modifiers ===
+    const meta = metaInit(gs);
+    const currentRouteKey = meta.lastPort && this.nearbyIsland
+        ? [meta.lastPort, this.nearbyIsland].sort().join('>')
+        : null;
+    const metaMods = metaGetModifiers(gs, {
+        route: currentRouteKey,
+        port: this.nearbyIsland,
+        faction: this.nearbyIsland ? CONFIG.islands[this.nearbyIsland]?.faction : null
+    });
 
     // === LIVING SEA: Check for blockade encounters when near blockaded islands ===
     const nearestBlockaded = this.getNearbyBlockadedIsland(gs);
@@ -5699,6 +6276,8 @@ checkEncounters() {
     // Pirate encounters scale with cargo value, faction, and season
     const pirateBase = CONFIG.settings.pirateEncounterChance * (fc.pirateChanceMult || 1) * (seasonMods.piratesMult || 1);
     let pirateChance = pirateBase * (1 + risk * 0.5); // +50% at max risk
+    // === META PRESSURE: Route bias increases pirate chance (they've learned your patterns) ===
+    pirateChance *= metaMods.pirateChanceMult;
     // Convoy protection reduces pirate encounters
     if (gs.player.convoyProtection && gs.player.convoyProtection >= gs.player.days) pirateChance *= 0.1;
     if (Math.random() < pirateChance) { this.triggerPirate(); return; }
@@ -5731,6 +6310,8 @@ checkEncounters() {
         }
         // Title modifiers
         inspectChance *= (1 - mods.inspectionReduction);
+        // === META PRESSURE: Port/faction bias increases inspection chance (they're watching you) ===
+        inspectChance *= metaMods.inspectionChanceMult;
         if (Math.random() < inspectChance) { this.triggerInspection(); return; }
     }
 
@@ -5740,6 +6321,8 @@ checkEncounters() {
     if (gs.world?.seasonalEvent?.effects?.stormMult) {
         stormChance *= gs.world.seasonalEvent.effects.stormMult;
     }
+    // === META PRESSURE: Route bias increases storm chance (the sea conspires against predictability) ===
+    stormChance *= metaMods.stormChanceMult;
     if (Math.random() < stormChance) {
         // During heavy storms, chance for Storm's Eye encounter
         if (seasonMods.stormMult >= 2 && Math.random() < 0.2) {
@@ -6774,6 +7357,18 @@ dock() {
 
     // === BALANCE: Record port visit for cooldown system ===
     recordPortVisit(gs, this.nearbyIsland);
+
+    // === META PRESSURE: Record route if we have a previous port ===
+    const meta = metaInit(gs);
+    if (meta.lastPort && meta.lastPort !== this.nearbyIsland) {
+        metaRecordRoute(gs, meta.lastPort, this.nearbyIsland);
+    } else {
+        // First dock or same port - just update lastPort and record port visit
+        meta.lastPort = this.nearbyIsland;
+        metaAddToWindow(meta.recentPorts, meta.portCounts, this.nearbyIsland, CONFIG.metaPressure.windowSize);
+        metaAddToWindow(meta.recentFactions, meta.factionCounts, isl.faction, CONFIG.metaPressure.windowSize);
+        metaRecalcPressure(gs);
+    }
 
     // === BALANCE: Bounty decay at friendly ports ===
     const isFriendly = isl.faction === gs.player.faction || isl.faction === 'neutral';
