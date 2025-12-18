@@ -3075,50 +3075,47 @@ export {
     generateContractId, generateContractsForIsland, generateContractTitle,
     getIslandDistance, getRouteRiskBetween, acceptContract, abandonContract,
     evaluateContractsOnDock, expireContracts, getTrackedContract, refreshContractBoard,
-    // Living world
-    updatePrices, triggerEvent, initDailyPrices,
     // Seasons
     getCurrentSeason, getSeasonModifiers,
     // Port states
-    getPortState, updatePortStates, getPortStateModifiers,
+    getPortState, updatePortStates,
     // Faction influence
-    getFactionInfluence, getControllingFaction, updateFactionInfluence,
-    recordPlayerAction, checkFactionWarEvents,
+    updateFactionInfluence,
     // Blockades
-    getActiveBlockades, isPortBlockaded, createBlockade, updateBlockades,
-    getBlockadeModifiers, canBreakBlockade, attemptBlockadeRun,
+    getActiveBlockades, isIslandBlockaded, startBlockade, updateBlockades,
     // War zones
-    getActiveWarZones, isInWarZone, createWarZone, updateWarZones, getWarZoneModifiers,
+    getActiveWarZones, isIslandWarZone, startWarZone, updateWarZones,
     // Hidden coves
-    discoverCove, getDiscoveredCoves, isNearCove, getCoveAt,
-    addChartFragment, canRevealCove, revealRandomCove, getCoveHint,
+    discoverCove, getDiscoveredCoves, addChartFragment, canRevealCove, getCoveHint,
     // Drift entities
-    spawnDriftEntity, updateDriftEntities, getNearbyDriftEntity, getDriftEntityEncounter,
+    spawnDriftEntity, updateDriftEntities, getNearbyDriftEntities,
     // Rumors
-    generateRumors, getRumorsForPort, evaluateRumorAccuracy,
+    generateRumors, getRumorsForPort,
     // Ship stats
-    getShipClass, getCargoCapacity, getCargoUsed, getBaseSpeed, getEffectiveSpeed,
-    getSpeedWithWind, getShipUpkeep,
+    getCargoCapacity, getCargoUsed,
     // Ship condition
-    initShipCondition, getShipCondition, damageShip, repairShip,
-    getConditionPenalties, updateShipWear, canSink, attemptMutiny, restoreMorale,
+    getShipHull, getShipRigging, getShipMorale, damageHull, damageRigging, damageMorale,
+    repairHull, repairRigging, restoreMorale, getRepairCost, isShipCritical,
     // Officers
-    getOfficers, hireOfficer, fireOfficer, getOfficerEffects,
-    calculateOfficerWages, getAvailableOfficersForPort,
+    getOfficer, hireOfficer, fireOfficer, getOfficerWages, getAvailableOfficersAtPort,
     // Chase system
-    initChase, getChaseEscapeChance, applyChaseAction, resolveChase, generateChaseHazard,
+    calculateEscapeChance, getChaseDuration,
     // Cove rumors
-    generateCoveRumor,
+    getCoveRumor,
     // Bounty hunters
-    shouldSpawnBountyHunter, getBountyHunter, resolveBountyHunterEncounter,
+    spawnBountyHunter, defeatHunter,
     // Questlines
-    getAvailableQuestlines, getActiveQuestlines, startQuestline,
-    updateQuestlineProgress, abandonQuestline, completeQuestline,
-    getQuestlineRewards, checkQuestlineDeadlines, getCompletedQuestlineTiers,
+    startQuestline, updateQuestlineProgress, abandonQuestline, completeQuestline,
+    getQuestlineProgress, checkQuestlineDeadline,
     // Risk & value
-    getRouteRisk, getRouteRiskInfo, getHighMarginGoods, getSpotlightDeals,
+    getRouteRisk, getHighMarginGoods,
     // Heat
-    getHeatLevel, decayHeat, addHeat,
-    // Economy
-    getBuyPrice, getSellPrice, migrateState
+    decayHeat, addHeat, decayHeatBalanced,
+    // Economy helpers
+    buyGood, sellGood, calcBuyPrice, calcSellPrice,
+    // State
+    createState, migrateState,
+    // Misc helpers
+    tickWorldStatePerDay, simMarketDay, getNetWorth, estimateCargoValue,
+    getWindEffect, getShipSpeed, getSupplyRate, applyDailyWear, checkMutinyRisk
 };
