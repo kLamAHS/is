@@ -481,7 +481,7 @@ window.addEventListener('DOMContentLoaded', function() {
             var faction = document.getElementById('faction-screen');
             if (faction) faction.classList.remove('hidden');
         }
-    }, 5000);
+    }, 15000); // 15 second fallback - only triggers if module truly fails
 });
 </script>
 
@@ -1160,11 +1160,6 @@ function getRandomIslandSubset(count) {
     const islands = Object.keys(CONFIG.islands);
     const shuffled = islands.sort(() => Math.random() - 0.5);
     return shuffled.slice(0, Math.min(count, islands.length));
-}
-
-function isStormSeason(gs) {
-    const day = gs.world?.seasonDay || 1;
-    return day >= CONFIG.settings.stormSeasonStart && day <= CONFIG.settings.stormSeasonEnd;
 }
 
 function getCrackdownLevel(gs) {
