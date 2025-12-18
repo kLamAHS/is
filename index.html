@@ -4371,7 +4371,11 @@ showTrade(iid, gs) {
 renderBuy(iid, gs) {
     const list = this.el['buy-goods-list']; list.innerHTML = '';
     Object.entries(CONFIG.goods).forEach(([gid, g]) => {
-        const m = gs.islands[iid].markets[gid], price = calcBuyPrice(gid, iid, gs), trend = getPriceTrend(gid, iid, price, gs);
+        const m = gs.islands[iid].markets[gid];
+        // Show actual price including anti-spam penalty
+        const antiSpamMult = getAntiSpamBuyMult(gs, iid, 1);
+        const price = Math.max(1, Math.round(calcBuyPrice(gid, iid, gs) * antiSpamMult));
+        const trend = getPriceTrend(gid, iid, price, gs);
         const check = canCarryMore(gid, 1, gs);
         const canBuy = m.supply > 0 && price <= gs.player.gold && check.canCarry;
 
@@ -4399,7 +4403,13 @@ renderSell(iid, gs) {
     const list = this.el['sell-goods-list']; list.innerHTML = '';
     if (!Object.keys(gs.player.cargo).length) { list.innerHTML = '<p style="text-align:center;color:var(--ink-light);padding:20px">Empty</p>'; return; }
     Object.entries(gs.player.cargo).forEach(([gid, qty]) => {
-        const g = CONFIG.goods[gid], price = calcSellPrice(gid, iid, gs), trend = getPriceTrend(gid, iid, price, gs), pp = gs.player.purchaseHistory[gid];
+        const g = CONFIG.goods[gid];
+        // Show actual price including saturation and anti-spam penalties
+        const satPenalty = getSaturationPenalty(gs, iid, gid);
+        const antiSpamMult = getAntiSpamSellMult(gs, iid, 1);
+        const price = Math.max(1, Math.round(calcSellPrice(gid, iid, gs) * satPenalty * antiSpamMult));
+        const trend = getPriceTrend(gid, iid, price, gs);
+        const pp = gs.player.purchaseHistory[gid];
         const item = document.createElement('div'); item.className = 'good-item';
         item.innerHTML = `<div class="good-info"><span class="good-icon">${g.icon}</span><span class="good-name">${g.name}</span><span class="good-price">${price}g${pp ? (price > pp ? '📈' : '📉') : ''}<span class="price-trend ${trend}">${trend === 'up' ? '↑' : trend === 'down' ? '↓' : ''}</span></span></div><div class="good-details">Have:${qty}${pp ? ' @' + pp + 'g' : ''}</div><div class="good-actions"><button class="qty-btn sell">−</button></div>`;
         item.querySelector('.qty-btn').addEventListener('click', () => { if (sellGood(gid, 1, iid, gs).success) { this.renderBuy(iid, gs); this.renderSell(iid, gs); this.updateFooter(gs); this.game.save(); } });
