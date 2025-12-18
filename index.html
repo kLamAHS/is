@@ -1253,49 +1253,62 @@ hiddenCoves: {
     }
 },
 
-// Questlines - multi-step narrative arcs
+// Questlines - contract collections with progress tracking
 questlines: {
     relief: {
         id: 'relief',
         name: 'The Relief Effort',
         icon: '🏥',
-        desc: 'A starving port needs your help. Deliver supplies and earn their eternal gratitude.',
+        desc: 'Help struggling ports by delivering essential supplies.',
         faction: 'neutral',
         steps: [
-            { type: 'deliver', goods: { timber: 5, iron: 3 }, to: null, desc: 'Deliver building materials' },
-            { type: 'deliver', goods: { rum: 3, sugar: 5 }, to: null, desc: 'Deliver food supplies' },
-            { type: 'visit', at: null, desc: 'Return to speak with the governor' }
+            { type: 'deliver_count', goods: { timber: 3, iron: 2 }, to: 'kingston', count: 3, reward: 50, desc: 'Deliver supplies to Kingston' },
+            { type: 'collect', at: 'portRoyal', desc: 'Collect payment at Port Royal' }
         ],
-        rewards: { gold: 500, reputation: { english: 15, eitc: 10 }, title: 'Benefactor', pardon: true },
-        deadline: 25
+        rewards: { gold: 400, reputation: { english: 15, eitc: 10 }, title: 'Benefactor' },
+        deadline: 30
     },
     smuggling: {
         id: 'smuggling',
         name: 'The Smuggling Ring',
         icon: '🏴‍☠️',
-        desc: 'Run contraband for the pirate network and prove your worth.',
+        desc: 'Run contraband for the pirate network across multiple ports.',
         faction: 'pirates',
         steps: [
-            { type: 'deliver', goods: { gunpowder: 8 }, to: 'tortuga', desc: 'Deliver gunpowder to Tortuga' },
-            { type: 'deliver', goods: { gunpowder: 8 }, to: 'nassau', desc: 'Deliver gunpowder to Nassau' },
-            { type: 'visit', at: 'tortuga', desc: 'Collect payment in Tortuga' }
+            { type: 'deliver_count', goods: { gunpowder: 5 }, to: 'tortuga', count: 2, reward: 100, desc: 'Smuggle gunpowder to Tortuga' },
+            { type: 'deliver_count', goods: { gunpowder: 5 }, to: 'nassau', count: 2, reward: 100, desc: 'Smuggle gunpowder to Nassau' },
+            { type: 'collect', at: 'tortuga', desc: 'Collect final payment at Tortuga' }
         ],
-        rewards: { gold: 800, reputation: { pirates: 20 }, unlocks: 'smugglersReef' },
-        deadline: 20
+        rewards: { gold: 500, reputation: { pirates: 25 }, unlocks: 'smugglersReef' },
+        deadline: 25
     },
-    faction_english: {
-        id: 'faction_english',
+    trading_company: {
+        id: 'trading_company',
+        name: 'Company Contract',
+        icon: '⚓',
+        desc: 'Establish yourself as a reliable Trading Company supplier.',
+        faction: 'eitc',
+        steps: [
+            { type: 'deliver_count', goods: { tea: 3, spices: 2 }, to: 'havana', count: 3, reward: 75, desc: 'Supply luxuries to Havana' },
+            { type: 'deliver_count', goods: { silk: 2 }, to: 'santiago', count: 2, reward: 100, desc: 'Deliver silk to Santiago' },
+            { type: 'collect', at: 'havana', desc: 'Collect bonus at Havana' }
+        ],
+        rewards: { gold: 600, reputation: { eitc: 25, english: 10 }, title: 'Preferred Vendor' },
+        deadline: 35
+    },
+    crown_service: {
+        id: 'crown_service',
         name: 'Crown Service',
         icon: '👑',
-        desc: 'Prove your loyalty to the Crown and earn a Royal Pardon.',
+        desc: 'Prove your loyalty to the Crown through naval supply runs.',
         faction: 'english',
         steps: [
-            { type: 'deliver', goods: { tea: 5, silk: 3 }, to: 'portRoyal', desc: 'Supply Port Royal with luxuries' },
-            { type: 'visit', at: 'kingston', desc: 'Deliver dispatches to Kingston' },
-            { type: 'deliver', goods: { iron: 5, timber: 5 }, to: 'portRoyal', desc: 'Bring naval supplies to Port Royal' }
+            { type: 'deliver_count', goods: { iron: 4, timber: 4 }, to: 'portRoyal', count: 3, reward: 60, desc: 'Deliver naval supplies to Port Royal' },
+            { type: 'deliver_count', goods: { gunpowder: 3 }, to: 'kingston', count: 2, reward: 80, desc: 'Supply munitions to Kingston' },
+            { type: 'collect', at: 'portRoyal', desc: 'Receive Royal commendation' }
         ],
-        rewards: { gold: 600, reputation: { english: 30, pirates: -20 }, pardon: true, title: 'Privateer' },
-        deadline: 30
+        rewards: { gold: 500, reputation: { english: 30, pirates: -15 }, pardon: true, title: 'Privateer' },
+        deadline: 35
     }
 },
 
@@ -3286,19 +3299,17 @@ function checkQuestlineStep(gs, event, eventData = {}) {
     const step = progress.currentStep;
     if (!step) return { advanced: false };
 
-    let stepComplete = false;
-
     // Only check on dock events
     if (event !== 'dock' || !eventData.islandId) {
         return { advanced: false };
     }
 
+    const qProgress = gs.player.questlineProgress[progress.questlineId];
+
     switch (step.type) {
-        case 'deliver':
-            // Check if we have the goods and we're at the right location
-            const atDestination = !step.to || step.to === eventData.islandId;
-            if (atDestination && step.goods) {
-                // Check if player has all required goods
+        case 'deliver_count':
+            // Repeated delivery task - check if at right island with goods
+            if (step.to === eventData.islandId && step.goods) {
                 const hasGoods = Object.entries(step.goods).every(([gid, qty]) =>
                     (gs.player.cargo[gid] || 0) >= qty
                 );
@@ -3307,24 +3318,79 @@ function checkQuestlineStep(gs, event, eventData = {}) {
                     Object.entries(step.goods).forEach(([gid, qty]) => {
                         gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) - qty;
                     });
-                    stepComplete = true;
+                    // Increment delivery count
+                    qProgress.stepProgress.delivered = (qProgress.stepProgress.delivered || 0) + 1;
+                    const delivered = qProgress.stepProgress.delivered;
+                    const needed = step.count || 1;
+                    // Give per-delivery reward
+                    const reward = step.reward || 0;
+                    if (reward > 0) gs.player.gold += reward;
+
+                    if (delivered >= needed) {
+                        // Step complete - move to next
+                        qProgress.stepProgress = {}; // Reset for next step
+                        const result = advanceQuestline(gs);
+                        return {
+                            advanced: true,
+                            completed: result.completed,
+                            rewards: result.rewards,
+                            stepDone: true,
+                            message: `${step.desc} complete!`,
+                            reward: reward
+                        };
+                    } else {
+                        // Partial progress
+                        return {
+                            advanced: false,
+                            progress: true,
+                            delivered: delivered,
+                            needed: needed,
+                            message: `Delivery ${delivered}/${needed}`,
+                            reward: reward
+                        };
+                    }
+                }
+            }
+            break;
+
+        case 'collect':
+            // Final collection step - just visit the island
+            if (step.at === eventData.islandId) {
+                qProgress.stepProgress = {};
+                const result = advanceQuestline(gs);
+                return {
+                    advanced: true,
+                    completed: result.completed,
+                    rewards: result.rewards,
+                    stepDone: true,
+                    message: 'Payment collected!'
+                };
+            }
+            break;
+
+        case 'deliver':
+            // Single delivery (legacy support)
+            const atDestination = !step.to || step.to === eventData.islandId;
+            if (atDestination && step.goods) {
+                const hasGoods = Object.entries(step.goods).every(([gid, qty]) =>
+                    (gs.player.cargo[gid] || 0) >= qty
+                );
+                if (hasGoods) {
+                    Object.entries(step.goods).forEach(([gid, qty]) => {
+                        gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) - qty;
+                    });
+                    const result = advanceQuestline(gs);
+                    return { advanced: true, completed: result.completed, rewards: result.rewards, stepDone: true };
                 }
             }
             break;
 
         case 'visit':
-        case 'talk':
-        case 'report':
-            // Simply visit the specified island
             if (!step.at || step.at === eventData.islandId) {
-                stepComplete = true;
+                const result = advanceQuestline(gs);
+                return { advanced: true, completed: result.completed, rewards: result.rewards, stepDone: true };
             }
             break;
-    }
-
-    if (stepComplete) {
-        const result = advanceQuestline(gs);
-        return { advanced: true, completed: result.completed, rewards: result.rewards };
     }
 
     return { advanced: false };
@@ -4490,12 +4556,29 @@ renderQuestlines() {
     if (activeProgress) {
         // Show active questline
         const { questline, currentStep, stepIndex, totalSteps, daysRemaining } = activeProgress;
+        const qProgress = gs.player.questlineProgress[activeProgress.questlineId] || {};
         const stepsHtml = questline.steps.map((step, i) => {
             let status = 'pending';
             let icon = '○';
+            let progressText = '';
             if (i < stepIndex) { status = 'completed'; icon = '✓'; }
-            else if (i === stepIndex) { status = 'current'; icon = '▶'; }
-            return `<div class="questline-step ${status}"><span class="step-icon">${icon}</span><span>${step.desc}</span></div>`;
+            else if (i === stepIndex) {
+                status = 'current';
+                icon = '▶';
+                // Show delivery progress for deliver_count steps
+                if (step.type === 'deliver_count' && step.count > 1) {
+                    const delivered = qProgress.stepProgress?.delivered || 0;
+                    progressText = ` <span style="color:var(--gold)">(${delivered}/${step.count})</span>`;
+                }
+            }
+            const destText = step.to ? ` → ${CONFIG.islands[step.to]?.name || step.to}` : (step.at ? ` @ ${CONFIG.islands[step.at]?.name || step.at}` : '');
+            let goodsText = '';
+            if (step.goods && i === stepIndex) {
+                const goodsList = Object.entries(step.goods).map(([gid, qty]) => `${qty}x ${CONFIG.goods[gid]?.name || gid}`).join(', ');
+                goodsText = ` <span style="font-size:0.65rem;color:var(--ink-light)">[${goodsList}]</span>`;
+            }
+            const rewardText = step.reward && i === stepIndex ? ` <span style="color:var(--gold);font-size:0.65rem">+${step.reward}g ea</span>` : '';
+            return `<div class="questline-step ${status}"><span class="step-icon">${icon}</span><span>${step.desc}${destText}${goodsText}${progressText}${rewardText}</span></div>`;
         }).join('');
 
         const rewardsHtml = [];
@@ -6439,12 +6522,17 @@ dock() {
 
     // === LIVING SEA: Check questline progress ===
     const questResult = checkQuestlineStep(gs, 'dock', { islandId: this.nearbyIsland });
-    if (questResult.advanced) {
-        if (questResult.completed) {
-            this.ui.showQuestComplete(questResult.rewards);
-        } else {
-            this.ui.toast('Quest Progress', 'Step completed!');
-        }
+    if (questResult.completed) {
+        // Full questline completed - show completion modal
+        this.ui.showQuestComplete(questResult.rewards);
+    } else if (questResult.stepDone) {
+        // Step completed but questline continues
+        const rewardText = questResult.reward ? ` +${questResult.reward}g` : '';
+        this.ui.toast('Step Complete!', questResult.message + rewardText);
+    } else if (questResult.progress) {
+        // Partial progress on a delivery step
+        const rewardText = questResult.reward ? ` +${questResult.reward}g` : '';
+        this.ui.toast('Delivery Made!', `${questResult.message}${rewardText}`);
     }
 
     // Refresh contract board
