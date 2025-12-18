@@ -425,6 +425,7 @@
 
 <div id="contract-complete-modal" class="modal hidden"><div class="modal-content warning-content"><div class="warning-icon" id="contract-complete-icon">📜</div><h2 id="contract-complete-title">Contract Complete!</h2><p id="contract-complete-desc">You've fulfilled the contract.</p><div id="contract-complete-rewards"></div><button class="btn-primary" id="contract-complete-dismiss">Collect Rewards</button></div></div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
 // NON-MODULE FALLBACK - runs even if module fails to load
 window.onerror = function(msg, url, line, col, error) {
@@ -435,6 +436,11 @@ window.onerror = function(msg, url, line, col, error) {
     if (faction) faction.classList.remove('hidden');
     return false;
 };
+
+// Catch module import errors
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Module error:', event.reason);
+});
 
 // Fallback timeout - if loading screen still showing after 5 seconds, something is wrong
 window.addEventListener('DOMContentLoaded', function() {
@@ -480,9 +486,10 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+// THREE is loaded globally via script tag above
+const THREE = window.THREE;
 
-console.log('Module loaded - Three.js ready');
+console.log('Module loaded - Three.js ready:', !!THREE);
 
 // ==================== CONFIG ====================
 const CONFIG = {
