@@ -327,6 +327,12 @@
     .officer-trait.negative { background: rgba(139,37,0,0.2); color: var(--blood-red); }
     .officer-actions { display: flex; gap: var(--space-xs); margin-top: var(--space-xs); }
     .officers-empty { text-align: center; color: var(--ink-light); padding: var(--space-md); font-style: italic; }
+    .rumor-card { display: flex; align-items: flex-start; gap: var(--space-xs); background: rgba(255,255,255,0.5); border-radius: 6px; padding: var(--space-xs) var(--space-sm); margin-bottom: var(--space-xs); font-size: 0.75rem; }
+    .rumor-card.rumor-true { border-left: 3px solid #1e7d34; }
+    .rumor-card.rumor-false { border-left: 3px solid #8b6914; }
+    .rumor-icon { font-size: 1rem; }
+    .rumor-text { flex: 1; font-style: italic; color: var(--ink); }
+    .rumor-age { font-size: 0.65rem; color: var(--ink-light); background: var(--parchment-dark); padding: 2px 6px; border-radius: 4px; }
 
     /* Ship Cards - Living Sea Update */
     .ship-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-sm); margin-bottom: var(--space-md); }
@@ -552,7 +558,7 @@
         <div class="trade-panel" id="buy-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="buy-best-btn">💰 Buy Best</button></div><div class="goods-list" id="buy-goods-list"></div></div>
         <div class="trade-panel hidden" id="sell-panel"><div class="panel-actions"><button class="btn-secondary btn-small" id="sell-best-btn">💰 Sell Best</button></div><div class="goods-list" id="sell-goods-list"></div></div>
         <div class="trade-panel hidden" id="contracts-panel"><div class="logbook-section" id="questline-section"><h4>📜 Questlines</h4><div id="questline-content"></div></div><div class="logbook-section"><h4>📋 Available Contracts</h4><div id="available-contracts"></div></div><div class="logbook-section"><h4>📌 Active Contracts (<span id="active-count">0</span>/3)</h4><div id="active-contracts"></div></div></div>
-        <div class="trade-panel hidden" id="tavern-panel"><div class="logbook-section"><h4>👥 Your Officers (<span id="officer-count">0</span>/3)</h4><div id="current-officers"></div></div><div class="logbook-section"><h4>🍻 Available for Hire</h4><div id="available-officers"></div></div></div>
+        <div class="trade-panel hidden" id="tavern-panel"><div class="logbook-section"><h4>👥 Your Officers (<span id="officer-count">0</span>/3)</h4><div id="current-officers"></div></div><div class="logbook-section"><h4>🍻 Available for Hire</h4><div id="available-officers"></div></div><div class="logbook-section"><h4>🗣️ Port Rumors</h4><div id="tavern-rumors"></div></div></div>
         <div class="trade-panel hidden" id="logbook-panel"><div class="logbook-section"><h4>💡 Deal Spotlight</h4><div id="spotlight-list"></div></div><div class="logbook-section"><h4>📜 Price History</h4><select class="island-select" id="logbook-island-select"></select><div id="logbook-prices"></div></div></div>
         <div class="trade-panel hidden" id="shipyard-panel"><div id="upgrades-list"></div></div>
         <div class="trade-footer"><div class="player-stats"><span>🪙 <span id="trade-gold">1000</span></span><span>📦 <span id="trade-cargo">0/50</span></span></div><button class="btn-primary" id="leave-port-btn">Set Sail</button></div>
@@ -3636,6 +3642,12 @@ if (gs.player.upgrades?.smugglerCompartments && g?.category === 'contraband') {
     discount *= (1 - CONFIG.upgrades.smugglerCompartments.effects.contrabandProfitBonus);
 }
 
+// Merchant favor: 2% discount per point, max 10%
+const favor = gs.player.merchantFavor || 0;
+if (favor > 0) {
+    discount *= (1 - Math.min(0.10, favor * 0.02));
+}
+
 return Math.max(1, Math.round(base * discount));
 }
 
@@ -4073,7 +4085,7 @@ end() { this.active = false; this.stick.classList.remove('active'); this.stick.s
 class UI {
 constructor(game) { this.game = game; this.el = {}; this.cache(); this.bind(); }
 cache() {
-['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','bounty-indicator','bounty-level','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers','questline-section','questline-content','chart-fragments','fragments-count'].forEach(id => this.el[id] = document.getElementById(id));
+['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','bounty-indicator','bounty-level','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers','tavern-rumors','questline-section','questline-content','chart-fragments','fragments-count'].forEach(id => this.el[id] = document.getElementById(id));
 this.el.tradeTabs = document.querySelectorAll('.trade-tab'); this.el.factionCards = document.querySelectorAll('.faction-card');
 }
 bind() {
@@ -4919,6 +4931,44 @@ renderTavern() {
             });
         });
     }
+
+    // Render port rumors
+    this.renderRumors(islandId, gs);
+}
+
+renderRumors(islandId, gs) {
+    const rumorsEl = this.el['tavern-rumors'];
+    if (!rumorsEl) return;
+
+    const rumors = getRumorsForPort(gs, islandId);
+    if (!rumors || rumors.length === 0) {
+        rumorsEl.innerHTML = '<div class="officers-empty">The tavern is quiet. No interesting news.</div>';
+        return;
+    }
+
+    const rumorIcons = {
+        convoy: '🚢',
+        shortage: '📉',
+        surplus: '📈',
+        danger: '⚠️',
+        opportunity: '💰',
+        weather: '🌊',
+        political: '👑'
+    };
+
+    rumorsEl.innerHTML = rumors.map(r => {
+        const icon = rumorIcons[r.type] || '🗣️';
+        const truthClass = r.truth ? 'rumor-true' : 'rumor-false';
+        const freshness = gs.player.days - r.createdDay;
+        const freshnessLabel = freshness <= 1 ? 'Fresh' : freshness <= 3 ? 'Recent' : 'Old';
+        return `
+            <div class="rumor-card ${truthClass}">
+                <span class="rumor-icon">${icon}</span>
+                <span class="rumor-text">"${r.text}"</span>
+                <span class="rumor-age">${freshnessLabel}</span>
+            </div>
+        `;
+    }).join('');
 }
 
 updateFooter(gs) { this.el['trade-gold'].textContent = gs.player.gold.toLocaleString(); this.el['trade-cargo'].textContent = getCargoUsed(gs) + '/' + getCargoCapacity(gs); }
@@ -5489,6 +5539,9 @@ checkEncounters() {
                     } else {
                         this.triggerStorm();
                     }
+                    return;
+                case 'merchantFleet':
+                    this.triggerMerchantFleet(entity);
                     return;
             }
         }
@@ -6211,6 +6264,64 @@ triggerDriftingMarket(entity) {
     ]);
 }
 
+triggerMerchantFleet(entity) {
+    const gs = this.gameState;
+    const enc = { name: 'Merchant Fleet', icon: '🚢', desc: 'A convoy of trading vessels crosses your path. They seem open to business.' };
+
+    // Generate trade offers - bulk goods at decent prices
+    const gids = Object.keys(CONFIG.goods).filter(g => CONFIG.goods[g].category !== 'contraband');
+    const buyGid = gids[Math.floor(Math.random() * gids.length)];
+    const buyGood = CONFIG.goods[buyGid];
+    const buyPrice = Math.floor(buyGood.basePrice * (0.75 + Math.random() * 0.15)); // 75-90% base
+    const buyQty = 5 + Math.floor(Math.random() * 6);
+
+    // What they want to buy from player
+    const playerCargo = Object.entries(gs.player.cargo).filter(([gid, qty]) => qty > 0 && CONFIG.goods[gid]?.category !== 'contraband');
+    const hasCargo = playerCargo.length > 0;
+    let sellGid, sellGood, sellPrice, sellQty;
+    if (hasCargo) {
+        [sellGid, sellQty] = playerCargo[Math.floor(Math.random() * playerCargo.length)];
+        sellGood = CONFIG.goods[sellGid];
+        sellPrice = Math.floor(sellGood.basePrice * (1.1 + Math.random() * 0.2)); // 110-130% base
+        sellQty = Math.min(sellQty, 5);
+    }
+
+    const actions = [
+        { label: `💰 Buy ${buyGood.icon} ${buyGood.name} (${buyPrice}g x${buyQty})`, style: 'primary', action: () => {
+            const total = buyPrice * buyQty;
+            const check = canCarryMore(buyGid, buyQty, gs);
+            if (gs.player.gold >= total && check.canCarry) {
+                gs.player.gold -= total;
+                gs.player.cargo[buyGid] = (gs.player.cargo[buyGid] || 0) + buyQty;
+                gs.player.purchaseHistory[buyGid] = buyPrice;
+                gs.player.merchantFavor = (gs.player.merchantFavor || 0) + 1;
+                this.ui.showEncounter(enc, [], { positive: true, text: `Bought ${buyQty}x ${buyGood.name}. The merchants appreciate your business.` });
+            } else {
+                this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'Not enough gold!' });
+            }
+            this.ui.updateHUD(gs);
+        } }
+    ];
+
+    if (hasCargo) {
+        actions.push({ label: `📦 Sell ${sellGood.icon} ${sellGood.name} (${sellPrice}g x${sellQty})`, action: () => {
+            gs.player.cargo[sellGid] -= sellQty;
+            if (gs.player.cargo[sellGid] <= 0) delete gs.player.cargo[sellGid];
+            gs.player.gold += sellPrice * sellQty;
+            gs.player.merchantFavor = (gs.player.merchantFavor || 0) + 1;
+            this.ui.showEncounter(enc, [], { positive: true, text: `Sold ${sellQty}x ${sellGood.name} for ${sellPrice * sellQty}g. Good trade!` });
+            this.ui.updateHUD(gs);
+        } });
+    }
+
+    actions.push({ label: '🚢 Sail on', action: () => {
+        this.ui.closeEncounter();
+        if (entity) entity.daysRemaining = Math.max(1, entity.daysRemaining - 2);
+    } });
+
+    this.ui.showEncounter(enc, actions);
+}
+
 triggerBlockadeRunner() {
     const gs = this.gameState, enc = CONFIG.encounters.blockadeRunner;
     const fee = 100 + Math.floor(Math.random() * 150);
@@ -6481,10 +6592,29 @@ dock() {
     const gs = this.gameState, pp = gs.player.position, isl = CONFIG.islands[this.nearbyIsland];
     if (Math.sqrt((isl.position.x - pp.x)**2 + (isl.position.z - pp.z)**2) > CONFIG.settings.dockDistance) { this.ui.toast('Too Far', 'Get closer!'); return; }
 
+    // === LIVING SEA: Check for blockade (requires blockadePass to dock) ===
+    const portState = getPortState(gs, this.nearbyIsland);
+    if (portState === 'blockaded') {
+        const hasPass = gs.player.blockadePass && gs.player.blockadePass >= gs.player.days;
+        if (!hasPass) {
+            this.ui.toast('Blockaded!', 'Navy ships prevent docking. Find a blockade runner.');
+            return;
+        }
+        this.ui.toast('Pass Used', 'Slipping through the blockade...');
+    }
+
     gs.isDocked = true;
     gs.currentIsland = this.nearbyIsland;
     gs.player.daysSinceDock = 0; // Reset days since dock
     // Per-contract inspection tracking: wasInspected flag is on each contract, no global reset needed
+
+    // === LIVING SEA: Check for convoy inspection (from shadowing navy convoy) ===
+    if (gs.player.convoyInspection) {
+        gs.player.convoyInspection = false; // Clear flag
+        this.ui.toast('Convoy Report', 'Navy was alerted to your presence!');
+        setTimeout(() => this.triggerInspection(), 500);
+        return; // Don't proceed with normal docking until inspection resolves
+    }
 
     // === BALANCE: Docking fee ===
     const dockFee = calculateDockingFee(gs, this.nearbyIsland);
