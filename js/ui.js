@@ -6,17 +6,19 @@ import {
     getPlayerPower, getGamePhase, getBountyLevel, getBounty,
     getTitleTier, getTitleName, getNextThreshold, getTitleModifiers,
     getCargoCapacity, getCargoUsed,
-    getShipHull, getShipRigging, getShipMorale, getRepairCost, isShipCritical,
+    getShipHull, getShipRigging, getShipMorale, getMaxHull, getMaxRigging, getMaxMorale,
+    getRepairCost, isShipCritical,
     getOfficer, getOfficerWages, getAvailableOfficersAtPort,
     getDiscoveredCoves,
-    getCurrentSeason, getSeasonModifiers, getPortState,
-    isIslandBlockaded, getActiveBlockades,
-    isIslandWarZone, getActiveWarZones,
+    getCurrentSeason, getSeasonModifiers, getSeasonLabel, getPortState, getPortStateConfig,
+    getCrackdownLevel, getIslandInfluence,
+    isIslandBlockaded, getActiveBlockades, getBlockadeInfo,
+    isIslandWarZone, getActiveWarZones, getWarZoneInfo,
     getQuestlineProgress,
     getTrackedContract, getRumorsForPort,
-    getRouteRisk, getHighMarginGoods, calcBuyPrice, calcSellPrice,
+    getRouteRisk, getHighMarginGoods, getRiskLabel, calcBuyPrice, calcSellPrice,
     canFence, getFenceRemaining, getSaturationPenalty,
-    calculateDockingFee
+    calculateDockingFee, getPardonCost
 } from './systems.js';
 
 class UI {
