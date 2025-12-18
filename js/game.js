@@ -5,6 +5,7 @@ import { CONFIG, WIND_DIRS, WIND_STR } from './config.js';
 import { SceneManager } from './scene.js';
 import { Joystick } from './joystick.js';
 import { UI } from './ui.js';
+import { leaderboard } from './leaderboard.js';
 import {
     // Power & Phase
     getPlayerPower, getGamePhase, getPowerScaling,
@@ -77,6 +78,11 @@ constructor() { this.gameState = null; this.scene = null; this.ui = null; this.j
 async init() {
     try {
         this.ui = new UI(this);
+
+        // Initialize leaderboard
+        await leaderboard.init();
+        this.ui.initLeaderboard(leaderboard);
+
         for (let i = 0; i <= 100; i += 20) { this.ui.showLoading(i); await new Promise(r => setTimeout(r, 80)); }
         const save = localStorage.getItem('merchantSeasSave');
         setTimeout(() => {
