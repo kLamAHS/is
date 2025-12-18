@@ -21,6 +21,7 @@ import {
     getTradeFatigue, addTradeFatigue, resetTradeFatigue, getPortVisitPenalty,
     recordPortVisit, getBulkTradePenalty, getAntiSpamSellMult, getAntiSpamBuyMult,
     buyGood, sellGood, calcBuyPrice, calcSellPrice,
+    calcCargoLoss, calcGoldLoss, calcTributeCost,
     // Titles
     updateTitles,
     // Reputation
@@ -35,7 +36,7 @@ import {
     // Faction influence
     updateFactionInfluence,
     // Blockades
-    getActiveBlockades, isIslandBlockaded, updateBlockades,
+    getActiveBlockades, isIslandBlockaded, updateBlockades, getBlockadeInfo,
     // War zones
     isIslandWarZone, updateWarZones,
     // Hidden coves
@@ -48,7 +49,8 @@ import {
     // Ship stats
     getCargoCapacity, getCargoUsed,
     // Ship condition
-    getShipHull, getShipRigging, getShipMorale, damageHull, damageRigging, damageMorale,
+    getShipHull, getShipRigging, getShipMorale, getMaxHull, getMaxRigging, getMaxMorale,
+    damageHull, damageRigging, damageMorale,
     repairHull, repairRigging, restoreMorale, getRepairCost, isShipCritical,
     // Officers
     getOfficer, hireOfficer, fireOfficer, getOfficerWages, getAvailableOfficersAtPort,

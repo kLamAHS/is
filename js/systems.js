@@ -3076,15 +3076,15 @@ export {
     getIslandDistance, getRouteRiskBetween, acceptContract, abandonContract,
     evaluateContractsOnDock, expireContracts, getTrackedContract, refreshContractBoard,
     // Seasons
-    getCurrentSeason, getSeasonModifiers,
+    getCurrentSeason, getSeasonModifiers, getSeasonLabel,
     // Port states
-    getPortState, updatePortStates,
+    getPortState, updatePortStates, getPortStateConfig, getCrackdownLevel,
     // Faction influence
-    updateFactionInfluence,
+    updateFactionInfluence, getIslandInfluence,
     // Blockades
-    getActiveBlockades, isIslandBlockaded, startBlockade, updateBlockades,
+    getActiveBlockades, isIslandBlockaded, startBlockade, updateBlockades, getBlockadeInfo,
     // War zones
-    getActiveWarZones, isIslandWarZone, startWarZone, updateWarZones,
+    getActiveWarZones, isIslandWarZone, startWarZone, updateWarZones, getWarZoneInfo,
     // Hidden coves
     discoverCove, getDiscoveredCoves, addChartFragment, canRevealCove, getCoveHint,
     // Drift entities
@@ -3094,7 +3094,8 @@ export {
     // Ship stats
     getCargoCapacity, getCargoUsed,
     // Ship condition
-    getShipHull, getShipRigging, getShipMorale, damageHull, damageRigging, damageMorale,
+    getShipHull, getShipRigging, getShipMorale, getMaxHull, getMaxRigging, getMaxMorale,
+    damageHull, damageRigging, damageMorale,
     repairHull, repairRigging, restoreMorale, getRepairCost, isShipCritical,
     // Officers
     getOfficer, hireOfficer, fireOfficer, getOfficerWages, getAvailableOfficersAtPort,
@@ -3104,15 +3105,18 @@ export {
     getCoveRumor,
     // Bounty hunters
     spawnBountyHunter, defeatHunter,
+    // Pardons
+    getPardonCost,
     // Questlines
     startQuestline, advanceQuestline, failQuestline, completeQuestline,
     getQuestlineProgress, checkQuestlineDeadline, checkQuestlineStep,
     // Risk & value
-    getRouteRisk, getHighMarginGoods,
+    getRouteRisk, getHighMarginGoods, getRiskLabel,
     // Heat
     decayHeat, addHeat, decayHeatBalanced,
     // Economy helpers
     buyGood, sellGood, calcBuyPrice, calcSellPrice,
+    calcCargoLoss, calcGoldLoss, calcTributeCost,
     // State
     createState, migrateState,
     // Misc helpers
