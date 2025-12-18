@@ -3364,6 +3364,8 @@ function completeQuestline(gs) {
     if (rewards.pardon) grantPardon(gs);
     if (rewards.unlocks) discoverCove(gs, rewards.unlocks);
 
+    // Mark questline as completed (prevents repeat, unlocks next tier)
+    gs.player.questlineProgress[questlineId].completed = true;
     gs.player.activeQuestline = null;
 
     return { success: true, completed: true, rewards };
