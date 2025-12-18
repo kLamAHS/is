@@ -604,13 +604,13 @@ voyager: {
     effects: { inspectionReduction: 0.02 } // per tier
 }
 },
-// CONTRACT TYPES - BALANCE: Reduced base rewards, contracts supplement trading not replace it
+// CONTRACT TYPES - BALANCE: Reduced rewards & rep, contracts supplement trading not replace it
 contractTypes: {
-delivery: { name: 'Delivery', icon: '📦', baseReward: 50, repReward: 5, riskMult: 1.0 },        // Down from 100 - you sacrifice sale profit
-smuggling: { name: 'Smuggling', icon: '🏴‍☠️', baseReward: 100, repReward: -5, riskMult: 1.8, heatGain: 20 }, // Down from 200, more heat
-courier: { name: 'Courier', icon: '✉️', baseReward: 25, repReward: 5, riskMult: 0.8, depositPct: 0.3 },  // Down from 80, requires deposit
-supply: { name: 'Supply Run', icon: '🍖', baseReward: 20, repReward: 3, riskMult: 0.6, supplyCost: 8 },  // Down from 60, consumes supplies
-faction: { name: 'Faction Work', icon: '⚔️', baseReward: 15, repReward: 12, riskMult: 1.2 }    // Down from 50, rep-focused
+delivery: { name: 'Delivery', icon: '📦', baseReward: 50, repReward: 2, riskMult: 1.0 },        // Rep 5->2, just a routine delivery
+smuggling: { name: 'Smuggling', icon: '🏴‍☠️', baseReward: 100, repReward: -5, riskMult: 1.8, heatGain: 20 }, // Rep penalty stays
+courier: { name: 'Courier', icon: '✉️', baseReward: 25, repReward: 2, riskMult: 0.8, depositPct: 0.3 },  // Rep 5->2, just travel
+supply: { name: 'Supply Run', icon: '🍖', baseReward: 20, repReward: 2, riskMult: 0.6, supplyCost: 8 },  // Rep 3->2, minor help
+faction: { name: 'Faction Work', icon: '⚔️', baseReward: 15, repReward: 5, riskMult: 1.2 }    // Rep 12->5, was way too high
 },
 events: [
 { id: 'festival', name: 'Festival', desc: 'Luxury demand up!', duration: 3, affects: ['luxury'], multiplier: 1.5 },
@@ -760,6 +760,13 @@ portStateChangeChance: 0.08, reliefRunThreshold: 10
 //   courier.baseReward    | 25                 | 15-40      | Down from 80 - requires 30% deposit
 //   supply.baseReward     | 20                 | 10-35      | Down from 60 - costs 8 supplies
 //   faction.baseReward    | 15                 | 10-25      | Down from 50 - rep-focused
+//
+// Contract Reputation      |                    |            | Rep should match difficulty
+//   delivery.repReward    | 2                  | 1-3        | Down from 5 - routine work
+//   smuggling.repReward   | -5                 | -3 to -8   | Penalty stays - illegal
+//   courier.repReward     | 2                  | 1-3        | Down from 5 - just travel
+//   supply.repReward      | 2                  | 1-3        | Down from 3 - minor help
+//   faction.repReward     | 5                  | 3-8        | Down from 12 - was way too high
 //
 // Progression Scaling     |                    |            | Anti-snowball
 //   contractRewardMin     | 0.7                | 0.5-0.9    | Min reward multiplier
