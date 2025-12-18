@@ -160,6 +160,13 @@
     .faction-tag.pirates { background: var(--pirates); }
     .faction-tag.neutral { background: var(--neutral); }
     .tariff-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: var(--gold-dark); color: var(--parchment); }
+    .port-state-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: var(--sea-medium); color: var(--parchment); }
+    .port-state-tag.prosperous { background: #1e7d34; }
+    .port-state-tag.struggling { background: var(--gold-dark); }
+    .port-state-tag.blockaded { background: #8b2500; }
+    .port-state-tag.lawless { background: #2c2c2c; }
+    .port-state-tag.starving { background: #5c1700; }
+    .port-state-tag.flooded { background: var(--sea-dark); }
     .modal-close { position: absolute; top: var(--space-sm); right: var(--space-sm); width: 32px; height: 32px; border: none; background: transparent; font-size: 1.3rem; cursor: pointer; color: var(--ink-light); }
 
     .trade-tabs { display: flex; border-bottom: 2px solid var(--parchment-dark); }
@@ -295,6 +302,8 @@
     .map-island.pirates { background: var(--pirates); }
     .map-island.neutral { background: var(--neutral); }
     .map-player { position: absolute; width: 12px; height: 12px; background: var(--gold); border-radius: 50%; border: 2px solid white; transform: translate(-50%, -50%); box-shadow: 0 0 10px var(--gold); z-index: 5; }
+    .map-drift-entity { position: absolute; width: 18px; height: 18px; border-radius: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; z-index: 3; animation: drift-pulse 2s ease-in-out infinite; pointer-events: none; }
+    @keyframes drift-pulse { 0%, 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
     .map-course-line { position: absolute; height: 2px; background: var(--gold); transform-origin: left center; opacity: 0.6; z-index: 4; }
     .map-legend { display: flex; justify-content: center; gap: var(--space-md); margin-top: var(--space-sm); font-size: 0.7rem; flex-wrap: wrap; }
     .map-legend span { display: flex; align-items: center; gap: 4px; }
@@ -366,7 +375,7 @@
 
 <div id="trade-modal" class="modal hidden">
     <div class="modal-content">
-        <div class="modal-header"><h2 id="trade-island-name">Port Royal</h2><div class="island-info"><span id="trade-island-faction" class="faction-tag">English</span><span id="trade-tariff" class="tariff-tag">No Tariff</span></div><button class="modal-close" id="close-trade">✕</button></div>
+        <div class="modal-header"><h2 id="trade-island-name">Port Royal</h2><div class="island-info"><span id="trade-island-faction" class="faction-tag">English</span><span id="trade-tariff" class="tariff-tag">No Tariff</span><span id="trade-port-state" class="port-state-tag hidden">Prosperous</span></div><button class="modal-close" id="close-trade">✕</button></div>
         <div class="trade-tabs">
             <button class="trade-tab active" data-tab="buy">Buy</button>
             <button class="trade-tab" data-tab="sell">Sell</button>
@@ -533,8 +542,67 @@ encounters: {
 storm: { name: 'Storm!', icon: '🌊', desc: 'A violent storm approaches!', baseChance: 0.04 },
 adriftMerchant: { name: 'Adrift Merchant', icon: '🚢', desc: 'A merchant offers a trade.', baseChance: 0.03 },
 wreckSalvage: { name: 'Wreckage', icon: '⚓', desc: 'Floating debris. Investigate?', baseChance: 0.03 },
-inspection: { name: 'Inspection!', icon: '🔍', desc: 'Naval patrol demands to search your vessel!', baseChance: 0.05 }
+inspection: { name: 'Inspection!', icon: '🔍', desc: 'Naval patrol demands to search your vessel!', baseChance: 0.05 },
+// === LIVING SEA ENCOUNTERS ===
+desperateMerchant: { name: 'The Desperate Merchant', icon: '😰', desc: 'A damaged trader hails you. They\'re out of supplies and offer their cargo at half price—but taking it means they\'ll die at sea.', baseChance: 0.02 },
+driftingMarket: { name: 'The Drifting Market', icon: '🛒', desc: 'The Free Merchants—no flags, no tariffs, no promises. They\'re packing up. Last chance.', baseChance: 0.0 }, // Triggered by drift entity
+blockadeRunner: { name: 'The Blockade Runner', icon: '🏃', desc: 'A smuggler offers to guide you through a blockaded port for a fee.', baseChance: 0.02 },
+stormsEye: { name: 'The Storm\'s Eye', icon: '🌀', desc: 'Mid-storm, you find a pocket of calm with a wrecked ship.', baseChance: 0.0 }, // Triggered during storms
+pirateFleetEncounter: { name: 'Pirate Armada!', icon: '🏴‍☠️', desc: 'A pirate fleet surrounds you! Multiple ships demand tribute.', baseChance: 0.0 }, // Triggered by drift entity
+convoyEncounter: { name: 'Navy Convoy', icon: '⚓', desc: 'You\'ve entered Navy convoy waters. They offer protection—if you submit to inspection.', baseChance: 0.0 } // Triggered by drift entity
 },
+// PORT STATES - dynamic port conditions
+portStates: {
+    prosperous: { name: 'Prosperous', icon: '🏛️', desc: 'Fat and happy—and they\'ll inspect every crate.', inspectMult: 1.5, tariffMult: 1.2, priceMult: 0.9, supplyMult: 1.3 },
+    struggling: { name: 'Struggling', icon: '📉', desc: 'They need goods. They\'ll overlook... irregularities.', inspectMult: 0.5, tariffMult: 0.8, priceMult: 1.2, supplyMult: 0.7 },
+    blockaded: { name: 'Blockaded', icon: '⛔', desc: 'Nothing gets in. Nothing gets out. Officially.', inspectMult: 2.0, tariffMult: 1.5, priceMult: 2.5, supplyMult: 0.2, smugglerBonus: 2.0 },
+    lawless: { name: 'Lawless', icon: '💀', desc: 'No law here. Watch your back.', inspectMult: 0, tariffMult: 0, priceMult: 1.1, supplyMult: 0.8, pirateRisk: 0.15 },
+    starving: { name: 'Starving', icon: '🍽️', desc: 'They\'ll pay anything. Anything.', inspectMult: 0.3, tariffMult: 0, priceMult: 3.0, supplyMult: 0.1, foodCategory: 'commodity', foodMult: 4.0, reliefRep: 10 },
+    flooded: { name: 'Flooded', icon: '🌊', desc: 'Half the docks are underwater. They need everything.', inspectMult: 0.5, tariffMult: 0.5, priceMult: 1.8, supplyMult: 0.4, materialBonus: 1.5 }
+},
+// SEASONS - 4 distinct seasons with material effects
+seasons: {
+    calmWinds: { name: 'Calm Winds', icon: '☀️', desc: 'Smooth sailing. Thin margins.', dayStart: 1, dayEnd: 12, stormMult: 0.3, windStrengthBias: -1, priceMult: 1.0, piratesMult: 0.8 },
+    tradeWinds: { name: 'Trade Winds', icon: '🌬️', desc: 'The lanes are open. Make your fortune.', dayStart: 13, dayEnd: 30, stormMult: 0.5, windStrengthBias: 1, priceMult: 0.95, piratesMult: 1.0 },
+    monsoon: { name: 'Monsoon', icon: '🌧️', desc: 'The sea takes what it wants.', dayStart: 31, dayEnd: 50, stormMult: 3.0, windStrengthBias: 2, priceMult: 1.3, piratesMult: 0.6, supplyCostMult: 1.5 },
+    doldrums: { name: 'Doldrums', icon: '🌫️', desc: 'Still water. Restless crews. Patience.', dayStart: 51, dayEnd: 60, stormMult: 0.2, windStrengthBias: -2, priceMult: 1.1, piratesMult: 1.2, speedMult: 0.7 }
+},
+// MOVING ENTITIES for the Drift Map
+driftEntities: {
+    stormFront: { name: 'Storm Front', icon: '🌀', color: '#4a8a9a', speed: 8, lifetime: 10, encounterType: 'storm' },
+    pirateFleet: { name: 'Pirate Fleet', icon: '🏴‍☠️', color: '#8b2500', speed: 5, lifetime: 15, encounterType: 'pirateFleet', dangerRadius: 40 },
+    navyConvoy: { name: 'Navy Convoy', icon: '⚓', color: '#c41e3a', speed: 4, lifetime: 20, encounterType: 'convoy', inspectRadius: 50 },
+    floatingMarket: { name: 'Floating Market', icon: '🛒', color: '#c9a227', speed: 3, lifetime: 8, encounterType: 'market', interactRadius: 30 },
+    merchantFleet: { name: 'Merchant Fleet', icon: '🚢', color: '#1e4d2b', speed: 4, lifetime: 12, encounterType: 'merchants' }
+},
+// RUMOR TEMPLATES
+rumorTemplates: [
+    { template: 'Navy\'s hunting something big near {island}.', type: 'convoy', accuracy: 0.8 },
+    { template: '{island} hasn\'t seen a supply ship in weeks.', type: 'shortage', accuracy: 0.85 },
+    { template: 'Floating market was seen drifting toward {direction}.', type: 'market', accuracy: 0.7 },
+    { template: 'Storm season\'s coming early—old sailors feel it.', type: 'weather', accuracy: 0.6 },
+    { template: 'The Company\'s convoy left {island} heavy-laden.', type: 'convoy', accuracy: 0.75 },
+    { template: 'Pirates took three ships near {island}.', type: 'pirates', accuracy: 0.9 },
+    { template: 'Merchant named Voss made a fortune in {good} last week.', type: 'price', accuracy: 0.7 },
+    { template: 'I wouldn\'t trust anything you hear in {island}.', type: 'meta', accuracy: 1.0 },
+    { template: '{island} is paying triple for {good}.', type: 'price', accuracy: 0.65 },
+    { template: 'The {faction} are cracking down on smugglers.', type: 'crackdown', accuracy: 0.8 },
+    { template: 'Heard there\'s a blockade forming around {island}.', type: 'blockade', accuracy: 0.75 },
+    { template: 'Plague ship spotted near {island}. Stay clear.', type: 'danger', accuracy: 0.85 }
+],
+// SEASONAL EVENTS - 10 major events
+seasonalEvents: [
+    { id: 'crimson_tide', name: 'The Crimson Tide', desc: 'Fishing collapsed; food prices spike everywhere', season: 'monsoon', duration: 6, effects: { commodity: 1.8, luxury: 1.0, contraband: 1.1 } },
+    { id: 'embargo', name: 'Embargo Declared', desc: 'Two factions at war; convoys double, inspections triple', season: 'any', duration: 8, effects: { inspectMult: 3.0, convoySpawn: 2.0 } },
+    { id: 'ghost_fleet', name: 'The Ghost Fleet', desc: 'Pirate armada appears; southern waters deadly', season: 'doldrums', duration: 10, effects: { pirateSpawn: 3.0, piratesMult: 2.0 } },
+    { id: 'harvest_glut', name: 'Harvest Glut', desc: 'Food prices crash; luxury demand explodes', season: 'calmWinds', duration: 5, effects: { commodity: 0.6, luxury: 1.5 } },
+    { id: 'great_race', name: 'The Great Race', desc: 'First merchant to reach destination wins big', season: 'tradeWinds', duration: 4, effects: { raceBonus: 5.0 } },
+    { id: 'plague_ship', name: 'Plague Ship', desc: 'One port quarantined; medicine worth fortunes', season: 'any', duration: 7, effects: { quarantine: true, medicineMult: 3.0 } },
+    { id: 'kings_wedding', name: 'The King\'s Wedding', desc: 'Luxury goods worth 3x at capital', season: 'calmWinds', duration: 5, effects: { luxury: 3.0, destination: 'portRoyal' } },
+    { id: 'hurricane_season', name: 'Hurricane Season', desc: 'Storms cluster and strengthen; damage doubled', season: 'monsoon', duration: 8, effects: { stormMult: 2.0, stormDamage: 2.0 } },
+    { id: 'mutiny_wave', name: 'The Mutiny Wave', desc: 'Random crew events more common', season: 'doldrums', duration: 6, effects: { crewEvents: 2.0, supplyCost: 1.5 } },
+    { id: 'free_trade', name: 'Free Trade Week', desc: 'All tariffs suspended; inspections halved', season: 'tradeWinds', duration: 5, effects: { tariffMult: 0, inspectMult: 0.5 } }
+],
 settings: {
 startingGold: 1000, startingSupplies: 30, baseCargoCapacity: 50, baseShipSpeed: 1.0,
 baseSupplyRate: 1, dockDistance: 35, islandCollisionRadius: 25,
@@ -542,8 +610,11 @@ pirateEncounterChance: 0.08, windChangeDays: 5,
 heatDecayPerDay: 2, heatGainContraband: 8, heatGainDockEnglishEITC: 5,
 highMarginThreshold: 15, // minimum profit/weight to glow
 maxActiveContracts: 3, contractBoardSize: 5, contractRefreshDays: 3,
-seasonCycleDays: 20, stormSeasonStart: 13, stormSeasonEnd: 18,
-crackdownDecayPerDay: 2, crackdownMaxLevel: 100
+seasonCycleDays: 60, // Full year cycle (4 seasons)
+crackdownDecayPerDay: 2, crackdownMaxLevel: 100,
+// Living Sea settings
+maxDriftEntities: 8, driftEntitySpawnChance: 0.12, rumorRefreshDays: 2, maxRumorsPerPort: 4,
+portStateChangeChance: 0.08, reliefRunThreshold: 10
 }
 };
 
@@ -952,9 +1023,6 @@ function refreshContractBoard(gs, iid) {
 function tickWorldStatePerDay(gs) {
     if (!gs.world) gs.world = {};
 
-    // Season cycle
-    gs.world.seasonDay = ((gs.world.seasonDay || 1) % CONFIG.settings.seasonCycleDays) + 1;
-
     // Crackdown decay
     if (gs.world.crackdown) {
         gs.world.crackdown.level = Math.max(0, (gs.world.crackdown.level || 0) - CONFIG.settings.crackdownDecayPerDay);
@@ -980,6 +1048,49 @@ function tickWorldStatePerDay(gs) {
             affectedIslands: getRandomIslandSubset(3 + Math.floor(Math.random() * 3))
         };
     }
+
+    // === LIVING SEA UPDATES ===
+
+    // Update drift entities (storms, fleets, markets move across map)
+    updateDriftEntities(gs);
+
+    // Update port states
+    updatePortStates(gs);
+
+    // Seasonal event management
+    if (gs.world.seasonalEvent) {
+        gs.world.seasonalEvent.daysRemaining--;
+        if (gs.world.seasonalEvent.daysRemaining <= 0) {
+            gs.world.seasonalEvent = null;
+        }
+    }
+
+    // Chance to spawn seasonal event (based on current season)
+    if (!gs.world.seasonalEvent && Math.random() < 0.03) {
+        const season = getCurrentSeason(gs);
+        const eligibleEvents = CONFIG.seasonalEvents.filter(e =>
+            e.season === 'any' || e.season === season.id
+        );
+        if (eligibleEvents.length > 0) {
+            const event = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+            gs.world.seasonalEvent = {
+                id: event.id,
+                name: event.name,
+                desc: event.desc,
+                effects: { ...event.effects },
+                daysRemaining: event.duration,
+                startDay: gs.player.days
+            };
+        }
+    }
+
+    // Check for season change notification
+    const prevSeason = gs.world.lastSeason;
+    const currentSeason = getCurrentSeason(gs);
+    if (prevSeason && prevSeason !== currentSeason.id) {
+        gs.world.seasonChanged = { from: prevSeason, to: currentSeason.id };
+    }
+    gs.world.lastSeason = currentSeason.id;
 }
 
 function getRandomIslandSubset(count) {
@@ -997,11 +1108,278 @@ function getCrackdownLevel(gs) {
     return gs.world?.crackdown?.level || 0;
 }
 
+// ==================== LIVING SEA - SEASONS ====================
+function getCurrentSeason(gs) {
+    const day = ((gs.player.days - 1) % CONFIG.settings.seasonCycleDays) + 1;
+    for (const [id, season] of Object.entries(CONFIG.seasons)) {
+        if (day >= season.dayStart && day <= season.dayEnd) {
+            return { id, ...season, currentDay: day };
+        }
+    }
+    return { id: 'calmWinds', ...CONFIG.seasons.calmWinds, currentDay: day };
+}
+
 function getSeasonLabel(gs) {
-    if (isStormSeason(gs)) return { label: 'Storm Season', icon: '🌧️', class: 'storm-season' };
-    const day = gs.world?.seasonDay || 1;
-    if (day < CONFIG.settings.stormSeasonStart) return { label: 'Fair Winds', icon: '🌤️', class: '' };
-    return { label: 'Calm Seas', icon: '☀️', class: '' };
+    const season = getCurrentSeason(gs);
+    const daysInSeason = season.dayEnd - season.dayStart + 1;
+    const dayInSeason = season.currentDay - season.dayStart + 1;
+    return {
+        label: season.name,
+        icon: season.icon,
+        class: season.id === 'monsoon' ? 'storm-season' : '',
+        desc: season.desc,
+        progress: `Day ${dayInSeason}/${daysInSeason}`
+    };
+}
+
+function isStormSeason(gs) {
+    const season = getCurrentSeason(gs);
+    return season.id === 'monsoon';
+}
+
+function getSeasonModifiers(gs) {
+    const season = getCurrentSeason(gs);
+    return {
+        stormMult: season.stormMult || 1,
+        priceMult: season.priceMult || 1,
+        piratesMult: season.piratesMult || 1,
+        speedMult: season.speedMult || 1,
+        supplyCostMult: season.supplyCostMult || 1,
+        windStrengthBias: season.windStrengthBias || 0
+    };
+}
+
+// ==================== LIVING SEA - PORT STATES ====================
+function getPortState(gs, iid) {
+    return gs.world?.portStates?.[iid] || 'prosperous';
+}
+
+function getPortStateConfig(gs, iid) {
+    const stateId = getPortState(gs, iid);
+    return CONFIG.portStates[stateId] || CONFIG.portStates.prosperous;
+}
+
+function updatePortStates(gs) {
+    if (!gs.world.portStates) gs.world.portStates = {};
+
+    for (const iid of Object.keys(CONFIG.islands)) {
+        const island = gs.islands[iid];
+        const currentState = gs.world.portStates[iid] || 'prosperous';
+
+        // Check for state transitions based on conditions
+        if (Math.random() < CONFIG.settings.portStateChangeChance) {
+            const newState = determinePortState(gs, iid, island);
+            if (newState !== currentState) {
+                gs.world.portStates[iid] = newState;
+                gs.world.portStateChanges = gs.world.portStateChanges || [];
+                gs.world.portStateChanges.push({ iid, from: currentState, to: newState, day: gs.player.days });
+            }
+        }
+    }
+}
+
+function determinePortState(gs, iid, island) {
+    const season = getCurrentSeason(gs);
+    const roll = Math.random();
+
+    // Seasonal influences
+    if (season.id === 'monsoon' && roll < 0.2) return 'flooded';
+    if (season.id === 'doldrums' && roll < 0.15) return 'struggling';
+
+    // Faction influences
+    if (island.faction === 'pirates' && roll < 0.25) return 'lawless';
+
+    // Supply-based states
+    let totalSupply = 0, totalDemand = 0;
+    Object.values(island.markets).forEach(m => {
+        totalSupply += m.supply;
+        totalDemand += m.demand;
+    });
+
+    const ratio = totalSupply / Math.max(1, totalDemand);
+    if (ratio < 0.3) return Math.random() < 0.5 ? 'starving' : 'struggling';
+    if (ratio > 1.5) return 'prosperous';
+
+    // Random events
+    if (roll < 0.05) return 'blockaded';
+    if (roll < 0.08) return 'lawless';
+
+    // Tendency toward normalcy
+    return roll < 0.6 ? 'prosperous' : 'struggling';
+}
+
+// ==================== LIVING SEA - DRIFT ENTITIES ====================
+function initDriftEntities(gs) {
+    if (!gs.world.driftEntities) gs.world.driftEntities = [];
+}
+
+function spawnDriftEntity(gs, typeId = null) {
+    if (gs.world.driftEntities.length >= CONFIG.settings.maxDriftEntities) return null;
+
+    const types = Object.keys(CONFIG.driftEntities);
+    if (!typeId) {
+        // Weight spawn chances by season
+        const season = getCurrentSeason(gs);
+        const weights = types.map(t => {
+            let w = 1;
+            if (t === 'stormFront' && season.id === 'monsoon') w = 3;
+            if (t === 'pirateFleet' && season.id === 'doldrums') w = 2;
+            if (t === 'floatingMarket' && season.id === 'tradeWinds') w = 2;
+            if (t === 'navyConvoy' && gs.world.crackdown.level > 30) w = 2;
+            return w;
+        });
+        const totalWeight = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * totalWeight;
+        for (let i = 0; i < types.length; i++) {
+            r -= weights[i];
+            if (r <= 0) { typeId = types[i]; break; }
+        }
+    }
+
+    const config = CONFIG.driftEntities[typeId];
+    const islands = Object.values(CONFIG.islands);
+
+    // Spawn at edge of map or near island
+    let pos;
+    if (Math.random() < 0.3) {
+        // Near random island
+        const isl = islands[Math.floor(Math.random() * islands.length)];
+        pos = { x: isl.position.x + (Math.random() - 0.5) * 100, z: isl.position.z + (Math.random() - 0.5) * 100 };
+    } else {
+        // Edge of map
+        const edge = Math.floor(Math.random() * 4);
+        switch (edge) {
+            case 0: pos = { x: -250, z: (Math.random() - 0.5) * 400 }; break;
+            case 1: pos = { x: 250, z: (Math.random() - 0.5) * 400 }; break;
+            case 2: pos = { x: (Math.random() - 0.5) * 500, z: -200 }; break;
+            case 3: pos = { x: (Math.random() - 0.5) * 500, z: 200 }; break;
+        }
+    }
+
+    // Random heading
+    const heading = Math.random() * Math.PI * 2;
+
+    const entity = {
+        id: 'drift_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        typeId,
+        position: pos,
+        heading,
+        velocity: { x: Math.sin(heading) * config.speed, z: Math.cos(heading) * config.speed },
+        daysRemaining: config.lifetime + Math.floor(Math.random() * 5),
+        spawnDay: gs.player.days
+    };
+
+    gs.world.driftEntities.push(entity);
+    return entity;
+}
+
+function updateDriftEntities(gs) {
+    initDriftEntities(gs);
+
+    // Move existing entities
+    for (const entity of gs.world.driftEntities) {
+        entity.position.x += entity.velocity.x;
+        entity.position.z += entity.velocity.z;
+        entity.daysRemaining--;
+
+        // Slight course changes
+        if (Math.random() < 0.2) {
+            entity.heading += (Math.random() - 0.5) * 0.5;
+            const config = CONFIG.driftEntities[entity.typeId];
+            entity.velocity.x = Math.sin(entity.heading) * config.speed;
+            entity.velocity.z = Math.cos(entity.heading) * config.speed;
+        }
+
+        // Wrap around map edges
+        if (entity.position.x < -280) entity.position.x = 280;
+        if (entity.position.x > 280) entity.position.x = -280;
+        if (entity.position.z < -230) entity.position.z = 230;
+        if (entity.position.z > 230) entity.position.z = -230;
+    }
+
+    // Remove expired entities
+    gs.world.driftEntities = gs.world.driftEntities.filter(e => e.daysRemaining > 0);
+
+    // Spawn new entities
+    if (Math.random() < CONFIG.settings.driftEntitySpawnChance) {
+        spawnDriftEntity(gs);
+    }
+}
+
+function getNearbyDriftEntities(gs, radius = 50) {
+    const pp = gs.player.position;
+    const nearby = [];
+
+    for (const entity of (gs.world.driftEntities || [])) {
+        const dist = Math.sqrt((entity.position.x - pp.x) ** 2 + (entity.position.z - pp.z) ** 2);
+        const config = CONFIG.driftEntities[entity.typeId];
+        const effectRadius = config.dangerRadius || config.inspectRadius || config.interactRadius || 30;
+
+        if (dist < radius + effectRadius) {
+            nearby.push({ ...entity, distance: dist, config });
+        }
+    }
+
+    return nearby;
+}
+
+// ==================== LIVING SEA - RUMORS ====================
+function generateRumors(gs, iid) {
+    const rumors = [];
+    const islands = Object.keys(CONFIG.islands);
+    const goods = Object.keys(CONFIG.goods);
+    const factions = ['Navy', 'Company', 'Pirates'];
+    const directions = ['north', 'south', 'east', 'west'];
+
+    const numRumors = 2 + Math.floor(Math.random() * (CONFIG.settings.maxRumorsPerPort - 1));
+
+    for (let i = 0; i < numRumors; i++) {
+        const template = CONFIG.rumorTemplates[Math.floor(Math.random() * CONFIG.rumorTemplates.length)];
+        const otherIslands = islands.filter(id => id !== iid);
+
+        let text = template.template
+            .replace('{island}', CONFIG.islands[otherIslands[Math.floor(Math.random() * otherIslands.length)]].name)
+            .replace('{good}', CONFIG.goods[goods[Math.floor(Math.random() * goods.length)]].name)
+            .replace('{faction}', factions[Math.floor(Math.random() * factions.length)])
+            .replace('{direction}', directions[Math.floor(Math.random() * directions.length)]);
+
+        // Determine if rumor is true
+        const isTrue = Math.random() < template.accuracy;
+        const daysOld = Math.floor(Math.random() * 3);
+
+        rumors.push({
+            id: 'rumor_' + Date.now() + '_' + i,
+            text,
+            type: template.type,
+            isTrue,
+            daysOld,
+            generatedDay: gs.player.days
+        });
+    }
+
+    return rumors;
+}
+
+function refreshRumors(gs, iid) {
+    if (!gs.world.rumors) gs.world.rumors = {};
+
+    const existing = gs.world.rumors[iid];
+    const shouldRefresh = !existing ||
+        (gs.player.days - existing.generatedDay) >= CONFIG.settings.rumorRefreshDays;
+
+    if (shouldRefresh) {
+        gs.world.rumors[iid] = {
+            generatedDay: gs.player.days,
+            rumors: generateRumors(gs, iid)
+        };
+    }
+
+    return gs.world.rumors[iid];
+}
+
+function getRumorsForPort(gs, iid) {
+    refreshRumors(gs, iid);
+    return gs.world.rumors[iid]?.rumors || [];
 }
 
 // ==================== SHIP STAT HELPERS ====================
@@ -1217,6 +1595,35 @@ if (gs.world?.regionalEvent?.affectedIslands?.includes(iid)) {
     if (catMult) evMult *= catMult;
 }
 
+// === LIVING SEA MODIFIERS ===
+
+// Port state effects
+const portState = getPortStateConfig(gs, iid);
+let portMult = portState.priceMult || 1;
+// Starving ports pay extra for food (commodities)
+if (portState.foodMult && g.category === 'commodity') {
+    portMult *= portState.foodMult;
+}
+// Blockaded ports pay extra for contraband
+if (portState.smugglerBonus && g.category === 'contraband') {
+    portMult *= portState.smugglerBonus;
+}
+// Flooded ports pay extra for materials (timber, iron)
+if (portState.materialBonus && (gid === 'timber' || gid === 'iron')) {
+    portMult *= portState.materialBonus;
+}
+
+// Season effects on prices
+const seasonMods = getSeasonModifiers(gs);
+let seasonMult = seasonMods.priceMult || 1;
+
+// Seasonal event effects
+if (gs.world?.seasonalEvent?.effects) {
+    const seFx = gs.world.seasonalEvent.effects;
+    if (seFx[g.category]) seasonMult *= seFx[g.category];
+    if (seFx.luxury && g.category === 'luxury') seasonMult *= seFx.luxury;
+}
+
 let fBonus = 1;
 if (gs.player.faction === 'eitc') fBonus = 0.95;
 if (gs.player.faction === 'pirates' && g.category === 'contraband') fBonus *= 0.5;
@@ -1224,7 +1631,7 @@ if (gs.player.faction === 'pirates' && g.category === 'contraband') fBonus *= 0.
 if (gs.player.upgrades?.smugglerCompartments && g.category === 'contraband') {
 fBonus *= (1 - CONFIG.upgrades.smugglerCompartments.effects.contrabandProfitBonus);
 }
-return Math.max(1, Math.round(g.basePrice * scarcity * demand * bias * tariff * evMult * fBonus));
+return Math.max(1, Math.round(g.basePrice * scarcity * demand * bias * tariff * evMult * portMult * seasonMult * fBonus));
 }
 
 function calcTariff(pf, if_, gs) {
@@ -1377,7 +1784,12 @@ world: {
     seasonDay: 1,
     crackdown: { level: 0 },
     regionalEvent: null,
-    boards: {}
+    boards: {},
+    // Living Sea fields
+    driftEntities: [],
+    portStates: {},
+    rumors: {},
+    seasonalEvent: null
 },
 currentIsland: null, isDocked: false
 };
@@ -1413,6 +1825,12 @@ if (gs.world.seasonDay === undefined) gs.world.seasonDay = 1;
 if (!gs.world.crackdown) gs.world.crackdown = { level: 0 };
 if (gs.world.regionalEvent === undefined) gs.world.regionalEvent = null;
 if (!gs.world.boards) gs.world.boards = {};
+
+// Living Sea migrations
+if (!gs.world.driftEntities) gs.world.driftEntities = [];
+if (!gs.world.portStates) gs.world.portStates = {};
+if (!gs.world.rumors) gs.world.rumors = {};
+if (gs.world.seasonalEvent === undefined) gs.world.seasonalEvent = null;
 
 return gs;
 }
@@ -1591,18 +2009,30 @@ updateContractTracker(gs) {
 updateWorldIndicator(gs) {
     const season = getSeasonLabel(gs);
     const crackdown = getCrackdownLevel(gs);
+    const seasonalEvent = gs.world?.seasonalEvent;
 
     this.el['world-icon'].textContent = season.icon;
 
     if (crackdown > 50) {
         this.el['world-status'].textContent = 'Crackdown!';
         this.el['world-indicator'].className = 'crackdown';
+    } else if (seasonalEvent) {
+        // Show active seasonal event
+        const eventConfig = CONFIG.seasonalEvents.find(e => e.id === seasonalEvent.id);
+        if (eventConfig) {
+            this.el['world-icon'].textContent = eventConfig.icon || season.icon;
+            this.el['world-status'].textContent = eventConfig.name;
+            this.el['world-indicator'].className = eventConfig.severity === 'major' ? 'storm-season' : '';
+            this.el['world-indicator'].title = eventConfig.desc;
+        }
     } else if (season.class === 'storm-season') {
         this.el['world-status'].textContent = season.label;
         this.el['world-indicator'].className = season.class;
+        this.el['world-indicator'].title = season.desc;
     } else {
         this.el['world-status'].textContent = season.label;
         this.el['world-indicator'].className = '';
+        this.el['world-indicator'].title = season.desc;
     }
 }
 
@@ -1649,6 +2079,19 @@ showTrade(iid, gs) {
     this.el['trade-island-faction'].className = 'faction-tag ' + isl.faction;
     const t = calcTariff(gs.player.faction, isl.faction, gs), tp = Math.round((t - 1) * 100);
     this.el['trade-tariff'].textContent = tp > 0 ? '+' + tp + '%' : 'No Tariff';
+
+    // Show port state
+    const portStateConfig = getPortStateConfig(gs, iid);
+    const portStateId = getPortState(gs, iid);
+    if (portStateConfig && portStateId !== 'prosperous') {
+        this.el['trade-port-state'].textContent = `${portStateConfig.icon} ${portStateConfig.name}`;
+        this.el['trade-port-state'].className = 'port-state-tag ' + portStateId;
+        this.el['trade-port-state'].title = portStateConfig.desc;
+        this.el['trade-port-state'].classList.remove('hidden');
+    } else {
+        this.el['trade-port-state'].classList.add('hidden');
+    }
+
     recordAllPrices(iid, gs);
     this.renderBuy(iid, gs);
     this.renderSell(iid, gs);
@@ -1934,6 +2377,22 @@ showMap() {
         const len = Math.sqrt((dx-px)**2 + (dy-py)**2), ang = Math.atan2(dy-py, dx-px) * 180 / Math.PI;
         const line = document.createElement('div'); line.className = 'map-course-line'; line.style.cssText = `left:${px}%;top:${py}%;width:${len}%;transform:rotate(${ang}deg)`; c.appendChild(line);
     }
+
+    // Show drift entities (storms, fleets, markets)
+    if (gs.world?.driftEntities) {
+        for (const entity of gs.world.driftEntities) {
+            const config = CONFIG.driftEntities[entity.typeId];
+            if (config) {
+                const de = document.createElement('div');
+                de.className = 'map-drift-entity';
+                de.style.cssText = `left:${toP(entity.position.x, minX, maxX)}%;top:${toP(entity.position.z, minZ, maxZ)}%;background:${config.color}`;
+                de.textContent = config.icon;
+                de.title = config.name;
+                c.appendChild(de);
+            }
+        }
+    }
+
     Object.entries(CONFIG.islands).forEach(([id, isl]) => {
         const dot = document.createElement('div'); dot.className = 'map-island ' + isl.faction + (id === destId ? ' selected' : '');
         dot.style.cssText = `left:${toP(isl.position.x, minX, maxX)}%;top:${toP(isl.position.z, minZ, maxZ)}%`; dot.textContent = isl.name[0]; dot.title = isl.name;
@@ -2064,17 +2523,56 @@ checkEncounters() {
     const risk = getRouteRisk(gs);
     const cargoVal = estimateCargoValue(gs);
     const mods = getTitleModifiers(gs);
+    const seasonMods = getSeasonModifiers(gs);
 
-    // Pirate encounters scale with cargo value and faction
-    const pirateBase = CONFIG.settings.pirateEncounterChance * (fc.pirateChanceMult || 1);
-    const pirateChance = pirateBase * (1 + risk * 0.5); // +50% at max risk
+    // === LIVING SEA: Check for drift entity encounters first ===
+    const nearbyEntities = getNearbyDriftEntities(gs, 60);
+    for (const entity of nearbyEntities) {
+        if (entity.distance < (entity.config.dangerRadius || entity.config.inspectRadius || entity.config.interactRadius || 30)) {
+            // Mark entity as encountered to prevent repeated triggers
+            if (entity.lastEncounterDay === gs.player.days) continue;
+            entity.lastEncounterDay = gs.player.days;
+
+            switch (entity.typeId) {
+                case 'pirateFleet':
+                    // Skip if player has convoy protection
+                    if (gs.player.convoyProtection && gs.player.convoyProtection >= gs.player.days) continue;
+                    this.triggerPirateFleetEncounter(entity);
+                    return;
+                case 'navyConvoy':
+                    this.triggerConvoyEncounter(entity);
+                    return;
+                case 'floatingMarket':
+                    this.triggerDriftingMarket(entity);
+                    return;
+                case 'stormFront':
+                    // Storm front triggers storm encounter with chance for Storm's Eye
+                    if (Math.random() < 0.25) {
+                        this.triggerStormsEye();
+                    } else {
+                        this.triggerStorm();
+                    }
+                    return;
+            }
+        }
+    }
+
+    // Pirate encounters scale with cargo value, faction, and season
+    const pirateBase = CONFIG.settings.pirateEncounterChance * (fc.pirateChanceMult || 1) * (seasonMods.piratesMult || 1);
+    let pirateChance = pirateBase * (1 + risk * 0.5); // +50% at max risk
+    // Convoy protection reduces pirate encounters
+    if (gs.player.convoyProtection && gs.player.convoyProtection >= gs.player.days) pirateChance *= 0.1;
     if (Math.random() < pirateChance) { this.triggerPirate(); return; }
 
-    // Inspection encounter - scales with heat, crackdown, and proximity to English/EITC waters
+    // Inspection encounter - scales with heat, crackdown, port state, and proximity to English/EITC waters
     if (isNearHostileWaters(gs) || gs.player.heat > 30) {
         let inspectChance = CONFIG.encounters.inspection.baseChance * (1 + gs.player.heat / 100);
         // Crackdown increases inspection chance
         inspectChance *= (1 + getCrackdownLevel(gs) / 100);
+        // Seasonal event effects
+        if (gs.world?.seasonalEvent?.effects?.inspectMult) {
+            inspectChance *= gs.world.seasonalEvent.effects.inspectMult;
+        }
         // Smuggler compartments reduce chance
         if (gs.player.upgrades?.smugglerCompartments) inspectChance *= (1 - CONFIG.upgrades.smugglerCompartments.effects.inspectionReduction);
         // Title modifiers
@@ -2082,10 +2580,40 @@ checkEncounters() {
         if (Math.random() < inspectChance) { this.triggerInspection(); return; }
     }
 
-    // Storm - slight increase with days at sea and during storm season
-    let stormChance = CONFIG.encounters.storm.baseChance * (1 + gs.player.daysSinceDock / 30);
-    if (isStormSeason(gs)) stormChance *= 2;
-    if (Math.random() < stormChance) { this.triggerStorm(); return; }
+    // Storm - scales with season, days at sea
+    let stormChance = CONFIG.encounters.storm.baseChance * (1 + gs.player.daysSinceDock / 30) * (seasonMods.stormMult || 1);
+    // Seasonal event storm multiplier
+    if (gs.world?.seasonalEvent?.effects?.stormMult) {
+        stormChance *= gs.world.seasonalEvent.effects.stormMult;
+    }
+    if (Math.random() < stormChance) {
+        // During heavy storms, chance for Storm's Eye encounter
+        if (seasonMods.stormMult >= 2 && Math.random() < 0.2) {
+            this.triggerStormsEye();
+        } else {
+            this.triggerStorm();
+        }
+        return;
+    }
+
+    // === LIVING SEA ENCOUNTERS ===
+
+    // Desperate Merchant - more common in harsh seasons
+    const desperateChance = CONFIG.encounters.desperateMerchant.baseChance * (seasonMods.stormMult || 1);
+    if (Math.random() < desperateChance) { this.triggerDesperateMerchant(); return; }
+
+    // Blockade Runner - near blockaded ports
+    for (const iid of Object.keys(CONFIG.islands)) {
+        const portState = getPortState(gs, iid);
+        if (portState === 'blockaded') {
+            const isl = CONFIG.islands[iid];
+            const dist = Math.sqrt((isl.position.x - gs.player.position.x)**2 + (isl.position.z - gs.player.position.z)**2);
+            if (dist < 100 && Math.random() < CONFIG.encounters.blockadeRunner.baseChance * 2) {
+                this.triggerBlockadeRunner();
+                return;
+            }
+        }
+    }
 
     // Merchant/wreck - slightly more common when risk is low (reward safe play)
     const safeBonus = 1 + (1 - risk) * 0.3;
@@ -2294,6 +2822,307 @@ triggerWreck() {
             this.ui.updateHUD(gs);
         } },
         { label: '🚢 Sail on', action: () => this.ui.closeEncounter() }
+    ]);
+}
+
+// ==================== LIVING SEA ENCOUNTERS ====================
+
+triggerDesperateMerchant() {
+    const gs = this.gameState, enc = CONFIG.encounters.desperateMerchant;
+    const gids = Object.keys(CONFIG.goods).filter(g => CONFIG.goods[g].category !== 'contraband');
+    const gid = gids[Math.floor(Math.random() * gids.length)];
+    const good = CONFIG.goods[gid];
+    const qty = 5 + Math.floor(Math.random() * 10);
+    const price = Math.floor(good.basePrice * 0.5);
+
+    this.ui.showEncounter({ ...enc, desc: `${enc.desc} They offer ${qty}x ${good.name} for ${price}g each.` }, [
+        { label: `💰 Take cargo (${price * qty}g)`, style: 'danger', action: () => {
+            const check = canCarryMore(gid, qty, gs);
+            if (gs.player.gold >= price * qty && check.canCarry) {
+                gs.player.gold -= price * qty;
+                gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
+                gs.player.purchaseHistory[gid] = price;
+                // Massive profit, but reputation hit
+                applyRepChange(gs, 'english', -8, 'abandoned_merchant');
+                applyRepChange(gs, 'eitc', -5, 'abandoned_merchant');
+                this.ui.showEncounter(enc, [], { positive: false, text: `Took ${qty}x ${good.name}. Their fate is on your hands. (-8 Navy rep, -5 Company rep)` });
+            } else {
+                this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'Not enough gold!' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🍖 Share supplies', action: () => {
+            if (gs.player.supplies >= 5) {
+                gs.player.supplies -= 5;
+                applyRepChange(gs, 'english', 10, 'helped_merchant');
+                applyRepChange(gs, 'eitc', 8, 'helped_merchant');
+                // They remember you
+                gs.player.merchantFavor = (gs.player.merchantFavor || 0) + 1;
+                this.ui.showEncounter(enc, [], { positive: true, text: 'Shared 5 supplies. They\'ll remember your kindness. (+10 Navy rep, +8 Company rep)' });
+            } else {
+                this.ui.showEncounter(enc, [], { positive: false, text: 'Not enough supplies to share!' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '💱 Trade fairly', action: () => {
+            const fairPrice = Math.floor(good.basePrice * 0.8);
+            const check = canCarryMore(gid, qty, gs);
+            if (gs.player.gold >= fairPrice * qty && check.canCarry) {
+                gs.player.gold -= fairPrice * qty;
+                gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
+                gs.player.purchaseHistory[gid] = fairPrice;
+                this.ui.showEncounter(enc, [], { positive: true, text: `Fair trade: ${qty}x ${good.name} for ${fairPrice * qty}g. Honor intact.` });
+            } else {
+                this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'Not enough gold!' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🚢 Sail on', action: () => this.ui.closeEncounter() }
+    ]);
+}
+
+triggerDriftingMarket(entity) {
+    const gs = this.gameState, enc = CONFIG.encounters.driftingMarket;
+    // Generate special market goods
+    const marketGoods = [];
+    const gids = Object.keys(CONFIG.goods);
+    for (let i = 0; i < 3; i++) {
+        const gid = gids[Math.floor(Math.random() * gids.length)];
+        const good = CONFIG.goods[gid];
+        marketGoods.push({
+            gid,
+            good,
+            price: Math.floor(good.basePrice * (0.6 + Math.random() * 0.3)), // 60-90% of base
+            qty: 3 + Math.floor(Math.random() * 8)
+        });
+    }
+
+    this.ui.showEncounter(enc, [
+        { label: `💰 Buy ${marketGoods[0].good.icon} ${marketGoods[0].good.name} (${marketGoods[0].price}g x${marketGoods[0].qty})`, style: 'primary', action: () => {
+            const mg = marketGoods[0];
+            const check = canCarryMore(mg.gid, mg.qty, gs);
+            const total = mg.price * mg.qty;
+            if (gs.player.gold >= total && check.canCarry) {
+                gs.player.gold -= total;
+                gs.player.cargo[mg.gid] = (gs.player.cargo[mg.gid] || 0) + mg.qty;
+                gs.player.purchaseHistory[mg.gid] = mg.price;
+                if (mg.good.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband);
+                this.ui.showEncounter(enc, [], { positive: true, text: `Bought ${mg.qty}x ${mg.good.name}! No tariffs, no questions.` });
+            } else {
+                this.ui.showEncounter(enc, [], { positive: false, text: check.reason || 'Not enough gold!' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🗣️ Ask for rumors', action: () => {
+            // Get one verified piece of intel
+            const islands = Object.keys(CONFIG.islands);
+            const randomIsland = CONFIG.islands[islands[Math.floor(Math.random() * islands.length)]];
+            const portState = getPortState(gs, islands[Math.floor(Math.random() * islands.length)]);
+            const stateInfo = CONFIG.portStates[portState];
+            this.ui.showEncounter(enc, [], { positive: true, text: `The merchants whisper: "${randomIsland.name} is ${stateInfo.name.toLowerCase()}. ${stateInfo.desc}"` });
+        } },
+        { label: '🚢 Sail on', action: () => {
+            this.ui.closeEncounter();
+            // Market moves away faster
+            if (entity) entity.daysRemaining = Math.max(1, entity.daysRemaining - 3);
+        } }
+    ]);
+}
+
+triggerBlockadeRunner() {
+    const gs = this.gameState, enc = CONFIG.encounters.blockadeRunner;
+    const fee = 100 + Math.floor(Math.random() * 150);
+
+    this.ui.showEncounter(enc, [
+        { label: `💰 Pay the fee (${fee}g)`, style: 'primary', action: () => {
+            if (gs.player.gold >= fee) {
+                gs.player.gold -= fee;
+                // Grant temporary blockade immunity
+                gs.player.blockadePass = gs.player.days + 3; // 3 days of safe passage
+                applyRepChange(gs, 'pirates', 5, 'used_smuggler');
+                applyRepChange(gs, 'english', -3, 'used_smuggler');
+                this.ui.showEncounter(enc, [], { positive: true, text: `Paid ${fee}g. You have safe passage through blockades for 3 days.` });
+            } else {
+                this.ui.showEncounter(enc, [], { positive: false, text: 'Not enough gold!' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '👮 Report them', action: () => {
+            const reward = 50 + Math.floor(Math.random() * 50);
+            gs.player.gold += reward;
+            applyRepChange(gs, 'english', 10, 'reported_smuggler');
+            applyRepChange(gs, 'pirates', -15, 'reported_smuggler');
+            addHeat(gs, -10); // Reduces heat
+            this.ui.showEncounter(enc, [], { positive: true, text: `Reported to Navy. +${reward}g reward, +10 Navy rep, -15 Pirate rep, reduced heat.` });
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🚢 Refuse', action: () => this.ui.closeEncounter() }
+    ]);
+}
+
+triggerStormsEye() {
+    const gs = this.gameState, enc = CONFIG.encounters.stormsEye;
+
+    this.ui.showEncounter(enc, [
+        { label: '⚡ Salvage quickly', style: 'primary', action: () => {
+            // Quick salvage - random valuable cargo, storm resumes
+            const r = Math.random();
+            if (r < 0.6) {
+                const gids = Object.keys(CONFIG.goods);
+                const gid = gids[Math.floor(Math.random() * gids.length)];
+                const good = CONFIG.goods[gid];
+                const qty = 2 + Math.floor(Math.random() * 4);
+                const check = canCarryMore(gid, qty, gs);
+                if (check.canCarry) {
+                    gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
+                    if (good.category === 'contraband') addHeat(gs, CONFIG.settings.heatGainContraband / 2);
+                    this.ui.showEncounter(enc, [], { positive: true, text: `Grabbed ${qty}x ${good.name} before the storm returned!` });
+                } else {
+                    this.ui.showEncounter(enc, [], { positive: false, text: 'No room for salvage!' });
+                }
+            } else {
+                const gold = 30 + Math.floor(Math.random() * 70);
+                gs.player.gold += gold;
+                this.ui.showEncounter(enc, [], { positive: true, text: `Found ${gold}g in the wreckage!` });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🔍 Search thoroughly', action: () => {
+            // Better cargo but storm catches you
+            const gids = Object.keys(CONFIG.goods).filter(g => CONFIG.goods[g].category === 'luxury');
+            const gid = gids[Math.floor(Math.random() * gids.length)] || 'gold';
+            const good = CONFIG.goods[gid];
+            const qty = 3 + Math.floor(Math.random() * 5);
+            const check = canCarryMore(gid, qty, gs);
+
+            if (check.canCarry) {
+                gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
+                // But storm catches you
+                const supplyLoss = 2 + Math.floor(Math.random() * 3);
+                gs.player.supplies = Math.max(0, gs.player.supplies - supplyLoss);
+                if (Math.random() < 0.4) {
+                    this.loseCargo(calcCargoLoss(gs, 0.1));
+                    this.ui.showEncounter(enc, [], { positive: false, text: `Found ${qty}x ${good.name}! But the storm caught you. Lost ${supplyLoss} supplies and some cargo.` });
+                } else {
+                    this.ui.showEncounter(enc, [], { positive: true, text: `Found ${qty}x ${good.name}! Lost ${supplyLoss} supplies escaping the storm.` });
+                }
+            } else {
+                this.ui.showEncounter(enc, [], { positive: false, text: 'No room for salvage!' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🙏 Take survivors only', action: () => {
+            // Crew bonus, karma, nothing material
+            gs.player.supplies = Math.min(30, gs.player.supplies + 2); // They had some supplies
+            applyRepChange(gs, 'english', 5, 'rescued_sailors');
+            applyRepChange(gs, 'eitc', 5, 'rescued_sailors');
+            gs.player.merchantFavor = (gs.player.merchantFavor || 0) + 2;
+            this.ui.showEncounter(enc, [], { positive: true, text: 'Rescued the crew. They share stories and a bit of supplies. +5 rep with Navy and Company. The sea remembers.' });
+            this.ui.updateHUD(gs);
+        } }
+    ]);
+}
+
+triggerPirateFleetEncounter(entity) {
+    const gs = this.gameState, enc = CONFIG.encounters.pirateFleetEncounter;
+    const baseCost = Math.floor(gs.player.gold * 0.25) + 200; // Higher than normal pirates
+    const cost = calcTributeCost(gs, baseCost);
+
+    this.ui.showEncounter(enc, [
+        { label: `💰 Pay tribute (${cost}g)`, style: 'danger', action: () => {
+            if (gs.player.gold >= cost) {
+                gs.player.gold -= cost;
+                applyRepChange(gs, 'pirates', 3, 'paid_fleet');
+                this.ui.showEncounter(enc, [], { positive: false, text: `Paid ${cost}g to the fleet. They let you pass... this time.` });
+            } else {
+                this.loseCargo(calcCargoLoss(gs, 0.5));
+                const goldLoss = calcGoldLoss(gs, Math.floor(gs.player.gold * 0.3));
+                gs.player.gold = Math.max(0, gs.player.gold - goldLoss);
+                applyRepChange(gs, 'pirates', -5, 'couldnt_pay_fleet');
+                this.ui.showEncounter(enc, [], { positive: false, text: 'Couldn\'t pay! They took what they wanted.' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '⚔️ Fight the fleet', action: () => {
+            // Very risky fight
+            if (Math.random() < 0.25) { // 25% chance to win
+                const reward = 200 + Math.floor(Math.random() * 300);
+                gs.player.gold += reward;
+                applyRepChange(gs, 'pirates', -20, 'defeated_fleet');
+                applyRepChange(gs, 'english', 15, 'defeated_fleet');
+                // Remove the fleet entity
+                if (entity) entity.daysRemaining = 0;
+                this.ui.showEncounter(enc, [], { positive: true, text: `Victory against the odds! +${reward}g, +15 Navy rep. The fleet is scattered.` });
+            } else {
+                this.loseCargo(calcCargoLoss(gs, 0.7));
+                const goldLoss = calcGoldLoss(gs, Math.floor(gs.player.gold * 0.5));
+                gs.player.gold = Math.max(0, gs.player.gold - goldLoss);
+                gs.player.supplies = Math.max(0, gs.player.supplies - 5);
+                this.ui.showEncounter(enc, [], { positive: false, text: 'Overwhelmed! Lost most cargo, gold, and supplies.' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        ...(gs.player.faction === 'pirates' ? [{ label: '🏴‍☠️ Invoke the Code', action: () => {
+            // Pirates can invoke the Code
+            applyRepChange(gs, 'pirates', -10, 'invoked_code');
+            this.ui.showEncounter(enc, [], { positive: true, text: 'You invoke the Pirate\'s Code. They grumble but let you pass. -10 pirate rep for the insult.' });
+            this.ui.updateHUD(gs);
+        } }] : [])
+    ]);
+}
+
+triggerConvoyEncounter(entity) {
+    const gs = this.gameState, enc = CONFIG.encounters.convoyEncounter;
+    const hasContraband = getContrabandCount(gs) > 0;
+
+    this.ui.showEncounter(enc, [
+        { label: '✅ Submit to inspection', style: hasContraband ? 'danger' : 'primary', action: () => {
+            if (hasContraband) {
+                // They find the contraband
+                this.confiscateContraband(gs);
+                const fine = 100 + getContrabandCount(gs) * 20;
+                gs.player.gold = Math.max(0, gs.player.gold - fine);
+                applyRepChange(gs, 'english', -15, 'caught_by_convoy');
+                addHeat(gs, 20);
+                this.ui.showEncounter(enc, [], { positive: false, text: `Contraband found! Confiscated, fined ${fine}g. -15 Navy rep.` });
+            } else {
+                // Clean - get convoy protection
+                applyRepChange(gs, 'english', 5, 'passed_inspection');
+                gs.player.convoyProtection = gs.player.days + 2; // 2 days safe from pirates
+                this.ui.showEncounter(enc, [], { positive: true, text: 'Cargo clean. The convoy offers protection for 2 days. +5 Navy rep.' });
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '🏃 Break away', action: () => {
+            // Try to escape - risky
+            if (Math.random() < 0.5) {
+                addHeat(gs, 15);
+                applyRepChange(gs, 'english', -10, 'fled_convoy');
+                this.ui.showEncounter(enc, [], { positive: true, text: 'Escaped the convoy! Heat increased, -10 Navy rep.' });
+            } else {
+                // Caught - forced inspection
+                if (hasContraband) {
+                    this.confiscateContraband(gs);
+                    const fine = 150 + getContrabandCount(gs) * 25;
+                    gs.player.gold = Math.max(0, gs.player.gold - fine);
+                    applyRepChange(gs, 'english', -25, 'caught_fleeing_convoy');
+                    addHeat(gs, 30);
+                    this.ui.showEncounter(enc, [], { positive: false, text: `Caught fleeing! Contraband confiscated, fined ${fine}g. -25 Navy rep.` });
+                } else {
+                    applyRepChange(gs, 'english', -15, 'fled_then_caught');
+                    addHeat(gs, 15);
+                    this.ui.showEncounter(enc, [], { positive: false, text: 'Caught! Cargo clean but -15 Navy rep for fleeing.' });
+                }
+            }
+            this.ui.updateHUD(gs);
+        } },
+        { label: '⛵ Shadow the convoy', action: () => {
+            // Follow for protection but guaranteed inspection at destination
+            gs.player.convoyProtection = gs.player.days + 3;
+            gs.player.convoyInspection = true; // Will be inspected at next dock
+            this.ui.showEncounter(enc, [], { positive: true, text: 'You shadow the convoy. Safe from pirates for 3 days, but expect inspection at your next port.' });
+            this.ui.closeEncounter();
+        } }
     ]);
 }
 
