@@ -253,6 +253,7 @@
     .questline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs); }
     .questline-title { font-family: var(--font-display); font-size: 0.9rem; display: flex; align-items: center; gap: var(--space-xs); }
     .questline-deadline { font-size: 0.7rem; color: var(--blood-red); font-weight: 600; }
+    .questline-tier { font-size: 0.6rem; background: var(--sea-medium); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
     .questline-desc { font-size: 0.75rem; color: var(--ink-light); margin-bottom: var(--space-sm); }
     .questline-steps { margin-bottom: var(--space-sm); }
     .questline-step { display: flex; align-items: flex-start; gap: var(--space-xs); font-size: 0.75rem; padding: var(--space-xs) 0; }
@@ -1259,62 +1260,149 @@ hiddenCoves: {
     }
 },
 
-// Questlines - contract collections with progress tracking
+// Questlines - tiered progression system (complete tier to unlock next)
+// Anti-cheese: goods must be acquired AFTER starting the questline
 questlines: {
-    relief: {
-        id: 'relief',
+    // === TIER 1: Starter questlines (available immediately) ===
+    courier_run: {
+        id: 'courier_run',
+        name: 'Courier Run',
+        icon: '📦',
+        desc: 'A simple delivery job to prove your reliability.',
+        faction: 'neutral',
+        tier: 1,
+        steps: [
+            { type: 'deliver_count', goods: { timber: 2 }, to: 'kingston', count: 2, reward: 25, desc: 'Deliver timber to Kingston' },
+            { type: 'collect', at: 'portRoyal', desc: 'Collect payment at Port Royal' }
+        ],
+        rewards: { gold: 100, reputation: { english: 3, eitc: 2 } },
+        deadline: 20
+    },
+    rum_runner: {
+        id: 'rum_runner',
+        name: 'Rum Runner',
+        icon: '🍺',
+        desc: 'The pirates need supplies. Keep it quiet.',
+        faction: 'pirates',
+        tier: 1,
+        steps: [
+            { type: 'deliver_count', goods: { rum: 3 }, to: 'tortuga', count: 2, reward: 30, desc: 'Deliver rum to Tortuga' },
+            { type: 'collect', at: 'nassau', desc: 'Collect payment at Nassau' }
+        ],
+        rewards: { gold: 120, reputation: { pirates: 5 } },
+        deadline: 20
+    },
+    company_errand: {
+        id: 'company_errand',
+        name: 'Company Errand',
+        icon: '📋',
+        desc: 'The Trading Company needs a reliable courier.',
+        faction: 'eitc',
+        tier: 1,
+        steps: [
+            { type: 'deliver_count', goods: { spices: 2 }, to: 'havana', count: 2, reward: 35, desc: 'Deliver spices to Havana' },
+            { type: 'collect', at: 'santiago', desc: 'Collect payment at Santiago' }
+        ],
+        rewards: { gold: 130, reputation: { eitc: 5, english: 2 } },
+        deadline: 20
+    },
+
+    // === TIER 2: Unlocked after completing any Tier 1 ===
+    relief_effort: {
+        id: 'relief_effort',
         name: 'The Relief Effort',
         icon: '🏥',
         desc: 'Help struggling ports by delivering essential supplies.',
         faction: 'neutral',
+        tier: 2,
+        requires: 1, // Requires 1 tier-1 completion
         steps: [
-            { type: 'deliver_count', goods: { timber: 3, iron: 2 }, to: 'kingston', count: 3, reward: 50, desc: 'Deliver supplies to Kingston' },
+            { type: 'deliver_count', goods: { timber: 3, iron: 2 }, to: 'kingston', count: 3, reward: 40, desc: 'Deliver supplies to Kingston' },
             { type: 'collect', at: 'portRoyal', desc: 'Collect payment at Port Royal' }
         ],
-        rewards: { gold: 400, reputation: { english: 15, eitc: 10 }, title: 'Benefactor' },
-        deadline: 30
+        rewards: { gold: 250, reputation: { english: 8, eitc: 5 }, title: 'Benefactor' },
+        deadline: 25
     },
-    smuggling: {
-        id: 'smuggling',
+    smuggling_ring: {
+        id: 'smuggling_ring',
         name: 'The Smuggling Ring',
         icon: '🏴‍☠️',
-        desc: 'Run contraband for the pirate network across multiple ports.',
+        desc: 'Run contraband for the pirate network.',
         faction: 'pirates',
+        tier: 2,
+        requires: 1,
         steps: [
-            { type: 'deliver_count', goods: { gunpowder: 5 }, to: 'tortuga', count: 2, reward: 100, desc: 'Smuggle gunpowder to Tortuga' },
-            { type: 'deliver_count', goods: { gunpowder: 5 }, to: 'nassau', count: 2, reward: 100, desc: 'Smuggle gunpowder to Nassau' },
-            { type: 'collect', at: 'tortuga', desc: 'Collect final payment at Tortuga' }
+            { type: 'deliver_count', goods: { gunpowder: 4 }, to: 'tortuga', count: 2, reward: 60, desc: 'Smuggle gunpowder to Tortuga' },
+            { type: 'deliver_count', goods: { gunpowder: 4 }, to: 'nassau', count: 2, reward: 60, desc: 'Smuggle gunpowder to Nassau' },
+            { type: 'collect', at: 'tortuga', desc: 'Collect payment at Tortuga' }
         ],
-        rewards: { gold: 500, reputation: { pirates: 25 }, unlocks: 'smugglersReef' },
-        deadline: 25
+        rewards: { gold: 350, reputation: { pirates: 10 } },
+        deadline: 30
     },
     trading_company: {
         id: 'trading_company',
         name: 'Company Contract',
         icon: '⚓',
-        desc: 'Establish yourself as a reliable Trading Company supplier.',
+        desc: 'Establish yourself as a Trading Company supplier.',
         faction: 'eitc',
+        tier: 2,
+        requires: 1,
         steps: [
-            { type: 'deliver_count', goods: { tea: 3, spices: 2 }, to: 'havana', count: 3, reward: 75, desc: 'Supply luxuries to Havana' },
-            { type: 'deliver_count', goods: { silk: 2 }, to: 'santiago', count: 2, reward: 100, desc: 'Deliver silk to Santiago' },
+            { type: 'deliver_count', goods: { tea: 2, spices: 2 }, to: 'havana', count: 3, reward: 50, desc: 'Supply luxuries to Havana' },
             { type: 'collect', at: 'havana', desc: 'Collect bonus at Havana' }
         ],
-        rewards: { gold: 600, reputation: { eitc: 25, english: 10 }, title: 'Preferred Vendor' },
-        deadline: 35
+        rewards: { gold: 300, reputation: { eitc: 10, english: 5 } },
+        deadline: 28
     },
+
+    // === TIER 3: Unlocked after completing any Tier 2 ===
     crown_service: {
         id: 'crown_service',
         name: 'Crown Service',
         icon: '👑',
         desc: 'Prove your loyalty to the Crown through naval supply runs.',
         faction: 'english',
+        tier: 3,
+        requires: 2,
         steps: [
-            { type: 'deliver_count', goods: { iron: 4, timber: 4 }, to: 'portRoyal', count: 3, reward: 60, desc: 'Deliver naval supplies to Port Royal' },
-            { type: 'deliver_count', goods: { gunpowder: 3 }, to: 'kingston', count: 2, reward: 80, desc: 'Supply munitions to Kingston' },
+            { type: 'deliver_count', goods: { iron: 4, timber: 4 }, to: 'portRoyal', count: 3, reward: 50, desc: 'Deliver naval supplies to Port Royal' },
+            { type: 'deliver_count', goods: { gunpowder: 3 }, to: 'kingston', count: 2, reward: 60, desc: 'Supply munitions to Kingston' },
             { type: 'collect', at: 'portRoyal', desc: 'Receive Royal commendation' }
         ],
-        rewards: { gold: 500, reputation: { english: 30, pirates: -15 }, pardon: true, title: 'Privateer' },
+        rewards: { gold: 500, reputation: { english: 15, pirates: -10 }, pardon: true, title: 'Privateer' },
         deadline: 35
+    },
+    pirate_lord: {
+        id: 'pirate_lord',
+        name: 'Pirate Lord\'s Favor',
+        icon: '💀',
+        desc: 'Arm the pirate fleet for a major operation.',
+        faction: 'pirates',
+        tier: 3,
+        requires: 2,
+        steps: [
+            { type: 'deliver_count', goods: { gunpowder: 6, iron: 4 }, to: 'tortuga', count: 3, reward: 80, desc: 'Arm Tortuga' },
+            { type: 'deliver_count', goods: { gunpowder: 6, iron: 4 }, to: 'nassau', count: 3, reward: 80, desc: 'Arm Nassau' },
+            { type: 'collect', at: 'tortuga', desc: 'Receive the Pirate Lord\'s blessing' }
+        ],
+        rewards: { gold: 600, reputation: { pirates: 20, english: -15, eitc: -10 }, unlocks: 'smugglersReef', title: 'Smuggler King' },
+        deadline: 40
+    },
+    merchant_prince: {
+        id: 'merchant_prince',
+        name: 'Merchant Prince',
+        icon: '💎',
+        desc: 'Become the premier luxury goods supplier in the Caribbean.',
+        faction: 'eitc',
+        tier: 3,
+        requires: 2,
+        steps: [
+            { type: 'deliver_count', goods: { silk: 3, tea: 3 }, to: 'havana', count: 3, reward: 70, desc: 'Supply Havana\'s elite' },
+            { type: 'deliver_count', goods: { spices: 4, silk: 2 }, to: 'santiago', count: 2, reward: 80, desc: 'Exclusive Santiago delivery' },
+            { type: 'collect', at: 'havana', desc: 'Receive your merchant charter' }
+        ],
+        rewards: { gold: 700, reputation: { eitc: 18, english: 8 }, title: 'Merchant Prince' },
+        deadline: 40
     }
 },
 
@@ -3320,9 +3408,26 @@ function checkQuestlineStep(gs, event, eventData = {}) {
                     (gs.player.cargo[gid] || 0) >= qty
                 );
                 if (hasGoods) {
+                    // Anti-cheese: goods must be from a different island than destination
+                    const purchaseLocs = gs.player.purchaseLocations || {};
+                    const goodsFromHere = Object.keys(step.goods).some(gid =>
+                        purchaseLocs[gid] === eventData.islandId
+                    );
+                    if (goodsFromHere) {
+                        return {
+                            advanced: false,
+                            blocked: true,
+                            message: 'Goods must be sourced from another port!'
+                        };
+                    }
+
                     // Remove delivered goods
                     Object.entries(step.goods).forEach(([gid, qty]) => {
                         gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) - qty;
+                        // Clear purchase location for delivered goods
+                        if (gs.player.cargo[gid] <= 0 && gs.player.purchaseLocations) {
+                            delete gs.player.purchaseLocations[gid];
+                        }
                     });
                     // Increment delivery count
                     qProgress.stepProgress.delivered = (qProgress.stepProgress.delivered || 0) + 1;
@@ -3703,6 +3808,9 @@ if (qty > m.supply || price * qty > gs.player.gold || !check.canCarry) return { 
 gs.player.gold -= price * qty;
 gs.player.cargo[gid] = (gs.player.cargo[gid] || 0) + qty;
 gs.player.purchaseHistory[gid] = price;
+// Track where goods were purchased (for questline anti-cheese)
+if (!gs.player.purchaseLocations) gs.player.purchaseLocations = {};
+gs.player.purchaseLocations[gid] = iid;
 m.supply -= qty;
 recordPrice(gid, iid, calcBasePrice(gid, iid, gs), gs); // Record base price for logbook
 // === BALANCE: Track trade fatigue ===
@@ -4635,15 +4743,28 @@ renderQuestlines() {
             }
         });
     } else {
-        // Show available questlines
+        // Show available questlines with tier filtering
+        // Calculate highest completed tier
+        const completedTiers = new Set();
+        Object.entries(gs.player.questlineProgress || {}).forEach(([qid, prog]) => {
+            if (prog.completed) {
+                const q = CONFIG.questlines[qid];
+                if (q?.tier) completedTiers.add(q.tier);
+            }
+        });
+        const highestTier = completedTiers.size > 0 ? Math.max(...completedTiers) : 0;
+
         const availableQuests = Object.entries(CONFIG.questlines).filter(([id, q]) => {
-            // Filter by faction affinity and completion status
+            // Already completed - can't repeat
             if (gs.player.questlineProgress[id]?.completed) return false;
+            // Check tier requirements
+            const requiredTier = q.requires || 0;
+            if (requiredTier > highestTier) return false;
             return true;
         });
 
         if (availableQuests.length === 0) {
-            contentEl.innerHTML = '<div class="questline-empty">No questlines available</div>';
+            contentEl.innerHTML = '<div class="questline-empty">No questlines available. Complete quests to unlock more!</div>';
         } else {
             contentEl.innerHTML = availableQuests.map(([id, q]) => {
                 const rewardsHtml = [];
@@ -4656,10 +4777,12 @@ renderQuestlines() {
                 if (q.rewards.title) rewardsHtml.push(`<span>🏅 "${q.rewards.title}"</span>`);
                 if (q.rewards.pardon) rewardsHtml.push(`<span>⚖️ Pardon</span>`);
 
+                const tierLabel = q.tier ? `<span class="questline-tier">Tier ${q.tier}</span>` : '';
+
                 return `
                     <div class="questline-card">
                         <div class="questline-header">
-                            <span class="questline-title">${q.icon} ${q.name}</span>
+                            <span class="questline-title">${q.icon} ${q.name} ${tierLabel}</span>
                             <span class="questline-deadline">${q.deadline} day limit</span>
                         </div>
                         <p class="questline-desc">${q.desc}</p>
@@ -6673,6 +6796,9 @@ dock() {
         // Partial progress on a delivery step
         const rewardText = questResult.reward ? ` +${questResult.reward}g` : '';
         this.ui.toast('Delivery Made!', `${questResult.message}${rewardText}`);
+    } else if (questResult.blocked) {
+        // Anti-cheese: goods were bought locally
+        this.ui.toast('Quest Blocked', questResult.message);
     }
 
     // Refresh contract board
