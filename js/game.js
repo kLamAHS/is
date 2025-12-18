@@ -12,7 +12,7 @@ import {
     // Bounty
     getBounty, addBounty, decayBounty, getBountyLevel,
     // Meta pressure
-    metaInit, metaRecordRoute, metaRecordTrade, metaRecalcPressure,
+    metaInit, metaAddToWindow, metaRecordRoute, metaRecordTrade, metaRecalcPressure,
     metaUpdateDaily, metaGetModifiers,
     // Economy
     getMarketSaturation, addMarketSaturation, decayMarketSaturation, getSaturationPenalty,
@@ -23,7 +23,7 @@ import {
     buyGood, sellGood, calcBuyPrice, calcSellPrice,
     calcCargoLoss, calcGoldLoss, calcTributeCost,
     // Titles
-    updateTitles,
+    updateTitles, getTitleModifiers,
     // Reputation
     applyRepChange,
     // Contracts
@@ -32,7 +32,7 @@ import {
     // Seasons
     getCurrentSeason, getSeasonModifiers,
     // Port states
-    getPortState, updatePortStates,
+    getPortState, updatePortStates, getPortStateConfig, getCrackdownLevel,
     // Faction influence
     updateFactionInfluence,
     // Blockades
@@ -47,24 +47,26 @@ import {
     // Rumors
     generateRumors, getRumorsForPort,
     // Ship stats
-    getCargoCapacity, getCargoUsed,
+    getCargoCapacity, getCargoUsed, getContrabandCount,
     // Ship condition
     getShipHull, getShipRigging, getShipMorale, getMaxHull, getMaxRigging, getMaxMorale,
     damageHull, damageRigging, damageMorale,
     repairHull, repairRigging, restoreMorale, getRepairCost, isShipCritical,
     // Officers
-    getOfficer, hireOfficer, fireOfficer, getOfficerWages, getAvailableOfficersAtPort,
+    getOfficer, hireOfficer, fireOfficer, getOfficerWages, getAvailableOfficersAtPort, hasOfficer,
     // Chase system
     calculateEscapeChance, getChaseDuration,
     // Cove rumors
     getCoveRumor,
     // Bounty hunters
     spawnBountyHunter, defeatHunter,
+    // Pardons
+    getPardonCost, grantPardon,
     // Questlines
     startQuestline, advanceQuestline, failQuestline, completeQuestline,
     getQuestlineProgress, checkQuestlineDeadline, checkQuestlineStep,
     // Risk & value
-    getRouteRisk, getHighMarginGoods,
+    getRouteRisk, getHighMarginGoods, isNearHostileWaters,
     // Heat
     decayHeat, addHeat, decayHeatBalanced,
     // State
