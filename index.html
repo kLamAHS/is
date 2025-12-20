@@ -6190,7 +6190,8 @@ updateCompass(h, gs) {
             this.el['dest-distance'].textContent = `~${Math.ceil(Math.sqrt(dx*dx+dz*dz)/30)}d`;
         }
     } else {
-        this.el['compass-needle'].style.transform = `translate(-50%, -100%) rotate(${h * 180 / Math.PI}deg)`;
+        // No destination - compass points north (traditional behavior)
+        this.el['compass-needle'].style.transform = `translate(-50%, -100%) rotate(0deg)`;
         this.el['compass-dest-marker'].classList.add('hidden');
         this.el['destination-info'].classList.add('hidden');
     }
