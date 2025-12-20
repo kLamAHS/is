@@ -9226,7 +9226,9 @@ animate() {
     const now = performance.now(), dt = (now - this.lastTime) / 1000;
     this.lastTime = now;
     this.update(dt);
-    this.scene.updateShip(this.gameState.player.position, this.joystick?.active ? this.joystick.angle : null);
+    const inv = localStorage.getItem('havenvoy-invert-joystick') === 'true';
+    const heading = this.joystick?.active ? (inv ? this.joystick.angle + Math.PI : this.joystick.angle) : null;
+    this.scene.updateShip(this.gameState.player.position, heading);
     this.scene.updateCamera(this.gameState.player.position);
 
     // Update navigation line to destination
