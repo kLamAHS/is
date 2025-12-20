@@ -573,7 +573,7 @@
     .help-collapse { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
     .help-collapse::after { content: '▼'; font-size: 0.7rem; transition: transform 0.2s; }
     .help-collapse.collapsed::after { transform: rotate(-90deg); }
-    .help-content { max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease; }
+    .help-content { max-height: 180px; overflow-y: auto; transition: max-height 0.3s ease; }
     .help-content.collapsed { max-height: 0; }
 
     /* ==================== ENHANCED ANIMATIONS ==================== */
@@ -1142,20 +1142,35 @@
         <div class="menu-section"><h3>Wind & Risk</h3><div class="ship-stats"><div class="stat-row"><span>Wind</span><span id="menu-wind-dir">N Calm</span></div><div class="stat-row"><span>Wind Change</span><span id="menu-wind-change">5d</span></div><div class="stat-row"><span>Route Risk</span><span id="menu-route-risk">Low</span></div><div class="stat-row"><span>Heat</span><span id="menu-heat">0</span></div></div></div>
         <div class="menu-section"><h3>Settings</h3><div class="settings-grid"><div class="setting-row"><div><div class="setting-label">Invert Joystick</div><div class="setting-desc">Push forward to go backward</div></div><div class="toggle-switch" id="invert-joystick-toggle"></div></div></div></div>
         <div class="menu-section"><h3 class="help-collapse" id="help-toggle">Help Guide</h3><div class="help-content" id="help-content"><div class="help-grid">
-            <div class="help-item"><div class="help-icon">💰</div><div class="help-text"><strong>Gold</strong><span>Your currency for trading, repairs, and bribes</span></div></div>
-            <div class="help-item"><div class="help-icon">📅</div><div class="help-text"><strong>Day</strong><span>Days passed - contracts have deadlines!</span></div></div>
-            <div class="help-item"><div class="help-icon">🍖</div><div class="help-text"><strong>Supplies</strong><span>Consumed daily. Run out and crew morale drops</span></div></div>
-            <div class="help-item"><div class="help-icon">📦</div><div class="help-text"><strong>Cargo</strong><span>Current/max cargo capacity. Trade goods fill this</span></div></div>
-            <div class="help-item"><div class="help-icon">🧭</div><div class="help-text"><strong>Compass</strong><span>Red needle points North. Gold dot shows your destination</span></div></div>
-            <div class="help-item"><div class="help-icon">💨</div><div class="help-text"><strong>Wind</strong><span>Arrow shows direction. Sailing with wind = faster</span></div></div>
-            <div class="help-item"><div class="help-icon">🔥</div><div class="help-text"><strong>Heat</strong><span>Smuggling attention. High heat = more inspections</span></div></div>
-            <div class="help-item"><div class="help-icon">💀</div><div class="help-text"><strong>Bounty</strong><span>Criminal status. Pirates attack, Navy hunts you</span></div></div>
-            <div class="help-item"><div class="help-icon">🪵</div><div class="help-text"><strong>Hull</strong><span>Ship health. Low = risk of sinking. Repair at shipyard</span></div></div>
-            <div class="help-item"><div class="help-icon">⛵</div><div class="help-text"><strong>Rigging</strong><span>Sail condition. Affects speed. Repair at shipyard</span></div></div>
-            <div class="help-item"><div class="help-icon">😊</div><div class="help-text"><strong>Morale</strong><span>Crew happiness. Low = mutiny risk. Keep supplies up</span></div></div>
-            <div class="help-item"><div class="help-icon">⚓</div><div class="help-text"><strong>Dock Button</strong><span>Pulses blue when near a port. Tap to dock and trade</span></div></div>
-            <div class="help-item"><div class="help-icon">🗺️</div><div class="help-text"><strong>Map Button</strong><span>View world map. Tap islands to set destination</span></div></div>
-            <div class="help-item"><div class="help-icon">☰</div><div class="help-text"><strong>Menu Button</strong><span>Opens this Captain's Log. Save game here</span></div></div>
+            <div class="help-item" style="border-bottom: 2px solid var(--gold);"><div class="help-icon">🚀</div><div class="help-text"><strong>Getting Started</strong></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Use the joystick to sail. The dock button pulses when near a port.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Open the map to see islands and set a destination. The compass guides you there.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Dock at ports to trade goods, take contracts, repair your ship, and resupply.</span></div></div>
+            <div class="help-item" style="border-bottom: 2px solid var(--gold);"><div class="help-icon">💹</div><div class="help-text"><strong>Trading</strong></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Each port has different prices. Buy goods where they're cheap, sell where they're expensive.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Green arrows mean low prices (good to buy). Red arrows mean high prices (good to sell).</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Check the Logbook tab to compare prices across ports you've visited.</span></div></div>
+            <div class="help-item" style="border-bottom: 2px solid var(--gold);"><div class="help-icon">📜</div><div class="help-text"><strong>Contracts</strong></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Take contracts at ports for bonus gold and reputation. Each has a deadline!</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Delivery contracts: bring specific goods to a destination port.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Track active contracts in the Contracts tab. The tracker chip shows your current goal.</span></div></div>
+            <div class="help-item" style="border-bottom: 2px solid var(--gold);"><div class="help-icon">🔧</div><div class="help-text"><strong>Ship Care</strong></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Keep supplies stocked - your crew eats daily! Low supplies hurts morale.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Repair hull and rigging at the Shipyard tab in ports. Damaged rigging slows you down.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Sail with the wind for a speed boost. Against the wind is slower.</span></div></div>
+            <div class="help-item" style="border-bottom: 2px solid var(--gold);"><div class="help-icon">⚔️</div><div class="help-text"><strong>Factions & Danger</strong></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Your reputation with factions affects prices and which ports welcome you.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Pirates roam the seas. You can pay tribute, fight, or try to escape.</span></div></div>
+            <div class="help-item"><div class="help-icon">•</div><div class="help-text"><span>Smuggling contraband is risky but profitable. High heat means inspections!</span></div></div>
+            <div class="help-item" style="border-bottom: 2px solid var(--gold);"><div class="help-icon">📊</div><div class="help-text"><strong>HUD Icons</strong></div></div>
+            <div class="help-item"><div class="help-icon">💰</div><div class="help-text"><strong>Gold</strong><span>Currency for trading, repairs, bribes</span></div></div>
+            <div class="help-item"><div class="help-icon">📅</div><div class="help-text"><strong>Day</strong><span>Days passed - contracts have deadlines</span></div></div>
+            <div class="help-item"><div class="help-icon">🍖</div><div class="help-text"><strong>Supplies</strong><span>Consumed daily, keeps morale up</span></div></div>
+            <div class="help-item"><div class="help-icon">📦</div><div class="help-text"><strong>Cargo</strong><span>Current/max cargo space</span></div></div>
+            <div class="help-item"><div class="help-icon">🧭</div><div class="help-text"><strong>Compass</strong><span>North + destination marker</span></div></div>
+            <div class="help-item"><div class="help-icon">💨</div><div class="help-text"><strong>Wind</strong><span>Direction and strength</span></div></div>
+            <div class="help-item"><div class="help-icon">🔥</div><div class="help-text"><strong>Heat</strong><span>Smuggling attention level</span></div></div>
+            <div class="help-item"><div class="help-icon">🪵⛵😊</div><div class="help-text"><strong>Ship Status</strong><span>Hull, Rigging, Morale bars</span></div></div>
         </div></div></div>
         <div class="menu-buttons"><button class="btn-secondary" id="save-btn">💾 Save</button><button class="btn-secondary" id="new-game-btn">🔄 New Game</button></div>
         <button class="btn-primary" id="close-menu">Continue</button>
