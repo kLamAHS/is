@@ -5666,19 +5666,20 @@ updateCamera(shipPos) {
 createNavigationLine() {
     const lineGroup = new THREE.Group();
 
-    // Create dashed navigation line using segments - bright and visible
+    // Create dashed navigation line - additive blending for glow effect over dark sea
     const lineMat = new THREE.MeshBasicMaterial({
-        color: 0xffdd00,
+        color: 0xffaa00,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending,
         depthWrite: false
     });
 
-    // Create 25 larger dash segments
+    // Create 25 dash segments - moderate size
     this.navDashes = [];
     for (let i = 0; i < 25; i++) {
         const dash = new THREE.Mesh(
-            new THREE.BoxGeometry(4, 1.5, 10),
+            new THREE.BoxGeometry(3, 0.8, 8),
             lineMat.clone()
         );
         dash.visible = false;
@@ -5686,24 +5687,26 @@ createNavigationLine() {
         this.navDashes.push(dash);
     }
 
-    // Destination marker (glowing ring) - larger and brighter
-    const markerGeo = new THREE.TorusGeometry(12, 2, 8, 24);
+    // Destination marker (glowing ring) - additive for glow
+    const markerGeo = new THREE.TorusGeometry(10, 1.5, 8, 24);
     const markerMat = new THREE.MeshBasicMaterial({
-        color: 0xffee00,
+        color: 0xffcc00,
         transparent: true,
-        opacity: 0.9
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
     });
     this.navMarker = new THREE.Mesh(markerGeo, markerMat);
     this.navMarker.rotation.x = -Math.PI / 2;
-    this.navMarker.position.y = 2;
+    this.navMarker.position.y = 1;
     this.navMarker.visible = false;
     lineGroup.add(this.navMarker);
 
-    // Inner pulsing ring - brighter
-    const innerGeo = new THREE.TorusGeometry(7, 1.2, 8, 24);
+    // Inner pulsing ring
+    const innerGeo = new THREE.TorusGeometry(6, 1, 8, 24);
     this.navMarkerInner = new THREE.Mesh(innerGeo, markerMat.clone());
     this.navMarkerInner.rotation.x = -Math.PI / 2;
-    this.navMarkerInner.position.y = 2;
+    this.navMarkerInner.position.y = 1;
     this.navMarkerInner.visible = false;
     lineGroup.add(this.navMarkerInner);
 
@@ -5739,22 +5742,22 @@ updateNavigation(shipPos, destPos) {
         if (i < numDashes && distance > 30) {
             const progress = (i + 1) / (numDashes + 1);
             // Animated offset for "moving" dashes effect
-            const animOffset = ((t * 0.4) % 1) / (numDashes + 1);
+            const animOffset = ((t * 0.5) % 1) / (numDashes + 1);
             const adjustedProgress = Math.min(progress + animOffset, 0.95);
 
             dash.position.x = shipPos.x + dx * adjustedProgress;
             dash.position.z = shipPos.z + dz * adjustedProgress;
-            dash.position.y = 1.5 + Math.sin(t * 2 + i * 0.5) * 0.5;
+            dash.position.y = 0.8 + Math.sin(t * 2 + i * 0.5) * 0.3;
             dash.rotation.y = angle;
 
-            // Fade dashes near ship and destination - higher base opacity
-            const fadeStart = 0.08;
-            const fadeEnd = 0.92;
-            let opacity = 0.9;
+            // Fade dashes near ship and destination
+            const fadeStart = 0.12;
+            const fadeEnd = 0.88;
+            let opacity = 0.7;
             if (adjustedProgress < fadeStart) {
-                opacity = 0.9 * (adjustedProgress / fadeStart);
+                opacity = 0.7 * (adjustedProgress / fadeStart);
             } else if (adjustedProgress > fadeEnd) {
-                opacity = 0.9 * (1 - (adjustedProgress - fadeEnd) / (1 - fadeEnd));
+                opacity = 0.7 * (1 - (adjustedProgress - fadeEnd) / (1 - fadeEnd));
             }
             dash.material.opacity = opacity;
             dash.visible = true;
@@ -5766,17 +5769,17 @@ updateNavigation(shipPos, destPos) {
     // Position and animate destination marker
     this.navMarker.position.x = destPos.x;
     this.navMarker.position.z = destPos.z;
-    this.navMarker.position.y = 2 + Math.sin(t * 1.5) * 0.8;
+    this.navMarker.position.y = 1 + Math.sin(t * 1.5) * 0.5;
     this.navMarker.rotation.z = t * 0.5;
     this.navMarker.visible = distance > 30;
 
     this.navMarkerInner.position.x = destPos.x;
     this.navMarkerInner.position.z = destPos.z;
-    this.navMarkerInner.position.y = 2 + Math.sin(t * 1.5) * 0.8;
+    this.navMarkerInner.position.y = 1 + Math.sin(t * 1.5) * 0.5;
     this.navMarkerInner.rotation.z = -t * 0.8;
-    const pulse = 0.6 + Math.sin(t * 3) * 0.3;
+    const pulse = 0.7 + Math.sin(t * 3) * 0.25;
     this.navMarkerInner.scale.set(pulse, pulse, 1);
-    this.navMarkerInner.material.opacity = 0.7 + Math.sin(t * 3) * 0.2;
+    this.navMarkerInner.material.opacity = 0.5 + Math.sin(t * 3) * 0.2;
     this.navMarkerInner.visible = distance > 30;
 }
 
