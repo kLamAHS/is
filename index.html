@@ -554,6 +554,28 @@
     .chart-fragment-indicator.can-reveal { animation: fragment-glow 1.5s ease-in-out infinite; }
     @keyframes fragment-glow { 0%, 100% { box-shadow: var(--shadow-light); } 50% { box-shadow: 0 0 10px var(--gold); } }
 
+    /* ==================== HELP & SETTINGS ==================== */
+    .help-grid { display: grid; gap: var(--space-xs); font-size: 0.75rem; }
+    .help-item { display: flex; align-items: flex-start; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: 1px solid var(--parchment-dark); }
+    .help-item:last-child { border-bottom: none; }
+    .help-icon { font-size: 1rem; min-width: 24px; text-align: center; }
+    .help-text { flex: 1; }
+    .help-text strong { color: var(--ink); }
+    .help-text span { color: var(--ink-light); font-size: 0.7rem; display: block; }
+    .settings-grid { display: flex; flex-direction: column; gap: var(--space-sm); }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; padding: var(--space-xs) 0; }
+    .setting-label { font-size: 0.8rem; color: var(--ink); }
+    .setting-desc { font-size: 0.65rem; color: var(--ink-light); }
+    .toggle-switch { position: relative; width: 44px; height: 24px; background: var(--parchment-dark); border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .toggle-switch.active { background: var(--gold); }
+    .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .toggle-switch.active::after { transform: translateX(20px); }
+    .help-collapse { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .help-collapse::after { content: '▼'; font-size: 0.7rem; transition: transform 0.2s; }
+    .help-collapse.collapsed::after { transform: rotate(-90deg); }
+    .help-content { max-height: 300px; overflow: hidden; transition: max-height 0.3s ease; }
+    .help-content.collapsed { max-height: 0; }
+
     /* ==================== ENHANCED ANIMATIONS ==================== */
     /* Theme Toggle Button - positioned top-right but below top HUD */
     #theme-toggle {
@@ -1118,6 +1140,23 @@
         <div class="menu-section"><h3>World Status</h3><div class="ship-stats"><div class="stat-row"><span>Season</span><span id="menu-season">Fair</span></div><div class="stat-row"><span>Crackdown</span><span id="menu-crackdown">None</span></div><div class="stat-row"><span>Regional Event</span><span id="menu-regional">None</span></div></div></div>
         <div class="menu-section"><h3>Ship</h3><div class="ship-stats"><div class="stat-row"><span>Speed</span><span id="ship-speed">1.0x</span></div><div class="stat-row"><span>Cargo</span><span id="ship-cargo-cap">50</span></div><div class="stat-row"><span>Supply/Day</span><span id="ship-supply-rate">1</span></div><div class="stat-row"><span>Upgrades</span><span id="ship-upgrades">None</span></div></div></div>
         <div class="menu-section"><h3>Wind & Risk</h3><div class="ship-stats"><div class="stat-row"><span>Wind</span><span id="menu-wind-dir">N Calm</span></div><div class="stat-row"><span>Wind Change</span><span id="menu-wind-change">5d</span></div><div class="stat-row"><span>Route Risk</span><span id="menu-route-risk">Low</span></div><div class="stat-row"><span>Heat</span><span id="menu-heat">0</span></div></div></div>
+        <div class="menu-section"><h3>Settings</h3><div class="settings-grid"><div class="setting-row"><div><div class="setting-label">Invert Joystick</div><div class="setting-desc">Push forward to go backward</div></div><div class="toggle-switch" id="invert-joystick-toggle"></div></div></div></div>
+        <div class="menu-section"><h3 class="help-collapse" id="help-toggle">Help Guide</h3><div class="help-content" id="help-content"><div class="help-grid">
+            <div class="help-item"><div class="help-icon">💰</div><div class="help-text"><strong>Gold</strong><span>Your currency for trading, repairs, and bribes</span></div></div>
+            <div class="help-item"><div class="help-icon">📅</div><div class="help-text"><strong>Day</strong><span>Days passed - contracts have deadlines!</span></div></div>
+            <div class="help-item"><div class="help-icon">🍖</div><div class="help-text"><strong>Supplies</strong><span>Consumed daily. Run out and crew morale drops</span></div></div>
+            <div class="help-item"><div class="help-icon">📦</div><div class="help-text"><strong>Cargo</strong><span>Current/max cargo capacity. Trade goods fill this</span></div></div>
+            <div class="help-item"><div class="help-icon">🧭</div><div class="help-text"><strong>Compass</strong><span>Red needle points North. Gold dot shows your destination</span></div></div>
+            <div class="help-item"><div class="help-icon">💨</div><div class="help-text"><strong>Wind</strong><span>Arrow shows direction. Sailing with wind = faster</span></div></div>
+            <div class="help-item"><div class="help-icon">🔥</div><div class="help-text"><strong>Heat</strong><span>Smuggling attention. High heat = more inspections</span></div></div>
+            <div class="help-item"><div class="help-icon">💀</div><div class="help-text"><strong>Bounty</strong><span>Criminal status. Pirates attack, Navy hunts you</span></div></div>
+            <div class="help-item"><div class="help-icon">🪵</div><div class="help-text"><strong>Hull</strong><span>Ship health. Low = risk of sinking. Repair at shipyard</span></div></div>
+            <div class="help-item"><div class="help-icon">⛵</div><div class="help-text"><strong>Rigging</strong><span>Sail condition. Affects speed. Repair at shipyard</span></div></div>
+            <div class="help-item"><div class="help-icon">😊</div><div class="help-text"><strong>Morale</strong><span>Crew happiness. Low = mutiny risk. Keep supplies up</span></div></div>
+            <div class="help-item"><div class="help-icon">⚓</div><div class="help-text"><strong>Dock Button</strong><span>Pulses blue when near a port. Tap to dock and trade</span></div></div>
+            <div class="help-item"><div class="help-icon">🗺️</div><div class="help-text"><strong>Map Button</strong><span>View world map. Tap islands to set destination</span></div></div>
+            <div class="help-item"><div class="help-icon">☰</div><div class="help-text"><strong>Menu Button</strong><span>Opens this Captain's Log. Save game here</span></div></div>
+        </div></div></div>
         <div class="menu-buttons"><button class="btn-secondary" id="save-btn">💾 Save</button><button class="btn-secondary" id="new-game-btn">🔄 New Game</button></div>
         <button class="btn-primary" id="close-menu">Continue</button>
     </div>
@@ -5983,7 +6022,7 @@ end() { this.active = false; this.stick.classList.remove('active'); this.stick.s
 class UI {
 constructor(game) { this.game = game; this.el = {}; this.cache(); this.bind(); }
 cache() {
-['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','bounty-indicator','bounty-level','notoriety-indicator','notoriety-fill','notoriety-label','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers','tavern-rumors','questline-section','questline-content','chart-fragments','fragments-count','cove-modal','cove-icon','cove-name','cove-desc','cove-services','close-cove'].forEach(id => this.el[id] = document.getElementById(id));
+['loading-screen','faction-screen','game-container','gold-value','day-value','supplies-value','faction-badge','faction-icon','faction-name','cargo-count','cargo-preview','compass-needle','compass-dest-marker','destination-info','dest-name','dest-distance','event-toast','event-title','event-desc','trade-modal','trade-island-name','trade-island-faction','trade-tariff','trade-port-state','buy-panel','sell-panel','logbook-panel','shipyard-panel','contracts-panel','tavern-panel','buy-goods-list','sell-goods-list','trade-gold','trade-cargo','close-trade','leave-port-btn','menu-modal','close-menu','save-btn','new-game-btn','rep-english','rep-eitc','rep-pirates','rep-english-val','rep-eitc-val','rep-pirates-val','ship-speed','ship-cargo-cap','ship-supply-rate','ship-upgrades','pirate-modal','pay-tribute','fight-pirates','pirate-pass','tribute-cost','warning-modal','warning-icon','warning-title','warning-text','warning-dismiss','continue-btn','btn-dock','btn-map','btn-menu','speed-fill','wind-effect','island-indicator','nearby-island-name','nearby-island-faction','nearby-island-dist','map-modal','map-container','map-info','close-map','clear-course-btn','wind-indicator','wind-arrow','wind-strength','menu-wind-dir','menu-wind-change','menu-route-risk','menu-heat','buy-best-btn','sell-best-btn','logbook-island-select','logbook-prices','spotlight-list','upgrades-list','encounter-modal','encounter-icon','encounter-title','encounter-desc','encounter-result','encounter-options','heat-indicator','heat-fill','heat-label','bounty-indicator','bounty-level','notoriety-indicator','notoriety-fill','notoriety-label','contract-tracker','tracker-title','tracker-meta','world-indicator','world-icon','world-status','available-contracts','active-contracts','active-count','contracts-badge','titles-list','menu-season','menu-crackdown','menu-regional','title-modal','title-icon','title-earned-name','title-earned-desc','title-dismiss','contract-complete-modal','contract-complete-icon','contract-complete-title','contract-complete-desc','contract-complete-rewards','contract-complete-dismiss','ship-condition','ship-class-icon','ship-class-label','hull-fill','hull-value','rigging-fill','rigging-value','morale-fill','morale-value','chase-modal','chase-desc','chase-player','chase-pirate','chase-chance','chase-timer','chase-trim','chase-jettison','chase-risky','chase-result','officer-count','current-officers','available-officers','tavern-rumors','questline-section','questline-content','chart-fragments','fragments-count','cove-modal','cove-icon','cove-name','cove-desc','cove-services','close-cove','invert-joystick-toggle','help-toggle','help-content'].forEach(id => this.el[id] = document.getElementById(id));
 this.el.tradeTabs = document.querySelectorAll('.trade-tab'); this.el.factionCards = document.querySelectorAll('.faction-card');
 }
 bind() {
@@ -6015,6 +6054,22 @@ this.el['contract-tracker']?.addEventListener('click', () => { if (this.game.gam
 this.el['chase-trim']?.addEventListener('click', () => this.game.chaseAction('trim'));
 this.el['chase-jettison']?.addEventListener('click', () => this.game.chaseAction('jettison'));
 this.el['chase-risky']?.addEventListener('click', () => this.game.chaseAction('risky'));
+// Help toggle binding
+this.el['help-toggle']?.addEventListener('click', () => {
+    this.el['help-toggle'].classList.toggle('collapsed');
+    this.el['help-content'].classList.toggle('collapsed');
+});
+// Joystick inversion toggle binding
+this.el['invert-joystick-toggle']?.addEventListener('click', () => {
+    const isInverted = localStorage.getItem('havenvoy-invert-joystick') === 'true';
+    localStorage.setItem('havenvoy-invert-joystick', !isInverted);
+    this.el['invert-joystick-toggle'].classList.toggle('active', !isInverted);
+});
+// Initialize joystick inversion toggle state from localStorage
+if (this.el['invert-joystick-toggle']) {
+    const isInverted = localStorage.getItem('havenvoy-invert-joystick') === 'true';
+    this.el['invert-joystick-toggle'].classList.toggle('active', isInverted);
+}
 }
 showLoading(p) { document.querySelector('.loading-progress').style.width = p + '%'; }
 hideLoading() { this.el['loading-screen'].classList.add('hidden'); }
@@ -7366,7 +7421,8 @@ update(dt) {
     if (this.gameState.isDocked) { this.ui.updateSpeed(0, null); return; }
     const gs = this.gameState;
     if (this.joystick?.magnitude > 0.1) {
-        const md = { x: -this.joystick.value.x, z: -this.joystick.value.y }, len = Math.sqrt(md.x**2 + md.z**2); if (len) { md.x /= len; md.z /= len; }
+        const inv = localStorage.getItem('havenvoy-invert-joystick') === 'true' ? -1 : 1;
+        const md = { x: inv * this.joystick.value.x, z: inv * this.joystick.value.y }, len = Math.sqrt(md.x**2 + md.z**2); if (len) { md.x /= len; md.z /= len; }
         const we = getWindEffect(gs, md), spd = getShipSpeed(gs) * this.joystick.magnitude * 0.8 * we.mult;
         gs.player.position.x = Math.max(-250, Math.min(250, gs.player.position.x + md.x * spd));
         gs.player.position.z = Math.max(-200, Math.min(200, gs.player.position.z + md.z * spd));
