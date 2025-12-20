@@ -5083,6 +5083,10 @@ constructor(canvas) {
     this.shipSpeed = 0;
     this.wakeParticles = this.createWakeSystem();
 
+    // Navigation course line on water
+    this.navigationLine = this.createNavigationLine();
+    this.currentDestination = null;
+
     // Ambient particles (sea spray, etc)
     this.ambientParticles = this.createAmbientParticles();
 
@@ -5657,6 +5661,123 @@ updateCamera(shipPos) {
     this.camera.position.y = 90 + Math.sin(t * 0.5) * 2;
 
     this.camera.lookAt(shipPos.x, 0, shipPos.z);
+}
+
+createNavigationLine() {
+    const lineGroup = new THREE.Group();
+
+    // Create dashed navigation line using segments
+    const lineMat = new THREE.MeshBasicMaterial({
+        color: 0xffd700,
+        transparent: true,
+        opacity: 0.6,
+        depthWrite: false
+    });
+
+    // Create 20 dash segments
+    this.navDashes = [];
+    for (let i = 0; i < 20; i++) {
+        const dash = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 0.3, 6),
+            lineMat.clone()
+        );
+        dash.visible = false;
+        lineGroup.add(dash);
+        this.navDashes.push(dash);
+    }
+
+    // Destination marker (glowing ring)
+    const markerGeo = new THREE.TorusGeometry(8, 1, 8, 24);
+    const markerMat = new THREE.MeshBasicMaterial({
+        color: 0xffd700,
+        transparent: true,
+        opacity: 0.7
+    });
+    this.navMarker = new THREE.Mesh(markerGeo, markerMat);
+    this.navMarker.rotation.x = -Math.PI / 2;
+    this.navMarker.position.y = 1;
+    this.navMarker.visible = false;
+    lineGroup.add(this.navMarker);
+
+    // Inner pulsing ring
+    const innerGeo = new THREE.TorusGeometry(5, 0.5, 8, 24);
+    this.navMarkerInner = new THREE.Mesh(innerGeo, markerMat.clone());
+    this.navMarkerInner.rotation.x = -Math.PI / 2;
+    this.navMarkerInner.position.y = 1;
+    this.navMarkerInner.visible = false;
+    lineGroup.add(this.navMarkerInner);
+
+    this.scene.add(lineGroup);
+    return lineGroup;
+}
+
+updateNavigation(shipPos, destPos) {
+    const t = this.clock.getElapsedTime();
+
+    if (!destPos) {
+        // Hide navigation when no destination
+        this.navDashes.forEach(d => d.visible = false);
+        this.navMarker.visible = false;
+        this.navMarkerInner.visible = false;
+        this.currentDestination = null;
+        return;
+    }
+
+    this.currentDestination = destPos;
+
+    // Calculate direction and distance
+    const dx = destPos.x - shipPos.x;
+    const dz = destPos.z - shipPos.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    const angle = Math.atan2(dx, dz);
+
+    // Position dashes along the path
+    const dashSpacing = Math.min(distance / 20, 25);
+    const numDashes = Math.min(20, Math.floor(distance / dashSpacing));
+
+    this.navDashes.forEach((dash, i) => {
+        if (i < numDashes && distance > 30) {
+            const progress = (i + 1) / (numDashes + 1);
+            // Animated offset for "moving" dashes effect
+            const animOffset = ((t * 0.3) % 1) / (numDashes + 1);
+            const adjustedProgress = Math.min(progress + animOffset, 0.95);
+
+            dash.position.x = shipPos.x + dx * adjustedProgress;
+            dash.position.z = shipPos.z + dz * adjustedProgress;
+            dash.position.y = 0.5 + Math.sin(t * 2 + i * 0.5) * 0.3;
+            dash.rotation.y = angle;
+
+            // Fade dashes near ship and destination
+            const fadeStart = 0.1;
+            const fadeEnd = 0.9;
+            let opacity = 0.6;
+            if (adjustedProgress < fadeStart) {
+                opacity = 0.6 * (adjustedProgress / fadeStart);
+            } else if (adjustedProgress > fadeEnd) {
+                opacity = 0.6 * (1 - (adjustedProgress - fadeEnd) / (1 - fadeEnd));
+            }
+            dash.material.opacity = opacity;
+            dash.visible = true;
+        } else {
+            dash.visible = false;
+        }
+    });
+
+    // Position and animate destination marker
+    this.navMarker.position.x = destPos.x;
+    this.navMarker.position.z = destPos.z;
+    this.navMarker.position.y = 1 + Math.sin(t * 1.5) * 0.5;
+    this.navMarker.rotation.z = t * 0.5;
+    this.navMarker.visible = distance > 30;
+
+    this.navMarkerInner.position.x = destPos.x;
+    this.navMarkerInner.position.z = destPos.z;
+    this.navMarkerInner.position.y = 1 + Math.sin(t * 1.5) * 0.5;
+    this.navMarkerInner.rotation.z = -t * 0.8;
+    const pulse = 0.5 + Math.sin(t * 3) * 0.3;
+    this.navMarkerInner.scale.set(pulse, pulse, 1);
+    this.navMarkerInner.material.opacity = 0.4 + Math.sin(t * 3) * 0.2;
+    this.navMarkerInner.visible = distance > 30;
 }
 
 onResize() {
@@ -6841,9 +6962,28 @@ showMap() {
     const destId = tracked?.toIsland || gs.player.destinationIslandId;
 
     if (destId) {
-        const d = CONFIG.islands[destId], px = toP(gs.player.position.x, minX, maxX), py = toP(gs.player.position.z, minZ, maxZ), dx = toP(d.position.x, minX, maxX), dy = toP(d.position.z, minZ, maxZ);
-        const len = Math.sqrt((dx-px)**2 + (dy-py)**2), ang = Math.atan2(dy-py, dx-px) * 180 / Math.PI;
-        const line = document.createElement('div'); line.className = 'map-course-line'; line.style.cssText = `left:${px}%;top:${py}%;width:${len}%;transform:rotate(${ang}deg)`; c.appendChild(line);
+        const d = CONFIG.islands[destId];
+        const px = toP(gs.player.position.x, minX, maxX), py = toP(gs.player.position.z, minZ, maxZ);
+        const dx = toP(d.position.x, minX, maxX), dy = toP(d.position.z, minZ, maxZ);
+
+        // Account for aspect ratio - container is not square
+        const containerWidth = c.offsetWidth || 300;
+        const containerHeight = c.offsetHeight || 250;
+        const aspectRatio = containerHeight / containerWidth;
+
+        // Calculate pixel-space delta (scale Y by aspect ratio)
+        const deltaXPx = (dx - px);
+        const deltaYPx = (dy - py) * aspectRatio;
+
+        // Length in percentage of width (since line width is % of container width)
+        const len = Math.sqrt(deltaXPx**2 + deltaYPx**2);
+        // Angle calculated with aspect-corrected Y
+        const ang = Math.atan2(deltaYPx, deltaXPx) * 180 / Math.PI;
+
+        const line = document.createElement('div');
+        line.className = 'map-course-line';
+        line.style.cssText = `left:${px}%;top:${py}%;width:${len}%;transform:rotate(${ang}deg)`;
+        c.appendChild(line);
     }
 
     // Show faction influence zones (behind everything)
@@ -8914,6 +9054,13 @@ animate() {
     this.update(dt);
     this.scene.updateShip(this.gameState.player.position, this.joystick?.active ? this.joystick.angle : null);
     this.scene.updateCamera(this.gameState.player.position);
+
+    // Update navigation line to destination
+    const tracked = getTrackedContract(this.gameState);
+    const destId = tracked?.toIsland || this.gameState.player.destinationIslandId;
+    const destPos = destId ? CONFIG.islands[destId]?.position : null;
+    this.scene.updateNavigation(this.gameState.player.position, destPos);
+
     this.scene.render();
 }
 
