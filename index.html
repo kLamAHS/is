@@ -7436,7 +7436,7 @@ update(dt) {
     if (this.gameState.isDocked) { this.ui.updateSpeed(0, null); return; }
     const gs = this.gameState;
     if (this.joystick?.magnitude > 0.1) {
-        const inv = localStorage.getItem('havenvoy-invert-joystick') === 'true' ? 1 : -1;
+        const inv = localStorage.getItem('havenvoy-invert-joystick') === 'true' ? -1 : 1;
         const md = { x: inv * this.joystick.value.x, z: inv * this.joystick.value.y }, len = Math.sqrt(md.x**2 + md.z**2); if (len) { md.x /= len; md.z /= len; }
         const we = getWindEffect(gs, md), spd = getShipSpeed(gs) * this.joystick.magnitude * 0.8 * we.mult;
         gs.player.position.x = Math.max(-250, Math.min(250, gs.player.position.x + md.x * spd));
@@ -9227,7 +9227,7 @@ animate() {
     this.lastTime = now;
     this.update(dt);
     const inv = localStorage.getItem('havenvoy-invert-joystick') === 'true';
-    const heading = this.joystick?.active ? (inv ? this.joystick.angle + Math.PI : this.joystick.angle) : null;
+    const heading = this.joystick?.active ? (inv ? this.joystick.angle : this.joystick.angle + Math.PI) : null;
     this.scene.updateShip(this.gameState.player.position, heading);
     this.scene.updateCamera(this.gameState.player.position);
 
