@@ -555,13 +555,13 @@
     @keyframes fragment-glow { 0%, 100% { box-shadow: var(--shadow-light); } 50% { box-shadow: 0 0 10px var(--gold); } }
 
     /* ==================== ENHANCED ANIMATIONS ==================== */
-    /* Theme Toggle Button */
+    /* Theme Toggle Button - positioned top-right but below top HUD */
     #theme-toggle {
-        position: fixed; top: var(--space-sm); right: var(--space-sm);
-        width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold);
-        background: var(--card-bg); cursor: pointer; z-index: 1001;
+        position: fixed; top: 5px; right: 70px;
+        width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--gold);
+        background: var(--card-bg); cursor: pointer; z-index: 15;
         display: flex; align-items: center; justify-content: center;
-        font-size: 1.3rem; box-shadow: var(--shadow-light);
+        font-size: 1.1rem; box-shadow: var(--shadow-light);
         transition: all 0.3s var(--ease-elastic);
     }
     #theme-toggle:hover { transform: scale(1.1) rotate(15deg); box-shadow: var(--glow-gold); }
@@ -926,61 +926,64 @@
         #action-buttons { bottom: var(--action-stack-bottom); right: 10px; gap: 8px; }
     }
 
-    /* Portrait mode - ultra compact HUD */
+    /* Portrait mode - compact but usable HUD */
     @media (orientation: portrait) {
-        #hud-top { padding: 3px var(--space-xs); gap: 3px; }
-        .hud-item { padding: 4px 8px; font-size: 0.7rem; gap: 3px; }
-        .hud-icon { font-size: 0.8rem; }
+        #theme-toggle { right: 65px; top: 4px; width: 34px; height: 34px; font-size: 1rem; }
 
-        #hud-left { top: 36px; left: 3px; gap: 2px; max-width: 100px; }
-        .hud-group { padding: 4px 6px; }
-        #faction-badge { font-size: 0.65rem; gap: 3px; }
-        #cargo-summary { padding: 4px 6px; font-size: 0.65rem; }
-        .cargo-header { font-size: 0.6rem; }
-        .cargo-dot { width: 5px; height: 5px; }
-        #wind-indicator { padding: 3px 6px; font-size: 0.65rem; }
-        #wind-arrow { font-size: 0.75rem; }
-        #heat-indicator, #bounty-indicator, #notoriety-indicator { padding: 3px 6px; font-size: 0.65rem; }
-        #heat-indicator .heat-bar, #notoriety-indicator .notoriety-bar, .status-bar { width: 32px; height: 3px; }
-        #world-indicator { padding: 3px 6px; font-size: 0.6rem; }
-        #contract-tracker { padding: 3px 6px; font-size: 0.65rem; max-width: 95px; }
-        #contract-tracker .contract-title { max-width: 55px; }
-        #contract-tracker .contract-meta { font-size: 0.55rem; }
+        #hud-top { padding: 4px var(--space-sm); gap: 4px; }
+        .hud-item { padding: 5px 10px; font-size: 0.72rem; gap: 4px; }
+        .hud-icon { font-size: 0.85rem; }
 
-        #ship-condition { padding: 4px 6px; }
-        #ship-condition .ship-class-name { font-size: 0.65rem; margin-bottom: 2px; gap: 3px; }
-        #ship-condition .condition-row { gap: 3px; margin: 1px 0; }
-        #ship-condition .condition-icon { width: 12px; font-size: 0.6rem; }
-        #ship-condition .condition-bar { height: 3px; min-width: 35px; }
-        #ship-condition .condition-value { width: 18px; font-size: 0.6rem; }
+        #hud-left { top: 38px; left: 4px; gap: 3px; max-width: 105px; }
+        .hud-group { padding: 5px 7px; }
+        #faction-badge { font-size: 0.68rem; gap: 4px; }
+        #cargo-summary { padding: 5px 7px; font-size: 0.68rem; }
+        .cargo-header { font-size: 0.62rem; }
+        .cargo-dot { width: 6px; height: 6px; }
+        #wind-indicator { padding: 4px 7px; font-size: 0.68rem; }
+        #wind-arrow { font-size: 0.8rem; }
+        #heat-indicator, #bounty-indicator, #notoriety-indicator { padding: 4px 7px; font-size: 0.68rem; }
+        #heat-indicator .heat-bar, #notoriety-indicator .notoriety-bar, .status-bar { width: 36px; height: 4px; }
+        #world-indicator { padding: 4px 7px; font-size: 0.62rem; }
+        #contract-tracker { padding: 4px 7px; font-size: 0.68rem; max-width: 100px; }
+        #contract-tracker .contract-title { max-width: 60px; }
+        #contract-tracker .contract-meta { font-size: 0.58rem; }
 
-        #compass { top: 36px; right: 3px; gap: 3px; }
-        .compass-ring { width: 45px; height: 45px; }
-        .compass-needle { width: 2px; height: 18px; }
-        .compass-dest-marker { width: 6px; height: 6px; top: 3px; }
-        .compass-n, .compass-e, .compass-s, .compass-w { font-size: 0.5rem; }
-        .compass-n { top: 1px; }
-        .compass-s { bottom: 1px; }
-        .compass-e { right: 3px; }
-        .compass-w { left: 3px; }
-        #destination-info { padding: 3px 6px; font-size: 0.65rem; }
-        #dest-name { font-size: 0.65rem; }
-        #dest-distance { font-size: 0.55rem; }
+        #ship-condition { padding: 5px 7px; }
+        #ship-condition .ship-class-name { font-size: 0.68rem; margin-bottom: 3px; gap: 4px; }
+        #ship-condition .condition-row { gap: 4px; margin: 2px 0; }
+        #ship-condition .condition-icon { width: 14px; font-size: 0.65rem; }
+        #ship-condition .condition-bar { height: 4px; min-width: 38px; }
+        #ship-condition .condition-value { width: 20px; font-size: 0.62rem; }
 
-        #mobile-controls { height: 140px; }
-        #joystick-zone { width: 90px; height: 90px; bottom: 12px; left: 12px; }
-        #joystick-base { width: 90px; height: 90px; }
-        #joystick-stick { width: 36px; height: 36px; }
-        #action-buttons { right: 10px; gap: 6px; }
-        .action-btn { width: 46px; height: 46px; font-size: 1.1rem; }
-        #speed-indicator { bottom: 110px; left: 15px; padding: 4px 8px; font-size: 0.65rem; }
-        #speed-indicator .bar { width: 32px; height: 3px; }
-        #island-indicator { padding: 4px 8px; font-size: 0.65rem; right: 10px; }
+        #compass { top: 38px; right: 4px; gap: 4px; }
+        .compass-ring { width: 50px; height: 50px; }
+        .compass-needle { width: 3px; height: 20px; }
+        .compass-dest-marker { width: 7px; height: 7px; top: 4px; }
+        .compass-n, .compass-e, .compass-s, .compass-w { font-size: 0.55rem; }
+        .compass-n { top: 2px; }
+        .compass-s { bottom: 2px; }
+        .compass-e { right: 4px; }
+        .compass-w { left: 4px; }
+        #destination-info { padding: 4px 7px; font-size: 0.68rem; }
+        #dest-name { font-size: 0.68rem; }
+        #dest-distance { font-size: 0.58rem; }
 
-        #event-toast { top: 38px; padding: 6px 10px; }
-        .event-icon { font-size: 1rem; }
-        #event-title { font-size: 0.75rem; }
-        #event-desc { font-size: 0.65rem; }
+        /* Larger touch targets for mobile usability */
+        #mobile-controls { height: 160px; }
+        #joystick-zone { width: 110px; height: 110px; bottom: 15px; left: 15px; }
+        #joystick-base { width: 110px; height: 110px; }
+        #joystick-stick { width: 46px; height: 46px; }
+        #action-buttons { right: 12px; gap: 10px; }
+        .action-btn { width: 54px; height: 54px; font-size: 1.25rem; }
+        #speed-indicator { bottom: 135px; left: 18px; padding: 5px 9px; font-size: 0.68rem; }
+        #speed-indicator .bar { width: 36px; height: 4px; }
+        #island-indicator { padding: 5px 9px; font-size: 0.68rem; right: 12px; }
+
+        #event-toast { top: 40px; padding: 7px 12px; }
+        .event-icon { font-size: 1.1rem; }
+        #event-title { font-size: 0.78rem; }
+        #event-desc { font-size: 0.68rem; }
     }
 </style>
 
