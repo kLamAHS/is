@@ -5411,43 +5411,45 @@ createPalmTree() {
 createShip() {
     const ship = new THREE.Group();
 
-    // Hull with more detail
-    const hullShape = new THREE.Shape();
-    hullShape.moveTo(-2, 0);
-    hullShape.quadraticCurveTo(-2.2, 1.5, -1.8, 2.5);
-    hullShape.lineTo(1.8, 2.5);
-    hullShape.quadraticCurveTo(2.2, 1.5, 2, 0);
-    hullShape.lineTo(-2, 0);
-
-    const hullGeo = new THREE.ExtrudeGeometry(hullShape, { depth: 10, bevelEnabled: false });
-    const hull = new THREE.Mesh(hullGeo, new THREE.MeshLambertMaterial({ color: 0x8b4513 }));
-    hull.rotation.x = -Math.PI / 2;
-    hull.position.set(0, 0, -5);
+    // Hull - using simple box geometry (more reliable)
+    const hull = new THREE.Mesh(
+        new THREE.BoxGeometry(4, 2.5, 11),
+        new THREE.MeshLambertMaterial({ color: 0x8b4513 })
+    );
+    hull.position.y = 1;
     hull.castShadow = true;
     ship.add(hull);
 
+    // Hull bottom taper
+    const hullBottom = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 1, 10),
+        new THREE.MeshLambertMaterial({ color: 0x6b3010 })
+    );
+    hullBottom.position.y = -0.3;
+    ship.add(hullBottom);
+
     // Deck
     const deck = new THREE.Mesh(
-        new THREE.BoxGeometry(3.8, 0.4, 9.5),
+        new THREE.BoxGeometry(3.8, 0.3, 10),
         new THREE.MeshLambertMaterial({ color: 0xdeb887 })
     );
-    deck.position.y = 2.5;
+    deck.position.y = 2.4;
     deck.castShadow = true;
     deck.receiveShadow = true;
     ship.add(deck);
 
-    // Cabin
+    // Cabin at stern
     const cabin = new THREE.Mesh(
-        new THREE.BoxGeometry(2.5, 1.5, 3),
+        new THREE.BoxGeometry(2.8, 1.8, 3),
         new THREE.MeshLambertMaterial({ color: 0x6b4423 })
     );
-    cabin.position.set(0, 3.5, -2.5);
+    cabin.position.set(0, 3.5, -3);
     cabin.castShadow = true;
     ship.add(cabin);
 
     // Main mast
     const mast = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.25, 0.35, 14, 8),
+        new THREE.CylinderGeometry(0.3, 0.4, 14, 8),
         new THREE.MeshLambertMaterial({ color: 0x4a3728 })
     );
     mast.position.y = 9;
@@ -5456,49 +5458,61 @@ createShip() {
 
     // Crow's nest
     const crowsNest = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.8, 0.6, 0.5, 8),
+        new THREE.CylinderGeometry(0.9, 0.7, 0.6, 8),
         new THREE.MeshLambertMaterial({ color: 0x6b4423 })
     );
-    crowsNest.position.y = 14;
+    crowsNest.position.y = 14.5;
     ship.add(crowsNest);
 
     // Main sail
     const sailMat = new THREE.MeshLambertMaterial({ color: 0xf5f0e1, side: THREE.DoubleSide });
-    const mainSail = new THREE.Mesh(new THREE.PlaneGeometry(7, 9), sailMat);
+    const mainSail = new THREE.Mesh(new THREE.PlaneGeometry(6, 8), sailMat);
     mainSail.position.set(0, 10, 0.5);
     mainSail.rotation.y = Math.PI / 2;
     mainSail.userData.isSail = true;
     ship.add(mainSail);
     this.mainSail = mainSail;
 
-    // Secondary smaller sail
-    const smallSail = new THREE.Mesh(new THREE.PlaneGeometry(4, 5), sailMat);
-    smallSail.position.set(0, 5, 3);
-    smallSail.rotation.y = Math.PI / 2;
-    smallSail.userData.isSail = true;
-    ship.add(smallSail);
+    // Forward sail
+    const foreSail = new THREE.Mesh(new THREE.PlaneGeometry(4, 5), sailMat);
+    foreSail.position.set(0, 6, 3.5);
+    foreSail.rotation.y = Math.PI / 2;
+    ship.add(foreSail);
 
-    // Bow decoration
+    // Bow (pointed front)
     const bow = new THREE.Mesh(
-        new THREE.ConeGeometry(0.8, 3, 6),
+        new THREE.ConeGeometry(1.2, 3.5, 6),
         new THREE.MeshLambertMaterial({ color: 0xc9a227 })
     );
-    bow.position.set(0, 1.5, 6);
+    bow.position.set(0, 1, 7);
     bow.rotation.x = Math.PI / 2;
     bow.castShadow = true;
     ship.add(bow);
 
+    // Railing posts
+    for (let i = 0; i < 4; i++) {
+        const post = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08, 0.08, 1, 6),
+            new THREE.MeshLambertMaterial({ color: 0x6b4423 })
+        );
+        post.position.set(1.7, 3, -3 + i * 2.5);
+        ship.add(post);
+        const post2 = post.clone();
+        post2.position.x = -1.7;
+        ship.add(post2);
+    }
+
     // Lantern at stern
     const lantern = new THREE.Mesh(
-        new THREE.SphereGeometry(0.3, 8, 8),
+        new THREE.SphereGeometry(0.35, 8, 8),
         new THREE.MeshBasicMaterial({ color: 0xffdd88 })
     );
-    lantern.position.set(0, 4.5, -4);
+    lantern.position.set(0, 4.8, -4.5);
     ship.add(lantern);
     this.lantern = lantern;
 
     // Point light from lantern (for night mode)
-    this.lanternLight = new THREE.PointLight(0xffdd66, 0, 20);
+    this.lanternLight = new THREE.PointLight(0xffdd66, 0, 25);
     this.lanternLight.position.copy(lantern.position);
     ship.add(this.lanternLight);
 
@@ -5508,16 +5522,21 @@ createShip() {
 updateSkyColor() {
     const darkMode = document.documentElement.dataset.theme === 'dark';
     if (darkMode) {
-        this.renderer.setClearColor(0x0a1520);
+        // Twilight/dusk colors - much brighter than before
+        this.renderer.setClearColor(0x1a2a3a);
         if (this.skyDome) {
-            this.skyDome.material.uniforms.topColor.value.setHex(0x0a1525);
-            this.skyDome.material.uniforms.bottomColor.value.setHex(0x152535);
+            this.skyDome.material.uniforms.topColor.value.setHex(0x1a2540);
+            this.skyDome.material.uniforms.bottomColor.value.setHex(0x2a4055);
         }
-        if (this.hemiLight) this.hemiLight.intensity = 0.15;
-        if (this.sunLight) this.sunLight.intensity = 0.3;
-        if (this.ambientLight) this.ambientLight.intensity = 0.2;
-        if (this.lanternLight) this.lanternLight.intensity = 1.5;
-        this.renderer.toneMappingExposure = 0.7;
+        // Brighter lighting for playability
+        if (this.hemiLight) this.hemiLight.intensity = 0.35;
+        if (this.sunLight) {
+            this.sunLight.intensity = 0.6;
+            this.sunLight.color.setHex(0xaabbff); // Moonlight blue tint
+        }
+        if (this.ambientLight) this.ambientLight.intensity = 0.4;
+        if (this.lanternLight) this.lanternLight.intensity = 2.0;
+        this.renderer.toneMappingExposure = 0.9;
     } else {
         this.renderer.setClearColor(0x1a3a4a);
         if (this.skyDome) {
@@ -5525,7 +5544,10 @@ updateSkyColor() {
             this.skyDome.material.uniforms.bottomColor.value.setHex(0x87ceeb);
         }
         if (this.hemiLight) this.hemiLight.intensity = 0.4;
-        if (this.sunLight) this.sunLight.intensity = 1.0;
+        if (this.sunLight) {
+            this.sunLight.intensity = 1.0;
+            this.sunLight.color.setHex(0xfff5e0); // Warm sunlight
+        }
         if (this.ambientLight) this.ambientLight.intensity = 0.35;
         if (this.lanternLight) this.lanternLight.intensity = 0;
         this.renderer.toneMappingExposure = 1.0;
