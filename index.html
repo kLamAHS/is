@@ -10,64 +10,58 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Light Theme (Default - Modern Maritime) */
-            --parchment: #faf6f0; --parchment-dark: #e8e0d4; --ink: #1a1a2e; --ink-light: #4a4a5a;
-            --gold: #e6a817; --gold-dark: #c4900f; --gold-light: #ffd54f;
-            --sea-dark: #0f2027; --sea-medium: #203a43; --sea-light: #2c5364;
-            --blood-red: #dc3545; --wood: #6b4423; --wood-dark: #3d2512;
-            --sail-white: #f8f9fa; --english: #e63946; --eitc: #2d6a4f; --pirates: #343a40;
-            --neutral: #6c757d;
-            --modal-bg: rgba(15, 32, 39, 0.85);
-            --card-bg: rgba(250, 246, 240, 0.85);
-            --glass-bg: rgba(255, 255, 255, 0.12);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            --shadow-light: 0 4px 16px rgba(0, 0, 0, 0.15);
-            --shadow-glow: 0 0 20px rgba(230, 168, 23, 0.3);
+            /* Light Theme (Default - Warm Parchment) */
+            --parchment: #f0e6d3; --parchment-dark: #d4c4a8; --ink: #2c1810; --ink-light: #5c4830;
+            --gold: #c9a227; --gold-dark: #a07f1c; --gold-light: #ddb84a;
+            --sea-dark: #1a3a4a; --sea-medium: #2d5a6a; --sea-light: #4a8a9a;
+            --blood-red: #b82525; --wood: #6b4423; --wood-dark: #3d2512;
+            --sail-white: #f5f0e1; --english: #c41e3a; --eitc: #1e5a3a; --pirates: #2c2c2c;
+            --neutral: #5a5a5a;
+            --modal-bg: rgba(20, 15, 10, 0.92);
+            --card-bg: rgba(240, 230, 211, 0.95);
+            --hud-bg: rgba(240, 230, 211, 0.92);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.25);
+            --shadow-glow: 0 0 15px rgba(201, 162, 39, 0.4);
             --font-display: 'Cinzel', serif;
             --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --space-xl: 32px;
             --touch-min: 48px;
             --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-full: 9999px;
             --action-stack-h: 200px; --action-stack-bottom: 20px;
-            /* Snappier Animation Timing */
+            /* Animation Timing */
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
             --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --ease-elastic: cubic-bezier(0.68, -0.6, 0.32, 1.6);
-            --ease-snap: cubic-bezier(0.2, 0, 0, 1);
             --duration-fast: 0.15s;
             --duration-normal: 0.2s;
             --duration-slow: 0.3s;
-            /* Visual Effects Variables */
-            --glow-gold: 0 0 24px rgba(230, 168, 23, 0.5);
-            --glow-sea: 0 0 20px rgba(44, 83, 100, 0.4);
-            --glow-danger: 0 0 24px rgba(220, 53, 69, 0.5);
-            --blur-glass: blur(12px);
+            /* Visual Effects */
+            --glow-gold: 0 0 15px rgba(201, 162, 39, 0.5);
+            --glow-sea: 0 0 15px rgba(74, 138, 154, 0.4);
+            --glow-danger: 0 0 15px rgba(184, 37, 37, 0.5);
             --particle-speed: 8s;
-            /* Theme transition */
-            --theme-transition: 0.25s ease;
+            --theme-transition: 0.3s ease;
         }
 
         /* Dark Theme (Night Mode) */
         [data-theme="dark"] {
-            --parchment: #16161a; --parchment-dark: #242429; --ink: #fffffe; --ink-light: #94a1b2;
-            --gold: #ffb800; --gold-dark: #d99a00; --gold-light: #ffe066;
-            --sea-dark: #0a0f14; --sea-medium: #141e26; --sea-light: #1e3040;
-            --blood-red: #ff6b6b; --wood: #3d2a1a; --wood-dark: #261a0f;
-            --sail-white: #1a1a20; --modal-bg: rgba(10, 15, 20, 0.9);
-            --card-bg: rgba(22, 22, 26, 0.85);
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-            --shadow-light: 0 4px 20px rgba(0, 0, 0, 0.4);
-            --shadow-glow: 0 0 30px rgba(255, 184, 0, 0.25);
-            --glow-gold: 0 0 30px rgba(255, 184, 0, 0.4);
-            --glow-sea: 0 0 24px rgba(30, 48, 64, 0.5);
-            --glow-danger: 0 0 30px rgba(255, 107, 107, 0.4);
+            --parchment: #1e1a15; --parchment-dark: #2a2520; --ink: #e8dcc8; --ink-light: #a89880;
+            --gold: #e6b800; --gold-dark: #c49a00; --gold-light: #ffd54f;
+            --sea-dark: #0d1a22; --sea-medium: #162a35; --sea-light: #1e3a4a;
+            --blood-red: #e64545; --wood: #3d2a1a; --wood-dark: #261a0f;
+            --sail-white: #252018; --modal-bg: rgba(15, 12, 10, 0.95);
+            --card-bg: rgba(30, 26, 21, 0.95);
+            --hud-bg: rgba(30, 26, 21, 0.92);
+            --shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+            --shadow-light: 0 2px 12px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 20px rgba(230, 184, 0, 0.3);
+            --glow-gold: 0 0 20px rgba(230, 184, 0, 0.4);
+            --glow-sea: 0 0 18px rgba(30, 58, 74, 0.5);
+            --glow-danger: 0 0 20px rgba(230, 69, 69, 0.4);
         }
 
-        /* Smooth theme transitions for key elements */
+        /* Smooth theme transitions */
         body, .modal-content, .hud-item, .faction-card, #cargo-summary,
         #wind-indicator, #heat-indicator, #bounty-indicator, #ship-condition,
         #compass, .compass-ring, #destination-info, #speed-indicator,
@@ -75,8 +69,7 @@
             transition: background var(--theme-transition),
                         color var(--theme-transition),
                         border-color var(--theme-transition),
-                        box-shadow var(--theme-transition),
-                        backdrop-filter var(--theme-transition);
+                        box-shadow var(--theme-transition);
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
@@ -123,20 +116,20 @@
     #game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 
     #hud-top { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 100%); pointer-events: none; z-index: 10; flex-wrap: wrap; }
-    .hud-item { display: flex; align-items: center; gap: 6px; background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 8px 14px; border-radius: var(--radius-full); font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); }
+    .hud-item { display: flex; align-items: center; gap: 6px; background: var(--hud-bg); padding: 8px 14px; border-radius: var(--radius-full); font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); }
     .hud-icon { font-size: 1.1rem; }
     .hud-value { font-weight: 600; color: var(--ink); }
 
     /* Left HUD Panel - Grouped indicators */
     #hud-left { position: fixed; top: 50px; left: var(--space-sm); display: flex; flex-direction: column; gap: 6px; z-index: 10; }
-    .hud-group { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border-radius: var(--radius-md); padding: 8px 10px; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); }
+    .hud-group { background: var(--hud-bg); border-radius: var(--radius-md); padding: 8px 10px; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); }
 
     #faction-badge { display: flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 0.8rem; font-weight: 500; }
     #faction-badge.english { border-left: 3px solid var(--english); padding-left: 8px; margin-left: -10px; }
     #faction-badge.eitc { border-left: 3px solid var(--eitc); padding-left: 8px; margin-left: -10px; }
     #faction-badge.pirates { border-left: 3px solid var(--pirates); padding-left: 8px; margin-left: -10px; }
 
-    #cargo-summary { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 8px 10px; border-radius: var(--radius-md); font-size: 0.8rem; max-width: 130px; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); }
+    #cargo-summary { background: var(--hud-bg); padding: 8px 10px; border-radius: var(--radius-md); font-size: 0.8rem; max-width: 130px; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); }
     .cargo-header { display: flex; justify-content: space-between; font-family: var(--font-body); font-size: 0.75rem; font-weight: 500; margin-bottom: 4px; color: var(--ink-light); }
     #cargo-preview { display: flex; flex-wrap: wrap; gap: 3px; }
     .cargo-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--gold); transition: transform var(--duration-fast) ease; }
@@ -145,16 +138,16 @@
     .cargo-dot.contraband { background: var(--blood-red); }
     @keyframes glow-dot { 0%, 100% { box-shadow: 0 0 3px var(--eitc); } 50% { box-shadow: 0 0 8px var(--eitc); } }
 
-    #wind-indicator { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; }
+    #wind-indicator { background: var(--hud-bg); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 6px; }
     #wind-arrow { display: inline-block; transition: transform 0.3s var(--ease-smooth); }
 
-    /* Status indicators - compact glass style */
-    .status-indicator { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; }
+    /* Status indicators - compact style */
+    .status-indicator { background: var(--hud-bg); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 6px; }
     .status-bar { width: 50px; height: 5px; background: rgba(255,255,255,0.15); border-radius: var(--radius-full); overflow: hidden; }
     .status-fill { height: 100%; border-radius: var(--radius-full); transition: width var(--duration-normal) var(--ease-smooth); }
 
     /* Heat indicator */
-    #heat-indicator { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; }
+    #heat-indicator { background: var(--hud-bg); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 6px; }
     #heat-indicator .heat-bar { width: 50px; height: 5px; background: rgba(255,255,255,0.15); border-radius: var(--radius-full); overflow: hidden; }
     #heat-indicator .heat-fill { height: 100%; background: var(--blood-red); border-radius: var(--radius-full); transition: width var(--duration-normal) var(--ease-smooth); }
     #heat-indicator.low .heat-fill { background: var(--eitc); }
@@ -162,7 +155,7 @@
     #heat-indicator.high .heat-fill { background: var(--blood-red); }
 
     /* Bounty indicator */
-    #bounty-indicator { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; }
+    #bounty-indicator { background: var(--hud-bg); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 6px; }
     #bounty-indicator.clean { opacity: 0.6; }
     #bounty-indicator.wanted { border-left: 3px solid var(--gold); }
     #bounty-indicator.hunted { border-left: 3px solid #ff8c42; animation: bounty-pulse 1.5s ease-in-out infinite; }
@@ -170,7 +163,7 @@
     @keyframes bounty-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.75; } }
 
     /* Notoriety indicator */
-    #notoriety-indicator { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity var(--duration-normal) ease; }
+    #notoriety-indicator { background: var(--hud-bg); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity var(--duration-normal) ease; }
     #notoriety-indicator.visible { opacity: 1; }
     #notoriety-indicator.low { border-left: 3px solid var(--eitc); }
     #notoriety-indicator.rising { border-left: 3px solid var(--gold); }
@@ -184,19 +177,19 @@
     #notoriety-indicator.notorious .notoriety-fill { background: var(--blood-red); }
 
     /* Contract tracker chip */
-    #contract-tracker { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 8px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; cursor: pointer; pointer-events: auto; max-width: 140px; border-left: 3px solid var(--gold); transition: transform var(--duration-fast) ease, box-shadow var(--duration-fast) ease; }
+    #contract-tracker { background: var(--hud-bg); padding: 8px 10px; border-radius: var(--radius-sm); font-size: 0.8rem; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 6px; cursor: pointer; pointer-events: auto; max-width: 140px; border-left: 3px solid var(--gold); transition: transform var(--duration-fast) ease, box-shadow var(--duration-fast) ease; }
     #contract-tracker:hover { transform: translateX(2px); box-shadow: var(--shadow-glow); }
     #contract-tracker.hidden { display: none; }
     #contract-tracker .contract-title { font-family: var(--font-body); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
     #contract-tracker .contract-meta { color: var(--ink-light); font-size: 0.7rem; }
 
     /* Season/World indicator */
-    #world-indicator { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; }
+    #world-indicator { background: var(--hud-bg); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 6px; }
     #world-indicator.storm-season { border-left: 3px solid var(--sea-light); }
     #world-indicator.crackdown { border-left: 3px solid var(--blood-red); }
 
     /* Ship condition HUD */
-    #ship-condition { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 10px 12px; border-radius: var(--radius-md); font-size: 0.75rem; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); min-width: 110px; }
+    #ship-condition { background: var(--hud-bg); padding: 10px 12px; border-radius: var(--radius-md); font-size: 0.75rem; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); min-width: 110px; }
     #ship-condition .ship-class-name { font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
     #ship-condition .condition-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
     #ship-condition .condition-icon { width: 16px; text-align: center; font-size: 0.85rem; }
@@ -211,7 +204,7 @@
     @keyframes pulse-critical { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
     #compass { position: fixed; top: 50px; right: var(--space-sm); display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 10; }
-    .compass-ring { width: 70px; height: 70px; border-radius: 50%; background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); border: 2px solid var(--glass-border); position: relative; box-shadow: var(--shadow-light); }
+    .compass-ring { width: 70px; height: 70px; border-radius: 50%; background: var(--hud-bg); border: 2px solid var(--parchment-dark); position: relative; box-shadow: var(--shadow-light); }
     .compass-needle { position: absolute; top: 50%; left: 50%; width: 4px; height: 28px; background: linear-gradient(180deg, var(--blood-red) 50%, var(--ink) 50%); transform-origin: center bottom; transform: translate(-50%, -100%); border-radius: 2px; transition: transform 0.2s var(--ease-smooth); }
     .compass-dest-marker { position: absolute; width: 10px; height: 10px; background: var(--gold); border-radius: 50%; top: 6px; left: 50%; transform: translateX(-50%); box-shadow: var(--glow-gold); }
     .compass-n, .compass-e, .compass-s, .compass-w { position: absolute; font-family: var(--font-body); font-size: 0.7rem; font-weight: 700; color: var(--ink-light); }
@@ -219,7 +212,7 @@
     .compass-s { bottom: 4px; left: 50%; transform: translateX(-50%); }
     .compass-e { right: 6px; top: 50%; transform: translateY(-50%); }
     .compass-w { left: 6px; top: 50%; transform: translateY(-50%); }
-    #destination-info { background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 6px 10px; border-radius: var(--radius-sm); text-align: center; font-size: 0.8rem; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); }
+    #destination-info { background: var(--hud-bg); padding: 6px 10px; border-radius: var(--radius-sm); text-align: center; font-size: 0.8rem; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); }
     #dest-name { display: block; font-family: var(--font-body); font-weight: 600; }
     #dest-distance { color: var(--ink-light); font-size: 0.75rem; }
 
@@ -230,7 +223,7 @@
     #joystick-stick.active { box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 0 15px rgba(201,162,39,0.5); }
 
     #action-buttons { position: absolute; bottom: var(--action-stack-bottom); right: 20px; display: flex; flex-direction: column; gap: 12px; pointer-events: auto; }
-    .action-btn { width: 64px; height: 64px; border-radius: 50%; border: none; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--duration-fast) var(--ease-bounce); box-shadow: var(--shadow-light); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); }
+    .action-btn { width: 64px; height: 64px; border-radius: 50%; border: none; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--duration-fast) var(--ease-bounce); box-shadow: var(--shadow-light); }
     .action-btn:hover { transform: scale(1.08); }
     .action-btn:active { transform: scale(0.95); }
     #btn-dock { background: linear-gradient(135deg, var(--sea-light) 0%, var(--sea-medium) 100%); color: white; }
@@ -239,14 +232,14 @@
     #btn-map { background: linear-gradient(135deg, var(--parchment) 0%, var(--parchment-dark) 100%); color: var(--ink); }
     #btn-menu { background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%); color: var(--ink); }
 
-    #speed-indicator { position: absolute; bottom: 150px; left: 30px; background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 8px 12px; border-radius: var(--radius-full); font-family: var(--font-body); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 8px; pointer-events: none; }
+    #speed-indicator { position: absolute; bottom: 150px; left: 30px; background: var(--hud-bg); padding: 8px 12px; border-radius: var(--radius-full); font-family: var(--font-body); font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); display: flex; align-items: center; gap: 8px; pointer-events: none; }
     #speed-indicator .bar { width: 50px; height: 6px; background: rgba(255,255,255,0.15); border-radius: var(--radius-full); overflow: hidden; }
     #speed-indicator .bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: var(--radius-full); width: 0%; transition: width var(--duration-fast) var(--ease-smooth); }
     .wind-boost { color: var(--eitc); font-size: 0.75rem; font-weight: 600; }
     .wind-penalty { color: var(--blood-red); font-size: 0.75rem; font-weight: 600; }
 
     /* Island indicator */
-    #island-indicator { position: absolute; bottom: calc(var(--action-stack-bottom) + var(--action-stack-h) + 15px); right: 20px; background: var(--glass-bg); backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); padding: 8px 14px; border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--glass-border); text-align: right; pointer-events: none; opacity: 0; transition: opacity var(--duration-normal) ease, transform var(--duration-normal) ease; transform: translateY(10px); }
+    #island-indicator { position: absolute; bottom: calc(var(--action-stack-bottom) + var(--action-stack-h) + 15px); right: 20px; background: var(--hud-bg); padding: 8px 14px; border-radius: var(--radius-md); font-family: var(--font-body); font-size: 0.85rem; font-weight: 500; box-shadow: var(--shadow-light); border: 1px solid var(--parchment-dark); text-align: right; pointer-events: none; opacity: 0; transition: opacity var(--duration-normal) ease, transform var(--duration-normal) ease; transform: translateY(10px); }
     #island-indicator.visible { opacity: 1; transform: translateY(0); }
 
     #event-toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); background: var(--parchment); padding: var(--space-md) var(--space-lg); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-md); box-shadow: var(--shadow); border: 1px solid var(--parchment-dark); z-index: 20; animation: toastSlide var(--duration-slow) var(--ease-bounce); max-width: calc(100% - 40px); }
@@ -976,19 +969,23 @@
         <div class="hud-item"><span class="hud-icon">📅</span><span class="hud-value">Day <span id="day-value">1</span></span></div>
         <div class="hud-item"><span class="hud-icon">🍖</span><span class="hud-value" id="supplies-value">30</span></div>
     </div>
-    <div id="faction-badge"><span id="faction-icon">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span><span id="faction-name">Royal Navy</span></div>
-    <div id="cargo-summary"><div class="cargo-header"><span>📦 Cargo</span><span id="cargo-count">0/50</span></div><div id="cargo-preview"></div></div>
-    <div id="wind-indicator"><span id="wind-arrow">💨</span><span id="wind-strength">Calm</span></div>
-    <div id="heat-indicator" class="low"><span>🔥</span><div class="heat-bar"><div class="heat-fill" id="heat-fill"></div></div><span id="heat-label">0</span></div>
-    <div id="bounty-indicator" class="clean"><span>⚖️</span><span id="bounty-level">Clean</span></div>
-    <div id="notoriety-indicator" title="How predictable your trading patterns have become"><span>👁️</span><div class="notoriety-bar"><div class="notoriety-fill" id="notoriety-fill"></div></div><span id="notoriety-label">Unseen</span></div>
-    <div id="contract-tracker" class="hidden"><span>📜</span><span class="contract-title" id="tracker-title">--</span><span class="contract-meta" id="tracker-meta">--</span></div>
-    <div id="world-indicator"><span id="world-icon">🌤️</span><span id="world-status">Fair Winds</span></div>
-    <div id="ship-condition">
+    <div id="hud-left">
+        <div class="hud-group">
+            <div id="faction-badge"><span id="faction-icon">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span><span id="faction-name">Royal Navy</span></div>
+        </div>
+        <div id="cargo-summary"><div class="cargo-header"><span>📦 Cargo</span><span id="cargo-count">0/50</span></div><div id="cargo-preview"></div></div>
+        <div id="wind-indicator"><span id="wind-arrow">💨</span><span id="wind-strength">Calm</span></div>
+        <div id="heat-indicator" class="low"><span>🔥</span><div class="heat-bar"><div class="heat-fill" id="heat-fill"></div></div><span id="heat-label">0</span></div>
+        <div id="bounty-indicator" class="clean"><span>⚖️</span><span id="bounty-level">Clean</span></div>
+        <div id="notoriety-indicator" title="How predictable your trading patterns have become"><span>👁️</span><div class="notoriety-bar"><div class="notoriety-fill" id="notoriety-fill"></div></div><span id="notoriety-label">Unseen</span></div>
+        <div id="contract-tracker" class="hidden"><span>📜</span><span class="contract-title" id="tracker-title">--</span><span class="contract-meta" id="tracker-meta">--</span></div>
+        <div id="world-indicator"><span id="world-icon">🌤️</span><span id="world-status">Fair Winds</span></div>
+        <div id="ship-condition">
         <div class="ship-class-name"><span id="ship-class-icon">⛵</span><span id="ship-class-label">Brigantine</span></div>
         <div class="condition-row"><span class="condition-icon" title="Hull integrity">🪵</span><div class="condition-bar"><div class="condition-fill hull" id="hull-fill"></div></div><span class="condition-value" id="hull-value">100</span></div>
         <div class="condition-row"><span class="condition-icon" title="Rigging condition">🪢</span><div class="condition-bar"><div class="condition-fill rigging" id="rigging-fill"></div></div><span class="condition-value" id="rigging-value">100</span></div>
         <div class="condition-row"><span class="condition-icon" title="Crew morale">👥</span><div class="condition-bar"><div class="condition-fill morale" id="morale-fill"></div></div><span class="condition-value" id="morale-value">100</span></div>
+        </div>
     </div>
     <div id="chart-fragments" class="chart-fragment-indicator hidden"><span>🗺️</span><span id="fragments-count">0</span>/3</div>
     <div id="compass">
@@ -5568,21 +5565,21 @@ createShip() {
 updateSkyColor() {
     const darkMode = document.documentElement.dataset.theme === 'dark';
     if (darkMode) {
-        // Twilight/dusk colors - much brighter than before
-        this.renderer.setClearColor(0x1a2a3a);
+        // Golden hour/dusk colors - warm and visible
+        this.renderer.setClearColor(0x2a3a4a);
         if (this.skyDome) {
-            this.skyDome.material.uniforms.topColor.value.setHex(0x1a2540);
-            this.skyDome.material.uniforms.bottomColor.value.setHex(0x2a4055);
+            this.skyDome.material.uniforms.topColor.value.setHex(0x2a3550);
+            this.skyDome.material.uniforms.bottomColor.value.setHex(0x4a5a70);
         }
-        // Brighter lighting for playability
-        if (this.hemiLight) this.hemiLight.intensity = 0.35;
+        // Bright enough for gameplay while still feeling like evening
+        if (this.hemiLight) this.hemiLight.intensity = 0.5;
         if (this.sunLight) {
-            this.sunLight.intensity = 0.6;
-            this.sunLight.color.setHex(0xaabbff); // Moonlight blue tint
+            this.sunLight.intensity = 0.85;
+            this.sunLight.color.setHex(0xffcc88); // Warm sunset tint
         }
-        if (this.ambientLight) this.ambientLight.intensity = 0.4;
-        if (this.lanternLight) this.lanternLight.intensity = 2.0;
-        this.renderer.toneMappingExposure = 0.9;
+        if (this.ambientLight) this.ambientLight.intensity = 0.55;
+        if (this.lanternLight) this.lanternLight.intensity = 1.5;
+        this.renderer.toneMappingExposure = 1.1;
     } else {
         this.renderer.setClearColor(0x1a3a4a);
         if (this.skyDome) {
