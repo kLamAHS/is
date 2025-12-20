@@ -573,7 +573,7 @@
     .help-collapse { cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
     .help-collapse::after { content: '▼'; font-size: 0.7rem; transition: transform 0.2s; }
     .help-collapse.collapsed::after { transform: rotate(-90deg); }
-    .help-content { max-height: 300px; overflow: hidden; transition: max-height 0.3s ease; }
+    .help-content { max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease; }
     .help-content.collapsed { max-height: 0; }
 
     /* ==================== ENHANCED ANIMATIONS ==================== */
@@ -7421,7 +7421,7 @@ update(dt) {
     if (this.gameState.isDocked) { this.ui.updateSpeed(0, null); return; }
     const gs = this.gameState;
     if (this.joystick?.magnitude > 0.1) {
-        const inv = localStorage.getItem('havenvoy-invert-joystick') === 'true' ? -1 : 1;
+        const inv = localStorage.getItem('havenvoy-invert-joystick') === 'true' ? 1 : -1;
         const md = { x: inv * this.joystick.value.x, z: inv * this.joystick.value.y }, len = Math.sqrt(md.x**2 + md.z**2); if (len) { md.x /= len; md.z /= len; }
         const we = getWindEffect(gs, md), spd = getShipSpeed(gs) * this.joystick.magnitude * 0.8 * we.mult;
         gs.player.position.x = Math.max(-250, Math.min(250, gs.player.position.x + md.x * spd));
