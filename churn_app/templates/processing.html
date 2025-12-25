@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Analyzing — Churn Pre-Mortem{% endblock %}
+{% block content %}
+<div class="card" style="text-align: center;">
+    <h1>Analyzing Your Data</h1>
+    <p class="subtitle">{{ job.company_name }}</p>
+    <div class="spinner"></div>
+    <div class="progress-container"><div class="progress-bar" id="progress-bar" style="width: {{ job.progress }}%;"></div></div>
+    <p id="status-text" style="color: var(--text-muted); margin-top: 20px;">Processing...</p>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 30px;">This typically takes 30-60 seconds.</p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    function checkStatus() {
+        fetch('/status').then(r => r.json()).then(data => {
+            if (data.status === 'complete') { window.location.href = '/results'; }
+            else if (data.status === 'error') { window.location.href = '/upload'; }
+            else {
+                document.getElementById('progress-bar').style.width = data.progress + '%';
+                let statusText = 'Processing...';
+                if (data.progress < 20) statusText = 'Loading data...';
+                else if (data.progress < 40) statusText = 'Validating...';
+                else if (data.progress < 70) statusText = 'Running analysis...';
+                else if (data.progress < 90) statusText = 'Computing metrics...';
+                else statusText = 'Generating report...';
+                document.getElementById('status-text').textContent = statusText;
+                setTimeout(checkStatus, 1000);
+            }
+        }).catch(() => setTimeout(checkStatus, 2000));
+    }
+    checkStatus();
+</script>
+{% endblock %}

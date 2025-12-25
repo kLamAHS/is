@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Results — Churn Pre-Mortem{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="score-display">
+        <div class="score-number" style="color: {% if job.scr_score <= 25 %}var(--success){% elif job.scr_score <= 50 %}var(--warning){% elif job.scr_score <= 75 %}#e65100{% else %}var(--danger){% endif %};">{{ job.scr_score | round | int }}</div>
+        <div class="score-label">Structural Churn Risk</div>
+        <span class="regime-badge regime-{{ job.regime }}">{% if job.regime == 'stable' %}STRUCTURALLY STABLE{% elif job.regime == 'conditional' %}CONDITIONALLY STABLE{% elif job.regime == 'volatile' %}STRUCTURALLY VOLATILE{% else %}PRE-CHURN STATE{% endif %}</span>
+        <div class="meta-info">
+            <div class="meta-item"><div class="meta-value">{{ "{:,}".format(job.user_count) }}</div><div class="meta-label">Users Analyzed</div></div>
+            <div class="meta-item"><div class="meta-value">{{ job.confidence | title }}</div><div class="meta-label">Confidence</div></div>
+            <div class="meta-item"><div class="meta-value">{{ job.company_name }}</div><div class="meta-label">Company</div></div>
+        </div>
+    </div>
+</div>
+<div class="card" style="text-align: center;">
+    <h2>Your Report Is Ready</h2>
+    <p style="color: var(--text-muted); margin-bottom: 30px;">3-page executive PDF with your complete analysis.</p>
+    <a href="{{ url_for('download') }}" class="btn" style="font-size: 1.1rem; padding: 18px 48px;">Download Report (PDF)</a>
+</div>
+<div style="text-align: center; margin-top: 20px;"><a href="{{ url_for('index') }}" class="btn btn-secondary">Run Another Analysis</a></div>
+{% endblock %}
