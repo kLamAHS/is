@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Churn Pre-Mortem{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Churn Pre-Mortem</h1>
+    <p class="subtitle">Structural Retention Analysis</p>
+    <p class="tagline">Find out if your users are staying because they chose you—or because they haven't found a reason to leave yet.</p>
+    <form action="{{ url_for('start_analysis') }}" method="POST">
+        <label for="access_code">Access Code</label>
+        <input type="text" id="access_code" name="access_code" placeholder="Enter your access code" autocomplete="off" required>
+        <button type="submit">Continue</button>
+    </form>
+</div>
+<div class="card">
+    <h2>What You'll Get</h2>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">A single diagnostic that tells you whether your retention is real or borrowed time.</p>
+    <div style="display: grid; gap: 15px;">
+        <div style="display: flex; gap: 15px; align-items: flex-start;">
+            <span style="color: var(--highlight); font-size: 1.5rem;">01</span>
+            <div><strong>Structural Churn Risk Score</strong><p style="color: var(--text-muted); font-size: 0.9rem;">One number (0-100) that captures whether your user base is structurally loyal or structurally volatile.</p></div>
+        </div>
+        <div style="display: flex; gap: 15px; align-items: flex-start;">
+            <span style="color: var(--highlight); font-size: 1.5rem;">02</span>
+            <div><strong>Where Money Is Being Wasted</strong><p style="color: var(--text-muted); font-size: 0.9rem;">Specific retention investments that are destroying value given your current state.</p></div>
+        </div>
+        <div style="display: flex; gap: 15px; align-items: flex-start;">
+            <span style="color: var(--highlight); font-size: 1.5rem;">03</span>
+            <div><strong>What Will Actually Work</strong><p style="color: var(--text-muted); font-size: 0.9rem;">Strategic moves calibrated to your structural state, not generic best practices.</p></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

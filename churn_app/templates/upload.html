@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Upload Data — Churn Pre-Mortem{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Upload Your Data</h1>
+    <p class="subtitle">We'll analyze your user behavior and generate your report.</p>
+    <form action="{{ url_for('process') }}" method="POST" enctype="multipart/form-data" id="upload-form">
+        <label for="company_name">Company Name</label>
+        <input type="text" id="company_name" name="company_name" placeholder="Your company name (for the report)" required>
+        <label>User Event Data (CSV)</label>
+        <div class="file-upload" id="file-upload-zone">
+            <div class="file-upload-icon">📁</div>
+            <div class="file-upload-text"><strong>Click to upload</strong> or drag and drop<br><span style="font-size: 0.9rem;">CSV file, max 50MB</span></div>
+            <div class="file-name" id="file-name" style="display: none;"></div>
+        </div>
+        <input type="file" id="datafile" name="datafile" accept=".csv" required>
+        <button type="submit" id="submit-btn" disabled>Run Analysis</button>
+    </form>
+</div>
+<div class="card">
+    <div style="background: var(--secondary); border-radius: 8px; padding: 20px;">
+        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Required Columns</h3>
+        <ul style="list-style: none; padding: 0;"><li style="padding: 6px 0;">→ <code>user_id</code> — Unique identifier for each user</li><li style="padding: 6px 0;">→ <code>timestamp</code> — When the event occurred</li></ul>
+    </div>
+    <div style="background: var(--secondary); border-radius: 8px; padding: 20px; margin-top: 15px;">
+        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Optional</h3>
+        <ul style="list-style: none; padding: 0;"><li style="padding: 6px 0;">→ <code>action</code> — Type of event (click, purchase, etc.)</li></ul>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const fileInput = document.getElementById('datafile');
+    const fileUploadZone = document.getElementById('file-upload-zone');
+    const fileNameDisplay = document.getElementById('file-name');
+    const submitBtn = document.getElementById('submit-btn');
+    fileUploadZone.addEventListener('click', () => fileInput.click());
+    fileUploadZone.addEventListener('dragover', (e) => { e.preventDefault(); fileUploadZone.style.borderColor = '#e94560'; });
+    fileUploadZone.addEventListener('dragleave', () => { fileUploadZone.style.borderColor = ''; });
+    fileUploadZone.addEventListener('drop', (e) => { e.preventDefault(); fileUploadZone.style.borderColor = ''; if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFileSelect(); } });
+    fileInput.addEventListener('change', handleFileSelect);
+    function handleFileSelect() {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            fileNameDisplay.textContent = `✓ ${file.name}`;
+            fileNameDisplay.style.display = 'block';
+            fileUploadZone.classList.add('has-file');
+            submitBtn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}
