@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Diamond Bank{% endblock %}</title>
+    <style>
+        :root {
+            --bg: #1e1e2e;
+            --bg2: #282840;
+            --bg3: #313150;
+            --fg: #cdd6f4;
+            --fg2: #a6adc8;
+            --accent: #89b4fa;
+            --green: #a6e3a1;
+            --red: #f38ba8;
+            --yellow: #f9e2af;
+            --purple: #cba6f7;
+            --border: #45475a;
+            --nav-bg: #11111b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: var(--nav-bg);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            height: 48px;
+            flex-shrink: 0;
+            overflow-x: auto;
+        }
+        .navbar-brand {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 14px;
+            padding: 0 12px;
+            white-space: nowrap;
+        }
+        .nav-links { display: flex; gap: 4px; }
+        .nav-link {
+            color: var(--fg);
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            background: var(--bg2);
+            transition: background 0.15s;
+            white-space: nowrap;
+            position: relative;
+        }
+        .nav-link:hover { background: var(--bg3); }
+        .nav-link.active { background: var(--accent); color: var(--nav-bg); }
+        .nav-link .badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: var(--red);
+            color: #fff;
+            font-size: 10px;
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-weight: 700;
+        }
+
+        /* Status bar */
+        .statusbar {
+            background: var(--nav-bg);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            height: 28px;
+            font-size: 12px;
+            color: var(--fg2);
+            gap: 24px;
+            flex-shrink: 0;
+        }
+
+        /* Main content */
+        .main { flex: 1; padding: 12px; overflow-y: auto; }
+
+        /* Cards */
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .card-header {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--fg);
+        }
+
+        /* Stat cards grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .stat-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: var(--fg2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--green);
+            margin-top: 4px;
+        }
+
+        /* Tables */
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead th {
+            background: var(--bg3);
+            color: var(--fg);
+            font-weight: 600;
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+        }
+        tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; }
+        tbody tr:hover { background: rgba(137, 180, 250, 0.08); }
+        tbody tr.selected { background: rgba(137, 180, 250, 0.15); }
+        td { padding: 7px 10px; white-space: nowrap; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 7px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s;
+            text-decoration: none;
+            color: var(--nav-bg);
+        }
+        .btn:hover { opacity: 0.85; }
+        .btn-accent { background: var(--accent); }
+        .btn-green { background: var(--green); }
+        .btn-red { background: var(--red); }
+        .btn-yellow { background: var(--yellow); color: #1e1e2e; }
+        .btn-purple { background: var(--purple); }
+        .btn-muted { background: var(--bg3); color: var(--fg); }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .toolbar-spacer { flex: 1; }
+
+        /* Forms & Inputs */
+        input[type="text"], input[type="number"], input[type="password"],
+        input[type="date"], select, textarea {
+            background: var(--bg3);
+            color: var(--fg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 10px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+        select { cursor: pointer; }
+        textarea { resize: vertical; min-height: 60px; }
+        label { font-size: 13px; font-weight: 500; margin-bottom: 4px; display: block; color: var(--fg2); }
+        .form-group { margin-bottom: 12px; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 150px; }
+
+        /* Layout helpers */
+        .split {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 12px;
+        }
+        @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+
+        /* Modal */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 60px;
+        }
+        .modal-backdrop.active { display: flex; }
+        .modal {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            width: 420px;
+            max-width: 95vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .modal h3 { margin-bottom: 16px; font-size: 16px; }
+        .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+        /* Detail panel */
+        .detail-panel {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .detail-panel pre {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--fg);
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        /* Book preview */
+        .book-preview {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            line-height: 1.4;
+            color: var(--fg);
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .alert-warning { background: rgba(249,226,175,0.15); border: 1px solid var(--yellow); color: var(--yellow); }
+        .alert-danger { background: rgba(243,139,168,0.15); border: 1px solid var(--red); color: var(--red); }
+        .alert-success { background: rgba(166,227,161,0.15); border: 1px solid var(--green); color: var(--green); }
+        .alert-info { background: rgba(137,180,250,0.1); border: 1px solid var(--accent); color: var(--accent); }
+
+        /* Info text */
+        .text-muted { color: var(--fg2); }
+        .text-green { color: var(--green); }
+        .text-red { color: var(--red); }
+        .text-yellow { color: var(--yellow); }
+        .text-accent { color: var(--accent); }
+        .text-purple { color: var(--purple); }
+
+        /* Bar chart fallback */
+        .bar-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+        .bar-label { width: 40px; font-size: 12px; color: var(--fg2); text-align: right; font-family: monospace; }
+        .bar-fill { height: 18px; border-radius: 3px; background: var(--accent); min-width: 4px; transition: width 0.3s; }
+        .bar-value { font-size: 12px; color: var(--fg); font-family: monospace; }
+
+        /* Checkbox */
+        input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 2000;
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-success { background: var(--green); color: #1e1e2e; }
+        .toast-error { background: var(--red); color: #1e1e2e; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--fg2); }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <span class="navbar-brand">[Diamond Bank]</span>
+        <div class="nav-links">
+            {% set nav_items = [
+                ('/', 'Dashboard', 'dashboard'),
+                ('/requests', 'Requests', 'requests'),
+                ('/players', 'Players', 'players'),
+                ('/notes', 'Notes', 'notes'),
+                ('/transactions', 'Transactions', 'transactions'),
+                ('/loans', 'Loans', 'loans'),
+                ('/vault', 'Vault', 'vault'),
+                ('/reports', 'Reports', 'reports'),
+                ('/settings', 'Settings', 'settings'),
+            ] %}
+            {% for href, label, name in nav_items %}
+                <a href="{{ href }}" class="nav-link {% if active_tab == name %}active{% endif %}" id="nav-{{ name }}">
+                    {{ label }}
+                </a>
+            {% endfor %}
+        </div>
+    </nav>
+
+    <div class="main">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="statusbar" id="statusbar">
+        <span id="sb-reserve">Reserve: --</span>
+        <span id="sb-circ">Circulating: --</span>
+        <span id="sb-loans">Loans: --</span>
+        <span id="sb-pending">Pending: --</span>
+        <span id="sb-db" style="color: var(--green)">DB: OK</span>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+    // Utility functions
+    function toast(msg, type='success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast toast-' + type + ' show';
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    async function api(url, opts={}) {
+        try {
+            const defaults = { headers: {'Content-Type': 'application/json'} };
+            if (opts.body && typeof opts.body === 'object') {
+                opts.body = JSON.stringify(opts.body);
+            }
+            const resp = await fetch(url, {...defaults, ...opts});
+            const data = await resp.json();
+            if (!resp.ok || data.error) {
+                toast(data.error || 'Request failed', 'error');
+                return null;
+            }
+            return data;
+        } catch(e) {
+            toast('Network error: ' + e.message, 'error');
+            return null;
+        }
+    }
+
+    function fmt(n, dec=0) {
+        return Number(n).toLocaleString('en-US', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // Close modal on backdrop click
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-backdrop')) {
+            e.target.classList.remove('active');
+        }
+    });
+
+    // Update status bar
+    async function updateStatusBar() {
+        try {
+            const data = await (await fetch('/api/dashboard')).json();
+            const sb = (id, text, color) => {
+                const el = document.getElementById(id);
+                if (el) { el.textContent = text; if (color) el.style.color = color; }
+            };
+            const ratio = data.ratio || 0;
+            const yw = 80, rd = 50;
+            const rColor = ratio < rd ? 'var(--red)' : ratio < yw ? 'var(--yellow)' : 'var(--green)';
+            sb('sb-reserve', `Reserve: ${ratio.toFixed(1)}%`, rColor);
+            sb('sb-circ', `Circulating: ${fmt(data.circ)}`);
+            sb('sb-loans', `Loans: ${data.loans_count}`);
+            const pend = data.pending_requests || 0;
+            sb('sb-pending', `Pending: ${pend}`, pend > 0 ? 'var(--red)' : 'var(--green)');
+
+            // Update requests badge
+            const reqNav = document.getElementById('nav-requests');
+            if (reqNav) {
+                let badge = reqNav.querySelector('.badge');
+                if (pend > 0) {
+                    if (!badge) { badge = document.createElement('span'); badge.className = 'badge'; reqNav.appendChild(badge); }
+                    badge.textContent = pend;
+                } else if (badge) { badge.remove(); }
+            }
+        } catch(e) {}
+    }
+    updateStatusBar();
+    setInterval(updateStatusBar, 10000);
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
