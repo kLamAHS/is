@@ -157,6 +157,7 @@ const ExRow = ({ ex, accent }) => (<div style={{ display: "flex", alignItems: "c
 function App() {
   const [tab, setTab] = useState("today");
   const [now, setNow] = useState(new Date());
+  const [viewDate, setViewDate] = useState(new Date());
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [days, setDays] = useState({});
   const [weights, setWeights] = useState([]);
@@ -177,7 +178,7 @@ function App() {
   const saveDays = useCallback((n) => { setDays(n); sset("cp:days", JSON.stringify(n)); }, []);
   const saveWeights = useCallback((n) => { setWeights(n); sset("cp:weights", JSON.stringify(n)); }, []);
 
-  const tk = keyOf(now);
+  const tk = keyOf(viewDate);
   const today = days[tk] || { routine: {}, habits: {}, water: 0, workouts: [], sets: {} };
   const setToday = (patch) => saveDays({ ...days, [tk]: { routine: {}, habits: {}, water: 0, workouts: [], sets: {}, ...today, ...patch } });
   const toggleRoutine = (id) => setToday({ routine: { ...today.routine, [id]: !today.routine[id] } });
@@ -192,7 +193,7 @@ function App() {
   const workoutsThisWeek = useMemo(() => { let c = 0; const sun = addDays(now, -now.getDay()); for (let i = 0; i < 7; i++) if (days[keyOf(addDays(sun, i))]?.workouts?.length) c++; return c; }, [days, now]);
 
   if (!ready) return <div style={{ minHeight: "100vh", background: C.bg }} />;
-  const ctx = { now, settings, saveSettings, days, saveDays, weights, saveWeights, today, setToday, toggleRoutine, toggleHabit, setWater, logWorkout, isNizoral, streak, workoutsThisWeek, dayComplete };
+  const ctx = { now, viewDate, setViewDate, settings, saveSettings, days, saveDays, weights, saveWeights, today, setToday, toggleRoutine, toggleHabit, setWater, logWorkout, isNizoral, streak, workoutsThisWeek, dayComplete };
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'DM Sans',sans-serif" }}>
@@ -217,14 +218,17 @@ function App() {
 }
 
 // =========================== TODAY ===========================
-function Today({ now, settings, today, toggleRoutine, toggleHabit, setToday, setWater, logWorkout, isNizoral, streak, workoutsThisWeek }) {
+function Today({ now, viewDate, setViewDate, settings, today, toggleRoutine, toggleHabit, setToday, setWater, logWorkout, isNizoral, streak, workoutsThisWeek }) {
   const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
-  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  const nizToday = isNizoral(now);
+  const isToday = keyOf(viewDate) === keyOf(now);
+  const dayDiff = dnum(viewDate) - dnum(now);
+  const relLabel = dayDiff === 0 ? "Today" : dayDiff === 1 ? "Tomorrow" : dayDiff === -1 ? "Yesterday" : dayDiff > 0 ? `In ${dayDiff} days` : `${Math.abs(dayDiff)} days ago`;
+  const dateLabel = viewDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  const nizToday = isNizoral(viewDate);
 
-  // today's scheduled session (resolve legs alternation)
-  const token = settings.schedule[now.getDay()] || "rest";
-  const resolved = token === "legs" ? legsToken(now) : token;
+  // scheduled session for the viewed day (resolve legs alternation)
+  const token = settings.schedule[viewDate.getDay()] || "rest";
+  const resolved = token === "legs" ? legsToken(viewDate) : token;
   const sessionW = WBYID[resolved];
   const sessionKeys = sessionW ? sessionW.blocks.flatMap((b) => b.ex.map((e) => ({ key: resolved + "|" + e.n, t: parseSets(e.s) }))) : [];
   const totalSets = sessionKeys.reduce((a, x) => a + x.t, 0);
@@ -240,8 +244,8 @@ function Today({ now, settings, today, toggleRoutine, toggleHabit, setToday, set
     setToday({ sets: nextSets, workouts });
   };
 
-  // today's abs circuit
-  const circuit = AB_CIRCUITS[absIndex(now)];
+  // abs circuit for the viewed day
+  const circuit = AB_CIRCUITS[absIndex(viewDate)];
   const absDone = !!today.habits.abs;
 
   const activeRoutine = ROUTINE_IDS.filter((id) => settings.enabled[id] !== false);
@@ -253,7 +257,7 @@ function Today({ now, settings, today, toggleRoutine, toggleHabit, setToday, set
   const pct = Math.round((done / total) * 100);
 
   const showerMeta = nizToday ? { name: "Nizoral Anti-Dandruff Shampoo", dose: "Lather, wait 3–5 min, rinse", note: "The soak treats the flaking. 3×/week is plenty." } : { name: "Native Moisturizing Shampoo", dose: "Normal wash", note: "Everyday shampoo for non-Nizoral days." };
-  const week = [...Array(7)].map((_, i) => ({ l: ["S", "M", "T", "W", "T", "F", "S"][i], niz: settings.nizoralDays.includes(i), today: i === now.getDay() }));
+  const week = [...Array(7)].map((_, i) => ({ l: ["S", "M", "T", "W", "T", "F", "S"][i], niz: settings.nizoralDays.includes(i), today: i === viewDate.getDay() }));
 
   return (
     <>
@@ -267,6 +271,23 @@ function Today({ now, settings, today, toggleRoutine, toggleHabit, setToday, set
           <Ring pct={pct} />
         </div>
       </header>
+
+      {/* ===== DATE NAVIGATOR ===== */}
+      <div className="fu" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18, background: isToday ? C.surf : "rgba(63,115,144,0.08)", border: `1px solid ${isToday ? C.line : "rgba(63,115,144,0.28)"}`, borderRadius: 14, padding: "8px 10px" }}>
+        <button onClick={() => setViewDate(addDays(viewDate, -1))} aria-label="Previous day" style={{ width: 34, height: 34, borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.ink }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <div style={{ flex: 1, textAlign: "center", lineHeight: 1.1 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", color: isToday ? C.green : C.blue, textTransform: "uppercase" }}>{relLabel}</div>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, marginTop: 2 }}>{dateLabel}</div>
+        </div>
+        <button onClick={() => setViewDate(addDays(viewDate, 1))} aria-label="Next day" style={{ width: 34, height: 34, borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.ink }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+        </button>
+        {!isToday && (
+          <button onClick={() => setViewDate(new Date())} style={{ marginLeft: 2, padding: "6px 11px", borderRadius: 999, border: "none", background: C.green, color: "#fff", fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}>Today</button>
+        )}
+      </div>
 
       {/* ===== MORNING ===== */}
       <SectionTitle>Morning routine</SectionTitle>
@@ -292,8 +313,8 @@ function Today({ now, settings, today, toggleRoutine, toggleHabit, setToday, set
       <StretchCard data={STRETCH_AM} done={!!today.habits.stretchAM} onToggle={() => toggleHabit("stretchAM")} />
 
       {/* ===== TRAINING ===== */}
-      {/* today's session — checklist: tap the box to finish a move, or tick sets one at a time */}
-      <SectionTitle>Today's session</SectionTitle>
+      {/* session checklist — tap the box to finish a move, or tick sets one at a time */}
+      <SectionTitle>{isToday ? "Today's session" : `${viewDate.toLocaleDateString("en-US", { weekday: "long" })}'s session`}</SectionTitle>
       {sessionW ? (
         <div className="fu" style={{ background: C.surf, border: `1px solid ${sessionComplete ? "rgba(58,107,78,0.35)" : C.line}`, borderRadius: 18, padding: "15px 16px", marginBottom: 22 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
@@ -348,7 +369,7 @@ function Today({ now, settings, today, toggleRoutine, toggleHabit, setToday, set
       )}
 
       {/* abs detail */}
-      <SectionTitle>Abs — today</SectionTitle>
+      <SectionTitle>{isToday ? "Abs — today" : "Abs"}</SectionTitle>
       <div className="fu" style={{ background: absDone ? C.greenSoft : C.surf, border: `1px solid ${absDone ? "rgba(58,107,78,0.28)" : C.line}`, borderRadius: 18, padding: "15px 16px", marginBottom: 22 }}>
         <button onClick={() => toggleHabit("abs")} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 12 }}>
           <Check on={absDone} />
