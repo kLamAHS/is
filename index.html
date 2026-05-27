@@ -161,14 +161,16 @@ function App() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [days, setDays] = useState({});
   const [weights, setWeights] = useState([]);
+  const [calories, setCalories] = useState([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const s = await sget("cp:settings"); const d = await sget("cp:days"); const w = await sget("cp:weights");
+      const s = await sget("cp:settings"); const d = await sget("cp:days"); const w = await sget("cp:weights"); const c = await sget("cp:calories");
       if (s) try { const ps = JSON.parse(s); setSettings({ ...DEFAULT_SETTINGS, ...ps, schedule: { ...DEFAULT_SETTINGS.schedule, ...(ps.schedule || {}) }, enabled: { ...DEFAULT_SETTINGS.enabled, ...(ps.enabled || {}) }, supplies: { ...DEFAULT_SETTINGS.supplies, ...(ps.supplies || {}) } }); } catch (e) {}
       if (d) try { setDays(JSON.parse(d)); } catch (e) {}
       if (w) try { setWeights(JSON.parse(w)); } catch (e) {}
+      if (c) try { setCalories(JSON.parse(c)); } catch (e) {}
       setReady(true);
     })();
     const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t);
@@ -177,6 +179,7 @@ function App() {
   const saveSettings = useCallback((n) => { setSettings(n); sset("cp:settings", JSON.stringify(n)); }, []);
   const saveDays = useCallback((n) => { setDays(n); sset("cp:days", JSON.stringify(n)); }, []);
   const saveWeights = useCallback((n) => { setWeights(n); sset("cp:weights", JSON.stringify(n)); }, []);
+  const saveCalories = useCallback((n) => { setCalories(n); sset("cp:calories", JSON.stringify(n)); }, []);
 
   const tk = keyOf(viewDate);
   const today = days[tk] || { routine: {}, habits: {}, water: 0, workouts: [], sets: {} };
@@ -193,7 +196,7 @@ function App() {
   const workoutsThisWeek = useMemo(() => { let c = 0; const sun = addDays(now, -now.getDay()); for (let i = 0; i < 7; i++) if (days[keyOf(addDays(sun, i))]?.workouts?.length) c++; return c; }, [days, now]);
 
   if (!ready) return <div style={{ minHeight: "100vh", background: C.bg }} />;
-  const ctx = { now, viewDate, setViewDate, settings, saveSettings, days, saveDays, weights, saveWeights, today, setToday, toggleRoutine, toggleHabit, setWater, logWorkout, isNizoral, streak, workoutsThisWeek, dayComplete };
+  const ctx = { now, viewDate, setViewDate, settings, saveSettings, days, saveDays, weights, saveWeights, calories, saveCalories, today, setToday, toggleRoutine, toggleHabit, setWater, logWorkout, isNizoral, streak, workoutsThisWeek, dayComplete };
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'DM Sans',sans-serif" }}>
@@ -218,7 +221,17 @@ function App() {
 }
 
 // =========================== TODAY ===========================
-function Today({ now, viewDate, setViewDate, settings, today, toggleRoutine, toggleHabit, setToday, setWater, logWorkout, isNizoral, streak, workoutsThisWeek }) {
+function Today({ now, viewDate, setViewDate, settings, today, toggleRoutine, toggleHabit, setToday, setWater, logWorkout, isNizoral, streak, workoutsThisWeek, calories, saveCalories }) {
+  const [calInput, setCalInput] = useState("");
+  const viewedCal = calories.find((c) => c.date === keyOf(viewDate))?.kcal;
+  const logCal = () => {
+    const n = parseInt(calInput, 10);
+    if (!n || n < 0 || n > 20000) return;
+    const dk = keyOf(viewDate);
+    saveCalories([...calories.filter((c) => c.date !== dk), { date: dk, kcal: n }].sort((a, b) => a.date.localeCompare(b.date)));
+    setCalInput("");
+  };
+  const clearCal = () => { const dk = keyOf(viewDate); saveCalories(calories.filter((c) => c.date !== dk)); };
   const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
   const isToday = keyOf(viewDate) === keyOf(now);
   const dayDiff = dnum(viewDate) - dnum(now);
@@ -384,7 +397,20 @@ function Today({ now, viewDate, setViewDate, settings, today, toggleRoutine, tog
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>{HABITS.filter((h) => h.id === "salad" || h.id === "noSugar").map((h) => { const on = !!today.habits[h.id]; return (<button key={h.id} onClick={() => toggleHabit(h.id)} style={{ textAlign: "left", width: "100%", display: "flex", alignItems: "center", gap: 12, borderRadius: 15, padding: "12px 15px", cursor: "pointer", background: on ? C.greenSoft : C.surf, border: `1px solid ${on ? "rgba(58,107,78,0.28)" : C.line}` }}><Check on={on} /><span style={{ flex: 1 }}><span style={{ display: "block", fontSize: 14.5, fontWeight: 600, color: on ? "rgba(34,45,36,0.5)" : C.ink, textDecoration: on ? "line-through" : "none" }}>{h.label}</span>{h.sub && <span style={{ fontSize: 12, color: "rgba(34,45,36,0.45)" }}>{h.sub}</span>}</span></button>); })}</div>
 
       {/* water */}
-      <div style={{ background: C.surf, border: `1px solid ${C.line}`, borderRadius: 15, padding: "14px 16px", marginBottom: 22 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 11 }}><span style={{ fontSize: 14.5, fontWeight: 600, color: C.ink }}>Water</span><span style={{ fontSize: 13, fontWeight: 700, color: today.water >= WATER_GOAL ? C.blue : "rgba(34,45,36,0.5)" }}>{today.water} / {WATER_GOAL} cups</span></div><div style={{ display: "flex", gap: 6 }}>{[...Array(WATER_GOAL)].map((_, i) => <button key={i} onClick={() => setWater(i + 1 === today.water ? i : i + 1)} style={{ flex: 1, height: 30, borderRadius: 8, border: "none", cursor: "pointer", background: i < today.water ? C.blue : "rgba(63,115,144,0.12)", transition: ".2s" }} />)}</div></div>
+      <div style={{ background: C.surf, border: `1px solid ${C.line}`, borderRadius: 15, padding: "14px 16px", marginBottom: 10 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 11 }}><span style={{ fontSize: 14.5, fontWeight: 600, color: C.ink }}>Water</span><span style={{ fontSize: 13, fontWeight: 700, color: today.water >= WATER_GOAL ? C.blue : "rgba(34,45,36,0.5)" }}>{today.water} / {WATER_GOAL} cups</span></div><div style={{ display: "flex", gap: 6 }}>{[...Array(WATER_GOAL)].map((_, i) => <button key={i} onClick={() => setWater(i + 1 === today.water ? i : i + 1)} style={{ flex: 1, height: 30, borderRadius: 8, border: "none", cursor: "pointer", background: i < today.water ? C.blue : "rgba(63,115,144,0.12)", transition: ".2s" }} />)}</div></div>
+
+      {/* calories */}
+      <div style={{ background: C.surf, border: `1px solid ${C.line}`, borderRadius: 15, padding: "14px 16px", marginBottom: 22 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ fontSize: 14.5, fontWeight: 600, color: C.ink }}>Calories</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: viewedCal != null ? C.clay : "rgba(34,45,36,0.5)" }}>{viewedCal != null ? `${viewedCal} kcal` : "Not logged"}</span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={calInput} onChange={(e) => setCalInput(e.target.value)} inputMode="numeric" placeholder={viewedCal != null ? "Update kcal" : "kcal eaten"} style={{ flex: 1, padding: "11px 14px", borderRadius: 11, border: `1px solid ${C.line}`, background: C.bg, fontSize: 15, color: C.ink, outline: "none" }} />
+          <button onClick={logCal} style={{ padding: "0 18px", borderRadius: 11, border: "none", background: C.clay, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Log</button>
+        </div>
+        {viewedCal != null && <button onClick={clearCal} style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: "rgba(34,45,36,0.5)", background: "none", border: "none", padding: 0, cursor: "pointer" }}>Clear this day</button>}
+      </div>
 
       {/* ===== EVENING ===== */}
       <SectionTitle>Evening</SectionTitle>
@@ -476,7 +502,7 @@ function Train({ now, settings, today, logWorkout }) {
 }
 
 // =========================== PROGRESS ===========================
-function Progress({ now, settings, weights, saveWeights, days, streak, dayComplete }) {
+function Progress({ now, settings, weights, saveWeights, calories, days, streak, dayComplete }) {
   const [input, setInput] = useState("");
   const addWeight = () => { const lbs = parseFloat(input); if (!lbs || lbs < 50 || lbs > 600) return; const tk = keyOf(now); saveWeights([...weights.filter((w) => w.date !== tk), { date: tk, lbs }].sort((a, b) => a.date.localeCompare(b.date))); setInput(""); };
   const series = useMemo(() => [{ date: "start", lbs: settings.startWeight }, ...weights], [weights, settings.startWeight]);
@@ -487,6 +513,19 @@ function Progress({ now, settings, weights, saveWeights, days, streak, dayComple
   const W = 400, H = 130, pad = 8; const vals = series.map((s) => s.lbs); const min = Math.min(...vals) - 2, max = Math.max(...vals) + 2;
   const x = (i) => pad + (i / Math.max(1, series.length - 1)) * (W - pad * 2); const y = (v) => H - pad - ((v - min) / Math.max(1, max - min)) * (H - pad * 2);
   const path = series.map((s, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(s.lbs).toFixed(1)}`).join(" ");
+
+  // calorie chart — date-spaced x-axis so unlogged days show as proportional gaps; straight segments interpolate between entries
+  const calSorted = useMemo(() => [...calories].sort((a, b) => a.date.localeCompare(b.date)), [calories]);
+  const calDnums = useMemo(() => calSorted.map((c) => { const [yy, mm, dd] = c.date.split("-").map(Number); return dnum(new Date(yy, mm - 1, dd)); }), [calSorted]);
+  const calVals = calSorted.map((c) => c.kcal);
+  const calMin = calVals.length ? Math.max(0, Math.min(...calVals) - 200) : 0;
+  const calMax = calVals.length ? Math.max(...calVals) + 200 : 1;
+  const calSpan = Math.max(1, (calDnums[calDnums.length - 1] || 0) - (calDnums[0] || 0));
+  const calX = (i) => calSorted.length <= 1 ? W / 2 : pad + ((calDnums[i] - calDnums[0]) / calSpan) * (W - pad * 2);
+  const calY = (v) => H - pad - ((v - calMin) / Math.max(1, calMax - calMin)) * (H - pad * 2);
+  const calPath = calSorted.map((c, i) => `${i === 0 ? "M" : "L"}${calX(i).toFixed(1)},${calY(c.kcal).toFixed(1)}`).join(" ");
+  const calLatest = calSorted.length ? calSorted[calSorted.length - 1].kcal : null;
+  const calAvg = calVals.length ? Math.round(calVals.reduce((a, b) => a + b, 0) / calVals.length) : null;
   return (
     <>
       <header className="fu" style={{ paddingTop: 40, paddingBottom: 16 }}><h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 27, fontWeight: 600, color: C.ink }}>Progress</h1><p style={{ fontSize: 13, color: "rgba(34,45,36,0.55)", marginTop: 4 }}>The scale is one signal. Strength, energy, and showing up matter just as much.</p></header>
@@ -496,6 +535,18 @@ function Progress({ now, settings, weights, saveWeights, days, streak, dayComple
         <p style={{ fontSize: 11.5, color: "rgba(34,45,36,0.45)", marginBottom: 12 }}>Started at {settings.startWeight} lb. Weigh in weekly — daily bounces around.</p>
         <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}><path d={path} fill="none" stroke={C.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />{series.map((s, i) => <circle key={i} cx={x(i)} cy={y(s.lbs)} r={i === series.length - 1 ? 4 : 2.5} fill={i === series.length - 1 ? C.clay : C.green} />)}</svg>
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}><input value={input} onChange={(e) => setInput(e.target.value)} inputMode="decimal" placeholder="Today's weight" style={{ flex: 1, padding: "11px 14px", borderRadius: 11, border: `1px solid ${C.line}`, background: C.bg, fontSize: 15, color: C.ink, outline: "none" }} /><button onClick={addWeight} style={{ padding: "0 18px", borderRadius: 11, border: "none", background: C.green, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Log</button></div>
+      </div>
+      <div className="fu" style={{ background: C.surf, border: `1px solid ${C.line}`, borderRadius: 18, padding: "18px 16px", marginBottom: 18, animationDelay: "75ms" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}><h3 style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>Calories</h3><span style={{ fontSize: 13, fontWeight: 700, color: calLatest != null ? C.clay : "rgba(34,45,36,0.5)" }}>{calLatest != null ? `${calLatest} kcal · last log${calAvg != null && calSorted.length > 1 ? `  ·  avg ${calAvg}` : ""}` : "No logs yet"}</span></div>
+        <p style={{ fontSize: 11.5, color: "rgba(34,45,36,0.45)", marginBottom: 12 }}>Days you skip get drawn as straight-line interpolation between adjacent logs — gaps show real time elapsed.</p>
+        {calSorted.length === 0 ? (
+          <p style={{ fontSize: 12.5, color: "rgba(34,45,36,0.45)", padding: "26px 0", textAlign: "center", lineHeight: 1.5 }}>Log a value from the Today tab and it'll appear here.</p>
+        ) : (
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
+            <path d={calPath} fill="none" stroke={C.clay} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {calSorted.map((c, i) => <circle key={c.date} cx={calX(i)} cy={calY(c.kcal)} r={i === calSorted.length - 1 ? 4 : 2.8} fill={i === calSorted.length - 1 ? C.ink : C.clay} />)}
+          </svg>
+        )}
       </div>
       <div className="fu" style={{ background: C.surf, border: `1px solid ${C.line}`, borderRadius: 18, padding: "18px 16px", animationDelay: "100ms" }}>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: C.ink, marginBottom: 12 }}>Recent training</h3>
