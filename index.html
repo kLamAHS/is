@@ -538,20 +538,63 @@ function col(x,z){
  const w1z=z+(vnoise(x*0.018+9.4,z*0.018+703.1)-0.5)*46;
  const w2x=w1x+(vnoise(w1x*0.07+91.3,w1z*0.07+12.7)-0.5)*8;
  const w2z=w1z+(vnoise(w1x*0.07+55.1,w1z*0.07+33.9)-0.5)*8;
- let isl=null,mask=0;
+ let isl=null,mask=0,reef=0;
  for(const s of W.isles){
-  const dx=w2x-s.cx,dz=w2z-s.cz,d=Math.sqrt(dx*dx+dz*dz);
-  if(d>s.r*1.8)continue;
-  const ang=Math.atan2(dz,dx);
-  const rr=s.r*(0.74+0.5*vnoise(Math.cos(ang)*1.5+s.id*13.7,Math.sin(ang)*1.5+s.id*5.1));
-  let t=clamp(1-d/rr,0,1);
-  if(s.type==='tropical'&&s.atoll)t=clamp(t*(1-t)*3.6,0,1); /* ring mask: lagoon centre */
-  const m=t*t*(3-2*t);
+  const ddx=w2x-s.cx,ddz=w2z-s.cz;
+  const d0=Math.sqrt(ddx*ddx+ddz*ddz);
+  if(d0>s.r*2.6)continue;
+  /* lobed landmass: each lobe is its own wandering coastline; the union shapes the isle */
+  let mt=0;
+  for(const lb of (s.lobes||[{ox:0,oz:0,r:s.r}])){
+   const dx=ddx-lb.ox,dz=ddz-lb.oz;
+   const d=Math.sqrt(dx*dx+dz*dz);
+   if(d>lb.r*1.9)continue;
+   const ang=Math.atan2(dz,dx);
+   const rr=lb.r*(0.72+0.52*vnoise(Math.cos(ang)*1.5+s.id*13.7+lb.ox*0.31,Math.sin(ang)*1.5+s.id*5.1+lb.oz*0.31));
+   let t=clamp(1-d/rr,0,1);
+   if(t>mt)mt=t;
+  }
+  if(s.cliff&&mt>0){ /* one quarter of the coast rears up sheer */
+   let da=Math.atan2(ddz,ddx)-s.cliffA;
+   while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+   if(Math.abs(da)<s.cliffW)mt=clamp(mt*2.1,0,1);
+  }
+  if(s.type==='tropical'&&s.atoll)mt=clamp(mt*(1-mt)*3.6,0,1); /* ring mask: lagoon centre */
+  const m=mt*mt*(3-2*mt);
   if(m>mask){mask=m;isl=s;}
+  /* fringing reefs: broken turquoise rings off tropical shores */
+  if(s.type==='tropical'&&!s.atoll){
+   const rb=clamp(1-Math.abs(d0-s.r*1.3)/(s.r*0.15),0,1);
+   if(rb>0){
+    const gap=vnoise(Math.atan2(ddz,ddx)*2.2+s.id*7.7,d0*0.06+s.id*3.1);
+    if(gap>0.45)reef=Math.max(reef,rb*(gap-0.45)/0.55);
+   }
+  }
  }
- /* shelf seabed rises toward land */
- const seabed=SEA-7.2+(vnoise(x*0.045+11.3,z*0.045+71.9)-0.5)*4+mask*4.8;
+ /* shelf seabed rises toward land; reefs climb almost to the light */
+ let seabed=SEA-7.2+(vnoise(x*0.045+11.3,z*0.045+71.9)-0.5)*4+mask*4.8;
+ if(reef>0)seabed=Math.max(seabed,lerp(seabed,reef>0.85?SEA+0.4:SEA-1.1,reef));
  let e=lerp(seabed,SEA+0.9,clamp(mask*3.3,0,1));
+ /* lone sea stacks haunt the rocky coasts */
+ if(mask<0.03){
+  const gx=Math.floor(x/10),gz=Math.floor(z/10);
+  if(hash2(gx*31+7,gz*17+3)<0.05){
+   const ox=gx*10+2+hash2(gx*3+1,gz*5+2)*6,oz=gz*10+2+hash2(gx*7+4,gz*11+6)*6;
+   const dd=Math.hypot(x-ox,z-oz);
+   if(dd<2.4){
+    let band=false;
+    for(const s of W.isles){
+     if(s.type!=='rock'&&s.type!=='mining')continue;
+     const d=Math.hypot(ox-s.cx,oz-s.cz);
+     if(d>s.r*1.25&&d<s.r*2.1){band=true;break;}
+    }
+    if(band){
+     const sh=2+hash2(gx*13,gz*19)*5;
+     e=Math.max(e,SEA+0.5+sh*(1-dd/2.4)*(1-dd/2.4));
+    }
+   }
+  }
+ }
  let cv=0;
  if(isl&&mask>0.03){
   /* MID: landform conditioned on the coarse mask, shaped per island character */
@@ -631,9 +674,11 @@ function genBlock(x,y,z){
  if(y<=h){
   const isl=c.isl;
   const sl=colSlope(x,z);
-  const rocky=sl>=3||(isl&&((isl.type==='mining'&&h>SEA+5)||(isl.type==='rock'&&h>SEA+2)));
+  const rocky=sl>=3||(!isl&&h>SEA)||(isl&&((isl.type==='mining'&&h>SEA+5)||(isl.type==='rock'&&h>SEA+2)));
   if(y===h){
    if(h<=SEA+1)return 3;
+   /* beaches run wider where the land lies low and dry */
+   if(!rocky&&h<=SEA+3&&c.mo<0.5&&vnoise(x*0.09+577.3,z*0.09+211.7)>0.52)return 3;
    return rocky?4:1;
   }
   if(y>h-3){
@@ -650,8 +695,14 @@ function genBlock(x,y,z){
   }
   return 4;
  }
- /* above ground: trees */
- if(y>colTop(x,z))return 0;
+ /* above ground: bushes, boulders, trees */
+ if(y>colTop(x,z)+1)return 0;
+ if(y===c.h+1&&c.h>SEA+1&&c.isl&&!W.flat.has(x+'|'+z)&&c.cv<0.4&&colSlope(x,z)<3){
+  const r2=hash2(x*7+3,z*7+9);
+  if(c.isl.type==='mining'||c.isl.type==='rock'){
+   if(r2<0.008)return 4; /* scattered boulders */
+  }else if(r2<0.02&&c.mo>0.45)return 6; /* low bushes in the damp */
+ }
  for(let ax=x-2;ax<=x+2;ax++)for(let az=z-2;az<=z+2;az++){
   const tt=treeAt(ax,az);if(!tt)continue;
   const th=col(ax,az).h;
@@ -701,26 +752,105 @@ function markDirty(x,y,z){
 
 /* ---------------- villages & ports ---------------- */
 function vset(x,y,z,id){VB.set(K(x,y,z),id);}
+/* level ground with a feathered skirt so plazas melt into the hillside
+   instead of cutting sheer walls out of it */
 function flatten(cx,cz,r,h){
- for(let x=cx-r;x<=cx+r;x++)for(let z=cz-r;z<=cz+r;z++){
-  W.flat.add(x+'|'+z);
-  for(let y=h+1;y<h+8;y++)vset(x,y,z,0);
+ const F=4; /* feather width */
+ for(let x=cx-r-F;x<=cx+r+F;x++)for(let z=cz-r-F;z<=cz+r+F;z++){
+  const d=Math.max(Math.abs(x-cx),Math.abs(z-cz));
   const gh=getH(x,z);
-  if(gh<h)for(let y=gh+1;y<=h;y++)vset(x,y,z,y===h?(h<=SEA+1?3:1):2);
-  if(gh>h)for(let y=h+1;y<=gh;y++)vset(x,y,z,0);
+  let th;
+  if(d<=r){th=h;W.flat.add(x+'|'+z);}
+  else{
+   const f=clamp((d-r)/F,0,1);
+   th=Math.round(lerp(h,gh,f*f*(3-2*f)));
+   if(th===gh)continue;
+   W.flat.add(x+'|'+z);
+  }
+  for(let y=th+1;y<th+8;y++)vset(x,y,z,0);
+  if(gh<th)for(let y=gh+1;y<=th;y++)vset(x,y,z,y===th?(th<=SEA+1?3:1):2);
+  if(gh>th)for(let y=th+1;y<=gh;y++)vset(x,y,z,0);
  }
 }
-function buildHut(x,z,h,rng){
- const w=3+((rng()*2)|0);
- for(let dx=0;dx<w;dx++)for(let dz=0;dz<w;dz++){
-  for(let dy=1;dy<=3;dy++){
-   const edge=dx===0||dz===0||dx===w-1||dz===w-1;
-   if(edge&&dy<=2)vset(x+dx,h+dy,z+dz,7);
-   else if(!edge&&dy<=2)vset(x+dx,h+dy,z+dz,0);
-  }
-  vset(x+dx,h+3,z+dz,5);
+/* top solid block including village blocks (terrain getH ignores VB) */
+function vTopY(x,z){
+ const h=getH(x,z);
+ for(let y=Math.min(WH-1,h+9);y>0;y--)if(solid(getBlock(x,y,z)))return y;
+ return h;
+}
+/* a sandy footpath worn between two points */
+function wearPath(x0,z0,x1,z1){
+ const d=Math.hypot(x1-x0,z1-z0),steps=Math.ceil(d);
+ for(let i=0;i<=steps;i++){
+  const x=Math.round(x0+(x1-x0)*i/steps),z=Math.round(z0+(z1-z0)*i/steps);
+  const y=vTopY(x,z);
+  const id=getBlock(x,y,z);
+  if(id===1||id===2||id===3){vset(x,y,z,3);W.flat.add(x+'|'+z);}
  }
- vset(x+1,h+1,z,0);vset(x+1,h+2,z,0); /* doorway */
+}
+/* cottages: log frames, plank walls, windows, a door facing the plaza,
+   and a stepped gable roof with eaves */
+function buildHut(cx,cz,h,rng,tx,tz){
+ const hx=1+((rng()*2)|0),hz=1+((rng()*2)|0); /* half-extents: 3-5 across */
+ const WALL=3;
+ for(let ax=-hx;ax<=hx;ax++)for(let az=-hz;az<=hz;az++){
+  vset(cx+ax,h,cz+az,7); /* plank floor */
+  W.flat.add((cx+ax)+'|'+(cz+az));
+  for(let y=1;y<=WALL;y++)vset(cx+ax,h+y,cz+az,0);
+ }
+ for(let ax=-hx;ax<=hx;ax++)for(let az=-hz;az<=hz;az++){
+  if(Math.abs(ax)!==hx&&Math.abs(az)!==hz)continue;
+  const corner=Math.abs(ax)===hx&&Math.abs(az)===hz;
+  for(let y=1;y<=WALL;y++)vset(cx+ax,h+y,cz+az,corner?5:7);
+ }
+ /* windows at eye height on the long walls */
+ if(hx>=2){vset(cx,h+2,cz-hz,0);vset(cx,h+2,cz+hz,0);}
+ if(hz>=2){vset(cx-hx,h+2,cz,0);vset(cx+hx,h+2,cz,0);}
+ /* door toward the plaza, log lintel above */
+ const ddx=tx-cx,ddz=tz-cz;
+ let dxs=0,dzs=0;
+ if(Math.abs(ddx)>Math.abs(ddz))dxs=Math.sign(ddx)||1;else dzs=Math.sign(ddz)||1;
+ const dwx=cx+dxs*hx,dwz=cz+dzs*hz;
+ vset(dwx,h+1,dwz,0);vset(dwx,h+2,dwz,0);vset(dwx,h+3,dwz,5);
+ /* gable roof along the longer axis, one-block eaves */
+ const alongX=hx>=hz;
+ const span=alongX?hz:hx,len=alongX?hx:hz;
+ for(let st=0;st<=span;st++){
+  const y=h+WALL+1+st;
+  for(let u=-len-1;u<=len+1;u++)for(let v=-(span-st);v<=span-st;v++){
+   const ax=alongX?u:v,az=alongX?v:u;
+   if(Math.abs(v)===span-st||st===span||Math.abs(u)===len)vset(cx+ax,y,cz+az,7);
+   else vset(cx+ax,y,cz+az,0);
+  }
+ }
+ /* a lantern by some doors */
+ if(rng()<0.5)vset(dwx+(dzs?1:0),h+2,dwz+(dxs?1:0),32);
+}
+/* a watchtower long since fallen to gulls and weather */
+function buildTower(tx,tz,h){
+ const top=6+((hash2(tx,tz)*3)|0);
+ const fall=hash2(tx*3+1,tz*7+5)*Math.PI*2; /* the quarter that collapsed */
+ for(let y=1;y<=top;y++)for(let ax=-2;ax<=2;ax++)for(let az=-2;az<=2;az++){
+  const rim=Math.max(Math.abs(ax),Math.abs(az))===2;
+  if(!rim){vset(tx+ax,h+y,tz+az,0);continue;}
+  if(Math.abs(ax)===2&&Math.abs(az)===2)continue; /* cut corners: rounder shell */
+  let da=Math.atan2(az,ax)-fall;
+  while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+  const lim=Math.abs(da)<0.65?Math.round(top*0.45):top;
+  const gone=y>lim||(y===lim&&hash2(tx+ax*3,tz+az*5)<0.5)||
+   (y>2&&hash2(tx*7+ax*3+y*13,tz*5+az*11+y*7)<0.07)||
+   (y===top&&((ax+az+tx+tz)&1)); /* battlement gaps */
+  if(!gone)vset(tx+ax,h+y,tz+az,4);
+ }
+ vset(tx+2,h+1,tz,0);vset(tx+2,h+2,tz,0); /* doorway */
+ for(let ax=-1;ax<=1;ax++)for(let az=-1;az<=1;az++)vset(tx+ax,h,tz+az,4); /* worn floor */
+ for(let i=0;i<9;i++){ /* tumbled rubble */
+  const a=hash2(tx+i*3,tz*5+i)*Math.PI*2,d=3+hash2(tx*2+i,tz+i*7)*3;
+  const rx=Math.round(tx+Math.cos(a)*d),rz=Math.round(tz+Math.sin(a)*d);
+  const rh=getH(rx,rz);
+  if(rh>SEA&&hash2(rx*3,rz*5)<0.8)vset(rx,rh+1,rz,4);
+ }
+ for(let ax=-2;ax<=2;ax++)for(let az=-2;az<=2;az++)W.flat.add((tx+ax)+'|'+(tz+az));
 }
 /* scan angles for a dock corridor that is genuinely open water */
 function scanDock(isl,rng){
@@ -754,28 +884,64 @@ function buildVillage(isl,rng){
  const {dx,dz,i0}=sc;
  const sx=Math.round(isl.cx+dx*(i0-5)),sz=Math.round(isl.cz+dz*(i0-5));
  const h=Math.max(SEA+1,getH(sx,sz));
- flatten(sx,sz,8,h);
+ flatten(sx,sz,5,h);
  /* stall */
  vset(sx,h+1,sz,14);vset(sx,h+2,sz,14);
  if(isl.fac)vset(sx,h+3,sz,33); /* faction colours over the stall */
  isl.stall={x:sx,y:h+1,z:sz};
- /* huts on the flattened plaza corners */
- const corners=[[-4,-4],[4,-4],[-4,4],[4,4]];
- const n=2+((rng()*2)|0);
- for(let i=corners.length-1;i>0;i--){const j=(rng()*(i+1))|0;const t=corners[i];corners[i]=corners[j];corners[j]=t;}
- for(let i=0;i<n;i++)buildHut(sx+corners[i][0]-1,sz+corners[i][1]-1,h,rng);
- /* dock: planks out over water along the validated corridor */
+ /* crates and barrels beside the stall */
+ vset(sx+2,h+1,sz-2,5);vset(sx+2,h+1,sz-1,7);vset(sx+2,h+2,sz-2,7);
+ /* an old well */
+ const wlx=sx-3,wlz=sz+3;
+ for(const [ax,az] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]])vset(wlx+ax,h+1,wlz+az,4);
+ vset(wlx,h,wlz,0);vset(wlx,h-1,wlz,0);
+ vset(wlx+1,h+2,wlz,5);vset(wlx-1,h+2,wlz,5);
+ vset(wlx-1,h+3,wlz,7);vset(wlx,h+3,wlz,7);vset(wlx+1,h+3,wlz,7);
+ /* cottages ringed about the plaza, doors facing in, footpaths worn between */
+ const dockA=Math.atan2(dz,dx);
+ const n=3+((rng()*2)|0);
+ const base=rng()*Math.PI*2;
+ let built=0;
+ for(let i=0;i<8&&built<n;i++){
+  const a=base+i*(Math.PI*2/8);
+  let da=a-dockA;
+  while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+  if(Math.abs(da)<0.6)continue; /* keep the way to the dock clear */
+  const hxp=Math.round(sx+Math.cos(a)*(9+rng()*2)),hzp=Math.round(sz+Math.sin(a)*(9+rng()*2));
+  const hh=getH(hxp,hzp);
+  if(hh<=SEA)continue;
+  const fh=Math.max(SEA+1,hh);
+  flatten(hxp,hzp,3,fh);
+  buildHut(hxp,hzp,fh,rng,sx,sz);
+  wearPath(sx+Math.round(Math.cos(a)*3),sz+Math.round(Math.sin(a)*3),
+   hxp-Math.round(Math.cos(a)*3),hzp-Math.round(Math.sin(a)*3));
+  built++;
+ }
+ /* dock: planks on log pilings, rails and a lantern at the pier head */
  let wx=Math.round(isl.cx+dx*i0),wz=Math.round(isl.cz+dz*i0);
+ const along=Math.abs(dx)>Math.abs(dz);
+ let seg=0;
  for(let i=i0;i<=i0+6;i++){
   const ddx=Math.round(isl.cx+dx*i),ddz=Math.round(isl.cz+dz*i);
   if(getH(ddx,ddz)>SEA)break;
   vset(ddx,SEA+1,ddz,7);
-  if(Math.abs(dx)>Math.abs(dz))vset(ddx,SEA+1,ddz+1,7);else vset(ddx+1,SEA+1,ddz,7);
+  const ox=along?0:1,oz=along?1:0;
+  vset(ddx+ox,SEA+1,ddz+oz,7);
+  if((seg++%3)===1){ /* pilings below, a low post beside */
+   vset(ddx,SEA,ddz,5);vset(ddx,SEA-1,ddz,5);
+   vset(ddx+ox,SEA,ddz+oz,5);
+   vset(ddx-ox,SEA+2,ddz-oz,5);
+  }
   wx=ddx;wz=ddz;
  }
+ vset(wx,SEA+2,wz,32); /* pier-head lantern */
+ if(isl.fac){ /* the port flies its colours at the dock root */
+  const rx=Math.round(isl.cx+dx*i0)-(along?0:1),rz=Math.round(isl.cz+dz*i0)-(along?1:0);
+  vset(rx,SEA+1,rz,5);vset(rx,SEA+2,rz,5);vset(rx,SEA+3,rz,33);
+ }
+ wearPath(sx,sz,Math.round(isl.cx+dx*(i0-1)),Math.round(isl.cz+dz*(i0-1)));
  isl.dock={x:wx,z:wz,dx:Math.sign(Math.round(dx*2))||1,dz:Math.sign(Math.round(dz*2))};
  /* berth: a validated open-water rectangle beside the dock end for the ship */
- const along=Math.abs(dx)>Math.abs(dz);
  const yawSnap=along?(dx>0?0:2):(dz>0?3:1);
  const px=-dz,pz=dx; /* perpendicular */
  isl.berth=null;
@@ -898,6 +1064,21 @@ function genWorld(seedStr){
   tries.push(isl);W.isles.push(isl);
  }
  for(const isl of W.isles)if(isl.type==='tropical')isl.atoll=hash2(isl.id*77,3)<0.5;
+ /* island character: extra lobes break the circle; some coasts rise as cliffs */
+ for(const isl of W.isles){
+  const lb=[{ox:0,oz:0,r:isl.r}];
+  if(!isl.atoll){
+   const n=isl.r>15?1+((rng()*2.2)|0):(rng()<0.35?1:0);
+   for(let i=0;i<n;i++){
+    const a=rng()*Math.PI*2,d=isl.r*(0.5+rng()*0.5);
+    lb.push({ox:Math.cos(a)*d,oz:Math.sin(a)*d,r:isl.r*(0.32+rng()*0.42)});
+   }
+  }
+  isl.lobes=lb;
+  isl.cliff=rng()<0.45&&isl.type!=='farm';
+  isl.cliffA=rng()*Math.PI*2;
+  isl.cliffW=0.5+rng()*0.9;
+ }
  /* assign 4 faction capitals to the 4 largest port-able isles */
  const sorted=W.isles.filter(i=>i.type!=='rock').sort((a,b)=>b.r-a.r);
  FKEYS.forEach((f,i)=>{if(sorted[i]){sorted[i].fac=f;if(i===0)sorted[i].type='capital';}});
@@ -948,20 +1129,16 @@ function genWorld(seedStr){
  for(const isl of wild){
   if(towers>=2)break;
   if(hash2(isl.id*13,5)<0.4)continue;
-  for(let t=0;t<10;t++){
+  for(let t=0;t<12;t++){
    const a=rng()*Math.PI*2,d=rng()*isl.r*0.45;
    const tx=Math.round(isl.cx+Math.cos(a)*d),tz=Math.round(isl.cz+Math.sin(a)*d);
    const h=getH(tx,tz);
-   if(h>SEA+1){
-    for(let y=1;y<=5;y++)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
-     if(dx===0&&dz===0)continue;
-     if(Math.abs(dx)+Math.abs(dz)===2&&y>3)continue;
-     if(y===5&&hash2(tx+dx+y,tz+dz)<0.45)continue;
-     vset(tx+dx,h+y,tz+dz,4);
-    }
-    vset(tx+1,h+1,tz,0);vset(tx+1,h+2,tz,0); /* doorway */
-    isl.tower={x:tx,z:tz};towers++;break;
-   }
+   if(h<=SEA+1||colSlope(tx,tz)>=3)continue;
+   let even=true; /* needs reasonably level ground so it doesn't sit half-buried */
+   for(const [ax,az] of [[3,0],[-3,0],[0,3],[0,-3]])if(Math.abs(getH(tx+ax,tz+az)-h)>3)even=false;
+   if(!even)continue;
+   buildTower(tx,tz,h);
+   isl.tower={x:tx,z:tz};towers++;break;
   }
  }
 }
@@ -1822,7 +1999,13 @@ function sailTick(dt,turn,thr){
  const s=G.ship;
  s.thr=clamp(s.thr+thr*dt*1.6,-0.35,1);
  if(thr===0)s.thr*=Math.pow(0.6,dt);
+ const oldYaw=s.yaw;
  s.yaw+=turn*dt*(s.turn||1.1)*(0.4+0.6*Math.min(1,Math.abs(s.spd)/3));
+ /* don't let the bow swing through a headland */
+ if(turn!==0&&shipGrounded(s,s.x,s.z)){
+  const newYaw=s.yaw;s.yaw=oldYaw;
+  if(shipGrounded(s,s.x,s.z))s.yaw=newYaw; /* already wedged: let the unstick below handle it */
+ }
  const heavy=1-clamp(cargoUsed()/(cargoCap()*2),0,0.45);
  const target=s.thr*s.spdMax*heavy*windMul(s.yaw);
  s.spd=lerp(s.spd,target,clamp(dt*0.8,0,1));
@@ -1847,11 +2030,45 @@ function sailTick(dt,turn,thr){
  const c=Math.cos(s.yaw),sn=Math.sin(s.yaw);
  const nx=s.x+c*s.spd*dt, nz=s.z-sn*s.spd*dt;
  s.scrapeT=Math.max(0,(s.scrapeT||0)-dt);
- /* block entering land from clear water; if already wedged (turned into shore), allow sliding free */
- if(!shipGrounded(s,s.x,s.z)&&shipGrounded(s,nx,nz)){
-  if(Math.abs(s.spd)>3){s.hp-=Math.abs(s.spd)*0.4;AU.hit();flashHurt();if(s.scrapeT<=0){toast('Hull scrapes the shallows!',true);s.scrapeT=1.2;}}
+ /* solid coasts: resolve per axis so she slides along the shore, never through it */
+ if(shipGrounded(s,s.x,s.z)){
+  /* beached somehow (old save, rebuilt hull): shove her back to open water */
+  let freed=false;
+  for(let rr=1;rr<=7&&!freed;rr++)for(let aa=0;aa<8&&!freed;aa++){
+   const ang=aa*Math.PI/4;
+   const ux=s.x+Math.cos(ang)*rr,uz=s.z+Math.sin(ang)*rr;
+   if(!shipGrounded(s,ux,uz)){s.x=ux;s.z=uz;freed=true;}
+  }
+  if(!freed){ /* deep inland: march her out away from the island's heart */
+   const isl2=islandAt(Math.round(s.x),Math.round(s.z));
+   const ang=isl2?Math.atan2(s.z-isl2.cz,s.x-isl2.cx):Math.random()*Math.PI*2;
+   for(let rr=2;rr<=90&&!freed;rr+=2){
+    const ux=s.x+Math.cos(ang)*rr,uz=s.z+Math.sin(ang)*rr;
+    if(ux<6||uz<6||ux>WORLD-6||uz>WORLD-6)break;
+    if(!shipGrounded(s,ux,uz)){s.x=ux;s.z=uz;freed=true;}
+   }
+   if(!freed){const home=W.isles.find(i=>i.fac===G.fac)||W.isles[0];const b=home.berth;if(b){s.x=b.ax;s.z=b.az;}}
+  }
   s.spd=0;
- }else{s.x=nx;s.z=nz;}
+ }else if(!shipGrounded(s,nx,nz)){
+  s.x=nx;s.z=nz;
+ }else{
+  const slideX=!shipGrounded(s,nx,s.z);
+  const slideZ=!slideX&&!shipGrounded(s,s.x,nz);
+  if(slideX)s.x=nx;
+  else if(slideZ)s.z=nz;
+  if(slideX||slideZ){
+   s.spd*=Math.pow(0.25,dt); /* dragging her keel */
+   if(s.scrapeT<=0){toast('Keel scrapes — ease her off the shallows.',true);s.scrapeT=1.6;}
+  }else{
+   if(Math.abs(s.spd)>3&&s.scrapeT<=0){
+    s.hp-=Math.abs(s.spd)*0.5;AU.hit();flashHurt();
+    toast('She strikes the shore!',true);s.scrapeT=1.6;
+    if(s.hp<=0){sinkPlayer();return;}
+   }
+   s.spd=0;
+  }
+ }
  s.bob=waveH(s.x,s.z)*shoalDamp(s.x,s.z)*0.85+Math.sin(G.time*2.7)*0.02;
  /* wake */
  s.wakeT=(s.wakeT||0)-dt;
@@ -2488,7 +2705,7 @@ function tickVillagers(dt){
     v.yaw=Math.atan2(mx,mz);
    }
   }
-  const gy=getH(Math.round(v.x),Math.round(v.z))+1;
+  const gy=vTopY(Math.round(v.x),Math.round(v.z))+1;
   const wob=moving?Math.abs(Math.sin(G.time*9))*0.06:0;
   setPerson(v.p,v.x,gy+wob,v.z,v.yaw);
  }
@@ -3478,7 +3695,7 @@ function objectiveText(){
  const tut=QLINES.tut;
  const st=G.quests.tut|0;
  if(st<tut.steps.length)return 'First Tides: '+tut.steps[st].d;
- if(G.course)return 'Course set — '+Math.round(Math.hypot(G.course.x-(G.ship.sailing?G.ship.x:G.ship.ax),G.course.z-(G.ship.sailing?G.ship.z:G.ship.az)))+' away';
+ if(G.course)return 'Course set — '+Math.round(G.course.path?pathLen(G.course.path):Math.hypot(G.course.x-(G.ship.sailing?G.ship.x:G.ship.ax),G.course.z-(G.ship.sailing?G.ship.z:G.ship.az)))+' by sea';
  return '';
 }
 
@@ -4838,18 +5055,234 @@ function miniTick(dt,force){
  c.strokeText('N',ctr-3,12);c.fillText('N',ctr-3,12);
 }
 
+/* ================= COURSE PLOTTING & ROUTING ================= */
+function waterOK(x,z){return getH(Math.round(x),Math.round(z))<=SEA-1;}
+function losWater(ax,az,bx,bz){
+ const d=Math.hypot(bx-ax,bz-az);
+ if(d<0.01)return true;
+ const steps=Math.ceil(d/2);
+ const px=-(bz-az)/d,pz=(bx-ax)/d; /* hull margin either side of the line */
+ for(let i=0;i<=steps;i++){
+  const x=ax+(bx-ax)*i/steps,z=az+(bz-az)*i/steps;
+  if(!waterOK(x,z)||!waterOK(x+px*2,z+pz*2)||!waterOK(x-px*2,z-pz*2))return false;
+ }
+ return true;
+}
+/* A* over a coarse water grid, then pull the line tight with water line-of-sight */
+function routeCourse(x0,z0,x1,z1){
+ const ST=4,N=Math.ceil(WORLD/ST);
+ const cell=new Int8Array(N*N); /* 0 unknown, 1 open, 2 land */
+ const open=(gx,gz)=>{
+  if(gx<0||gz<0||gx>=N||gz>=N)return false;
+  const i=gx*N+gz;
+  if(cell[i])return cell[i]===1;
+  /* the whole cell footprint must be water, so no islet hides between samples */
+  let ok=true;
+  const bx=gx*ST,bz=gz*ST;
+  for(let ax=0;ax<ST&&ok;ax++)for(let az=0;az<ST&&ok;az++)
+   if(getH(bx+ax,bz+az)>SEA-1)ok=false;
+  cell[i]=ok?1:2;
+  return ok;
+ };
+ const snap=(gx,gz)=>{
+  if(open(gx,gz))return [gx,gz];
+  for(let r=1;r<=8;r++)for(let a=-r;a<=r;a++)
+   for(const [ux,uz] of [[gx+a,gz-r],[gx+a,gz+r],[gx-r,gz+a],[gx+r,gz+a]])
+    if(open(ux,uz))return [ux,uz];
+  return null;
+ };
+ const s0=snap(Math.floor(x0/ST),Math.floor(z0/ST));
+ const s1=snap(Math.floor(x1/ST),Math.floor(z1/ST));
+ if(!s0||!s1)return null;
+ const gsc=new Float32Array(N*N).fill(Infinity);
+ const came=new Int32Array(N*N).fill(-1);
+ const closed=new Uint8Array(N*N);
+ const heap=[];
+ const hpush=(f,i)=>{heap.push([f,i]);let k=heap.length-1;
+  while(k>0){const p=(k-1)>>1;if(heap[p][0]<=heap[k][0])break;const t=heap[p];heap[p]=heap[k];heap[k]=t;k=p;}};
+ const hpop=()=>{const top=heap[0],last=heap.pop();
+  if(heap.length){heap[0]=last;let k=0;
+   for(;;){const l=k*2+1,r=l+1;let m=k;
+    if(l<heap.length&&heap[l][0]<heap[m][0])m=l;
+    if(r<heap.length&&heap[r][0]<heap[m][0])m=r;
+    if(m===k)break;const t=heap[m];heap[m]=heap[k];heap[k]=t;k=m;}}
+  return top;};
+ const id0=s0[0]*N+s0[1],id1=s1[0]*N+s1[1];
+ const heur=(gx,gz)=>{const dx=Math.abs(gx-s1[0]),dz=Math.abs(gz-s1[1]);return dx+dz-0.5858*Math.min(dx,dz);};
+ gsc[id0]=0;hpush(heur(s0[0],s0[1]),id0);
+ const DIRS=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
+ let found=false,guard=0;
+ while(heap.length&&guard++<26000){
+  const cur=hpop()[1];
+  if(closed[cur])continue;
+  closed[cur]=1;
+  if(cur===id1){found=true;break;}
+  const cx2=(cur/N)|0,cz2=cur%N;
+  for(const [ux,uz,w2] of DIRS){
+   const nx2=cx2+ux,nz2=cz2+uz;
+   if(!open(nx2,nz2))continue;
+   if(ux&&uz&&(!open(cx2+ux,cz2)||!open(cx2,cz2+uz)))continue; /* no cutting corners over land */
+   const ni=nx2*N+nz2;
+   if(closed[ni])continue;
+   const ng=gsc[cur]+w2;
+   if(ng<gsc[ni]){gsc[ni]=ng;came[ni]=cur;hpush(ng+heur(nx2,nz2),ni);}
+  }
+ }
+ if(!found)return null;
+ const pts=[];
+ for(let i=id1;i!==-1;i=came[i])pts.push([((i/N)|0)*ST+ST/2,(i%N)*ST+ST/2]);
+ pts.reverse();
+ pts[0]=[x0,z0];
+ if(waterOK(x1,z1))pts.push([x1,z1]);
+ /* string-pull: skip to the furthest waypoint with clear water between */
+ const out=[pts[0]];
+ let i2=0;
+ while(i2<pts.length-1){
+  let j=pts.length-1;
+  for(;j>i2+1;j--)if(losWater(pts[i2][0],pts[i2][1],pts[j][0],pts[j][1]))break;
+  out.push(pts[j]);i2=j;
+ }
+ return out;
+}
+function pathLen(path){
+ let l=0;
+ for(let i=1;i<path.length;i++)l+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+ return l;
+}
+function setCourse(x,z){
+ let tx=x,tz=z;
+ if(!waterOK(tx,tz)){ /* clicked ashore: aim for the nearest water */
+  let snapped=false;
+  for(let r=2;r<=14&&!snapped;r+=2)for(let a=0;a<12&&!snapped;a++){
+   const ang=a*Math.PI/6;
+   const ux=Math.round(x+Math.cos(ang)*r),uz=Math.round(z+Math.sin(ang)*r);
+   if(waterOK(ux,uz)){tx=ux;tz=uz;snapped=true;}
+  }
+  if(!snapped){toast('No anchorage there — pick open water.',true);return;}
+ }
+ const s=G.ship;
+ const sx=s.sailing?s.x:s.ax,sz2=s.sailing?s.z:s.az;
+ const path=routeCourse(sx,sz2,tx,tz);
+ if(path)G.course={x:tx,z:tz,path};
+ else{
+  G.course={x:tx,z:tz,path:[[sx,sz2],[tx,tz]],direct:true};
+  toast('No clear passage charted — straight bearing only.',true);
+ }
+ AU.sel();
+}
+function clearCourse(quiet){
+ G.course=null;
+ hideCrumbs();
+ if(!quiet)toast('Course cleared.');
+}
+/* in-world course: a lane of gold motes riding the swell, a beacon at journey's end */
+const CRUMB={pool:[],beacon:null,re:0};
+function crumbTexture(){
+ const cn=document.createElement('canvas');cn.width=32;cn.height=32;
+ const c=cn.getContext('2d');
+ const g2=c.createRadialGradient(16,16,2,16,16,15);
+ g2.addColorStop(0,'rgba(255,228,140,1)');g2.addColorStop(0.5,'rgba(255,202,84,0.7)');g2.addColorStop(1,'rgba(255,190,60,0)');
+ c.fillStyle=g2;
+ c.beginPath();c.moveTo(16,2);c.lineTo(29,16);c.lineTo(16,30);c.lineTo(3,16);c.closePath();c.fill();
+ return new THREE.CanvasTexture(cn);
+}
+function ensureCrumbs(){
+ if(CRUMB.pool.length)return;
+ const tex=crumbTexture();
+ for(let i=0;i<14;i++){
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));
+  sp.scale.set(1.2,1.2,1);
+  sp.visible=false;sp.renderOrder=6;
+  scene.add(sp);
+  CRUMB.pool.push(sp);
+ }
+ CRUMB.beacon=new THREE.Mesh(new THREE.BoxGeometry(0.7,30,0.7),
+  new THREE.MeshLambertMaterial({color:0xffd76a,transparent:true,opacity:0.35,depthWrite:false}));
+ CRUMB.beacon.visible=false;
+ scene.add(CRUMB.beacon);
+}
+function hideCrumbs(){
+ for(const sp of CRUMB.pool)sp.visible=false;
+ if(CRUMB.beacon)CRUMB.beacon.visible=false;
+}
+function courseTick(dt){
+ if(!G.course||!G.course.path||G.course.path.length<2){
+  if(CRUMB.pool.length)hideCrumbs();
+  return;
+ }
+ ensureCrumbs();
+ const s=G.ship;
+ const sx=s.sailing?s.x:s.ax,sz2=s.sailing?s.z:s.az;
+ if(Math.hypot(G.course.x-sx,G.course.z-sz2)<8){
+  toast('Course made good — you’ve arrived.');
+  AU.bell();
+  clearCourse(true);
+  return;
+ }
+ const path=G.course.path;
+ /* nearest point on the path to the ship */
+ let best=0,bestT=0,bd=1e9;
+ for(let i=0;i<path.length-1;i++){
+  const ax=path[i][0],az=path[i][1],vx=path[i+1][0]-ax,vz=path[i+1][1]-az;
+  const L2=vx*vx+vz*vz||1;
+  const t=clamp(((sx-ax)*vx+(sz2-az)*vz)/L2,0,1);
+  const d=Math.hypot(ax+vx*t-sx,az+vz*t-sz2);
+  if(d<bd){bd=d;best=i;bestT=t;}
+ }
+ /* drifted well off a routed line: quietly re-plot from here */
+ if(!G.course.direct&&bd>38){
+  CRUMB.re-=dt;
+  if(CRUMB.re<=0){
+   CRUMB.re=4;
+   const np=routeCourse(sx,sz2,G.course.x,G.course.z);
+   if(np)G.course.path=np;
+  }
+ }
+ const pos={i:best,t:bestT};
+ const advance=(dist)=>{
+  while(pos.i<path.length-1){
+   const ax=path[pos.i][0],az=path[pos.i][1];
+   const segL=Math.hypot(path[pos.i+1][0]-ax,path[pos.i+1][1]-az)||0.001;
+   const rem=segL*(1-pos.t);
+   if(dist<=rem){pos.t+=dist/segL;return true;}
+   dist-=rem;pos.i++;pos.t=0;
+  }
+  return false;
+ };
+ for(let k=0;k<CRUMB.pool.length;k++){
+  const sp=CRUMB.pool[k];
+  if(!advance(7)){sp.visible=false;continue;}
+  const px2=path[pos.i][0]+(path[pos.i+1][0]-path[pos.i][0])*pos.t;
+  const pz2=path[pos.i][1]+(path[pos.i+1][1]-path[pos.i][1])*pos.t;
+  sp.position.set(px2,SEA+1.1+waveH(px2,pz2)*0.7+Math.sin(G.time*2+k*0.9)*0.12,pz2);
+  sp.material.opacity=0.85-k*0.045;
+  sp.visible=true;
+ }
+ CRUMB.beacon.visible=true;
+ CRUMB.beacon.position.set(G.course.x,SEA+12,G.course.z);
+ CRUMB.beacon.material.opacity=0.2+0.15*Math.sin(G.time*2.5);
+}
+
 /* ---------------- map ---------------- */
 function openMap(){
  const cn=$('mapCan'),c=cn.getContext('2d');
  const S=cn.width/WORLD;
- c.fillStyle='#143246';c.fillRect(0,0,cn.width,cn.height);
+ c.fillStyle='#0f2940';c.fillRect(0,0,cn.width,cn.height);
  for(let x=0;x<WORLD;x+=2)for(let z=0;z<WORLD;z+=2){
   const h=getH(x,z);
-  if(h<=SEA-4)continue;
   let col;
-  if(h<=SEA-1)col='#1f5b76';
+  if(h<=SEA-8)continue;                 /* the abyss stays background-dark */
+  else if(h<=SEA-4)col='#16435c';       /* deeps */
+  else if(h<=SEA-1)col='#2a6f8f';       /* sailable shallows */
+  else if(h<=SEA)col='#3fae9c';         /* awash: reefs & bars */
   else col=h<=SEA+1?'#d8c47e':(colSlope(x,z)>=3||h>SEA+10)?'#8a8d92':'#5d9c3f';
   c.fillStyle=col;c.fillRect(x*S,z*S,2*S+0.5,2*S+0.5);
+ }
+ /* chart grid */
+ c.strokeStyle='rgba(231,216,171,0.08)';c.lineWidth=1;
+ for(let g2=32;g2<WORLD;g2+=32){
+  c.beginPath();c.moveTo(g2*S+0.5,0);c.lineTo(g2*S+0.5,cn.height);c.stroke();
+  c.beginPath();c.moveTo(0,g2*S+0.5);c.lineTo(cn.width,g2*S+0.5);c.stroke();
  }
  c.font='15px VT323';
  for(const isl of W.isles){
@@ -4926,15 +5359,23 @@ function openMap(){
    c.fillStyle='#ffd76a';c.fillText(leg.name,leg.x*S-30,leg.z*S-8);
   }
  }
- /* player/ship with facing, course line */
+ /* player/ship with facing, plotted course */
  const px=(G.mode==='sail'?G.ship.x:P.x)*S,pz=(G.mode==='sail'?G.ship.z:P.z)*S;
- if(G.course){
-  c.strokeStyle='#7fd0d0';c.lineWidth=2;
-  c.setLineDash([4,4]);
-  c.beginPath();c.moveTo(px,pz);c.lineTo(G.course.x*S,G.course.z*S);c.stroke();
-  c.setLineDash([]);
+ if(G.course&&G.course.path){
+  const path=G.course.path;
+  c.strokeStyle='rgba(10,16,22,0.7)';c.lineWidth=4;
+  c.beginPath();c.moveTo(path[0][0]*S,path[0][1]*S);
+  for(let i=1;i<path.length;i++)c.lineTo(path[i][0]*S,path[i][1]*S);
+  c.stroke();
+  c.strokeStyle=G.course.direct?'#e0a05a':'#7fd0d0';c.lineWidth=2;
+  c.setLineDash([6,4]);
+  c.beginPath();c.moveTo(path[0][0]*S,path[0][1]*S);
+  for(let i=1;i<path.length;i++)c.lineTo(path[i][0]*S,path[i][1]*S);
+  c.stroke();c.setLineDash([]);
   c.fillStyle='#7fd0d0';
+  for(let i=1;i<path.length-1;i++)c.fillRect(path[i][0]*S-2,path[i][1]*S-2,4,4);
   c.fillRect(G.course.x*S-3,G.course.z*S-3,6,6);
+  c.strokeStyle='#fff';c.strokeRect(G.course.x*S-4.5,G.course.z*S-4.5,9,9);
  }
  if(G.mode==='sail'){
   c.strokeStyle='#fff';c.lineWidth=2;
@@ -4949,13 +5390,37 @@ function openMap(){
  c.fillStyle='#cfe3ea';c.font='12px VT323';
  c.fillText('wind · '+(WX.wstr<0.15?'calm':WX.wstr<0.45?'light':WX.wstr<0.8?'fresh':'gale'),-24,38);
  c.restore();
- let info='Squares are stalls; circled letters are port states. Click anywhere to plot a course.';
- if(G.course){
-  const dist=Math.hypot(G.course.x-(G.mode==='sail'?G.ship.x:P.x),G.course.z-(G.mode==='sail'?G.ship.z:P.z));
-  const spd=Math.max(2,G.ship.spdMax*0.8*windMul(Math.atan2(-(G.course.z-(G.mode==='sail'?G.ship.z:P.z)),G.course.x-(G.mode==='sail'?G.ship.x:P.x))));
+ /* compass rose */
+ c.save();
+ c.translate(cn.width-40,42);
+ c.fillStyle='rgba(8,10,14,0.55)';c.beginPath();c.arc(0,0,28,0,7);c.fill();
+ c.strokeStyle='rgba(231,216,171,0.4)';c.lineWidth=1;
+ c.beginPath();c.moveTo(-20,0);c.lineTo(20,0);c.moveTo(0,-20);c.lineTo(0,20);c.stroke();
+ c.fillStyle='#e7d8ab';
+ c.beginPath();c.moveTo(0,-20);c.lineTo(4,-6);c.lineTo(-4,-6);c.closePath();c.fill();
+ c.font='13px VT323';
+ c.fillText('N',-3,-22);c.fillText('S',-3,26);c.fillText('W',-26,4);c.fillText('E',22,4);
+ c.restore();
+ /* scale bar */
+ {
+  const bl=50*S;
+  c.fillStyle='rgba(8,10,14,0.55)';c.fillRect(cn.width-bl-22,cn.height-26,bl+16,18);
+  c.strokeStyle='#e7d8ab';c.lineWidth=2;
+  c.beginPath();c.moveTo(cn.width-bl-14,cn.height-13);c.lineTo(cn.width-14,cn.height-13);c.stroke();
+  c.beginPath();c.moveTo(cn.width-bl-14,cn.height-17);c.lineTo(cn.width-bl-14,cn.height-9);
+  c.moveTo(cn.width-14,cn.height-17);c.lineTo(cn.width-14,cn.height-9);c.stroke();
+  c.fillStyle='#e7d8ab';c.font='12px VT323';
+  c.fillText('50',cn.width-bl/2-20,cn.height-16);
+ }
+ let info='Click anywhere to plot a course — gold motes mark the way at sea. Click the marker again to clear it.';
+ if(G.course&&G.course.path){
+  const dist=pathLen(G.course.path);
+  const spd=Math.max(2,G.ship.spdMax*0.8);
   const eta=Math.round(dist/spd);
   const dayFrac=Math.round(eta/DAY*10)/10;
-  info='Course: '+Math.round(dist)+' to the '+dirTo(G.course.x,G.course.z)+' · about '+eta+'s ('+dayFrac+' day'+(dayFrac===1?'':'s')+') at present trim.';
+  info='Course: '+Math.round(dist)+' by sea to the '+dirTo(G.course.x,G.course.z)+
+   (G.course.direct?' (uncharted — straight bearing)':' ('+(G.course.path.length-1)+' legs)')+
+   ' · about '+eta+'s ('+dayFrac+' day'+(dayFrac===1?'':'s')+') at present trim.';
   const haz=[];
   if(WX.kind==='storm')haz.push('storm');
   if(G.war)haz.push('war zone');
@@ -4963,7 +5428,14 @@ function openMap(){
   if(haz.length)info+=' Hazards: '+haz.join(', ')+'.';
  }
  if(G.tmap&&!G.tmap.found)info+=' Red ✕ marks your treasure.';
- $('mapInfo').textContent=info;
+ let legend='';
+ for(const k in STATES)legend+='<span style="color:'+STATES[k].c+'">'+STATES[k].i+'</span> '+STATES[k].n.toLowerCase()+' · ';
+ legend+='<span style="color:#9a7fd0">⌂</span> hidden cove · <span style="color:#e7b94a">◇</span> contract';
+ $('mapInfo').innerHTML=esc(info)+
+  (G.course?' <button id="clearCourseB" style="font-size:1rem">Clear course</button>':'')+
+  '<div class="muted" style="font-size:1rem;margin-top:3px">'+legend+'</div>';
+ const ccb=$('clearCourseB');
+ if(ccb)ccb.onclick=()=>{clearCourse();openMap();};
  openPanel('mapM');
 }
 
@@ -5218,14 +5690,15 @@ function wireInput(){
  $('prompt').addEventListener('pointerdown',e=>{e.preventDefault();AU.init();doAct();});
  $('mini').addEventListener('pointerdown',e=>{e.preventDefault();if(G&&!anyPanelOpen())openMap();});
  $('objChip').addEventListener('pointerdown',e=>{e.preventDefault();if(G&&!anyPanelOpen())openMap();});
- /* chart plotting: click the big map to set a course */
+ /* chart plotting: click the big map to route a course; click the marker again to clear */
  $('mapCan').addEventListener('pointerdown',e=>{
   if(!G)return;
   const cn=$('mapCan');
   const r=cn.getBoundingClientRect();
-  const wx=(e.clientX-r.left)/r.width*WORLD;
-  const wz=(e.clientY-r.top)/r.height*WORLD;
-  G.course={x:Math.round(wx),z:Math.round(wz)};
+  const wx=Math.round((e.clientX-r.left)/r.width*WORLD);
+  const wz=Math.round((e.clientY-r.top)/r.height*WORLD);
+  if(G.course&&Math.hypot(G.course.x-wx,G.course.z-wz)<10)clearCourse();
+  else setCourse(wx,wz);
   openMap();
  });
 }
@@ -5345,6 +5818,7 @@ function sim(dt){
  maintainSea(dt);
  wxTick(dt);
  jobSiteTick();
+ courseTick(dt);
  saveFlush(dt);
  tickVillagers(dt);
  updateCrewFigs();
