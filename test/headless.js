@@ -823,7 +823,7 @@ console.log('== landfall: caves, reefs, wrecks ==');
     const c=col(x,z);
     if(c.cavM>0.62&&c.h>SEA+2){
      const y=Math.round(c.cavY);
-     if(y>3&&y<c.h-4&&genBlock(x,y,z)===0)carved++;
+     if(y>3&&y<c.h-4&&(y>=SEA||c.h>SEA+6)&&genBlock(x,y,z)===0)carved++;
      for(let dy=-9;dy<=9;dy++){const yy=y+dy;if(yy>3&&yy<c.h-3&&genBlock(x,yy,z)===45)crystal++;}
     }
    }
@@ -1095,6 +1095,38 @@ frames(10);
   return {drop:plazaTop-holeTop};
  })()`);
  ok('the well breaks the plaza surface — villagers sidestep it (delta '+res.drop+')',Math.abs(res.drop)>=2);
+}
+
+
+console.log('== dry caves & honest water ==');
+{
+ const res=run(`(function(){
+  let seaHoles=0,dryCaves=0,drySpot=null;
+  for(let x=6;x<WORLD-6;x+=3)for(let z=6;z<WORLD-6;z+=3){
+   const c=col(x,z);
+   if(c.h<SEA){
+    for(let y=4;y<c.h-1;y+=2)if(genBlock(x,y,z)===0)seaHoles++;
+   }else{
+    for(let y=Math.max(4,SEA-40);y<Math.min(SEA,c.h-3);y+=2)
+     if(genBlock(x,y,z)===0){dryCaves++;if(!drySpot&&genBlock(x,y-1,z)!==0&&c.h>SEA+6)drySpot=[x,y,z];}
+   }
+  }
+  return {seaHoles,dryCaves,drySpot};
+ })()`);
+ ok('underwater island flanks are solid — no swiss cheese ('+res.seaHoles+' holes)',res.seaHoles===0);
+ ok('a dry underworld exists below sea level ('+res.dryCaves+' cells)',res.dryCaves>500);
+ if(res.drySpot){
+  const phys=run('(function(){'+
+   'const s=['+res.drySpot.join(',')+'];'+
+   'P.x=s[0]+0.5;P.y=s[1]+0.05;P.z=s[2]+0.5;P.vx=P.vz=0;P.vy=0;'+
+   'G.hp=20;G.breath=breathMax();'+
+   'for(let i=0;i<10;i++)movePlayer(0.05,0,0,false);'+
+   'const grounded=P.onG&&!P.inWater;'+
+   'for(let i=0;i<60;i++)vitalsTick(0.1);'+
+   'return {grounded,breath:G.breath,max:breathMax(),uwCol:waterCol(P.x,P.z)};'+
+  '})()');
+  ok('deep dry cave: solid footing, full lungs ('+phys.breath.toFixed(0)+'/'+phys.max+')',phys.grounded&&phys.breath===phys.max&&phys.uwCol===false);
+ }else ok('dry cave physics skipped (no spot found)',true);
 }
 
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}

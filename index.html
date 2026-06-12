@@ -691,11 +691,10 @@ function col(x,z){
   gy:4+vnoise(x*0.03+311.9,z*0.03+419.3)*(SEA-9),
   mo:vnoise(x*0.03+777.7,z*0.03+99.1),
   cavM:vnoise(x*0.028+517.1,z*0.028+733.9),
-  cavY:SEA-34+vnoise(x*0.045+913.7,z*0.045+157.3)*68,
+  cavY:SEA-18+vnoise(x*0.045+913.7,z*0.045+157.3)*52,
   cav2M:vnoise(x*0.021+217.9,z*0.021+941.1),
-  cav2Y:SEA-62+vnoise(x*0.05+613.3,z*0.05+357.9)*50,
-  room:vnoise(x*0.06+157.1,z*0.06+89.9),
-  rav:Math.abs(vnoise(x*0.016+431.7,z*0.016+277.9)-0.5)};
+  cav2Y:SEA-48+vnoise(x*0.05+613.3,z*0.05+357.9)*58,
+  room:vnoise(x*0.06+157.1,z*0.06+89.9)};
  if(COLS.size>140000)COLS.clear();
  COLS.set(key,c);
  return c;
@@ -710,11 +709,10 @@ function colSlope(x,z){
   Math.abs(h-col(x,z+1).h),Math.abs(h-col(x,z-1).h));
  return c.sl;
 }
-/* is this column's surface block carved away (cave mouth or ravine)? */
+/* is this column's surface block carved away (a cave mouth)? */
 function surfOpen(x,z){
  const c=col(x,z);
- if(W.flat.has(x+'|'+z))return false;
- if(c.rav<0.03&&c.h>SEA+4)return true;
+ if(c.h<=SEA+2||W.flat.has(x+'|'+z))return false;
  if(hash2((x>>2)*13+7,(z>>2)*29+3)>=0.3)return false;
  if(c.cavM>0.705&&Math.abs(c.h-c.cavY)<2.4)return true;
  if(c.cav2M>0.725&&Math.abs(c.h-c.cav2Y)<2.4)return true;
@@ -768,12 +766,12 @@ function genBlock(x,y,z){
   /* oyster beds and coral crust the reef tops */
   if(y===h&&h<=SEA-2&&c.reef>0.3&&hash2(x*13+5,z*7+9)<0.16)return 44;
   if(y===h&&h<=SEA-2&&c.reef>0.25&&hash2(x*11+3,z*17+1)>0.8)return 47;
-  /* two cave systems worm through the rock, swelling into caverns where they
-     cross the room field. The body of a cave never thins the surface below a
-     3-block crust (no more floating skins); mouths are deliberate walk-in
-     pockets, and ravines knife straight down from the open air. */
-  if(y>2&&!W.flat.has(x+'|'+z)){
-   if(c.rav<0.03&&h>SEA+4&&y<=h&&y>h-(12+(0.03-c.rav)*1100))return 0; /* ravine */
+  /* two cave systems worm through the rock under the LAND only — tunnels and
+     rooms in the Minecraft way, never opening the underwater flanks. Shallow
+     coastal ground keeps its caves above the waterline; only thick interior
+     rock (h>SEA+8) carries galleries down into the deep — and those run dry. */
+  if(y>2&&h>SEA+2&&!W.flat.has(x+'|'+z)){
+   const deepOK=h>SEA+6;
    const roomB=c.room>0.6?(c.room-0.6)*9:0;
    const mouth=hash2((x>>2)*13+7,(z>>2)*29+3)<0.3;
    const dig=(M,Y,th)=>{
@@ -781,12 +779,13 @@ function genBlock(x,y,z){
     const r=1.6+(M-th)*11+roomB;
     const dy=y-Y;
     if(Math.abs(dy)<r){
+     if(y<SEA&&!deepOK)return 0;
      if(y<h-3)return 1;
      /* a mouth only opens if the shaft reaches daylight — no one-block lids */
      if(mouth&&M>th+0.105&&Math.abs(dy)<2.4&&Math.abs(h-Y)<2.4)return 1;
      return 0;
     }
-    if(dy>=r&&dy<r+1&&M>th+0.07&&hash2(x*31+y*7,z*17+y*3)<0.07)return 2;
+    if(dy>=r&&dy<r+1&&(y>=SEA||deepOK)&&M>th+0.07&&hash2(x*31+y*7,z*17+y*3)<0.07)return 2;
     return 0;
    };
    const k1=dig(c.cavM,c.cavY,0.6);
@@ -865,6 +864,10 @@ function getBlockAll(x,y,z){
  return getBlock(x,y,z);
 }
 function solid(id){return id!==0&&id!==46;} /* kelp parts before you like weed should */
+/* water is a property of the column, not of altitude: the sea fills only
+   columns whose surface lies below the waterline. Air under an island —
+   a cave, a dug shaft — is dry, however deep it runs. */
+function waterCol(x,z){return getH(Math.round(x),Math.round(z))<SEA;}
 
 /* meshing bounds: chunks only iterate the y-band where air can exist.
    Player edits and village blocks widen the band for their chunk + neighbours. */
@@ -1542,6 +1545,7 @@ function initThree(){
    ' vec2 duv=(vP.xz-dOrg)*dInv;',
    ' float depth=texture2D(tDepth,duv).r*110.0;',
    ' if(duv.x<0.0||duv.x>1.0||duv.y<0.0||duv.y>1.0)depth=110.0;',
+   ' if(depth<0.15)discard;', /* no water sheet over land: caves stay dry to the eye */
    ' vec3 n=normalize(vN);',
    ' /* fine scrolling ripples */',
    ' float r1=sin(vP.x*1.9+t*2.4)+sin(vP.z*2.3-t*2.0);',
@@ -1683,10 +1687,12 @@ function buildChunk(cx,cz){
  const colRange=(x,z)=>{
   const c=col(x,z);
   let lo=c.h-2;
-  const roomB=c.room>0.6?(c.room-0.6)*9:0;
-  if(c.cavM>0.6)lo=Math.min(lo,c.cavY-(1.6+(c.cavM-0.6)*11+roomB)-1);
-  if(c.cav2M>0.62)lo=Math.min(lo,c.cav2Y-(1.6+(c.cav2M-0.62)*11+roomB)-1);
-  if(c.rav<0.03&&c.h>SEA+4)lo=Math.min(lo,c.h-46);
+  if(c.h>SEA+2){ /* only land columns carry caves */
+   const floor2=c.h>SEA+6?3:SEA-1;
+   const roomB=c.room>0.6?(c.room-0.6)*9:0;
+   if(c.cavM>0.6)lo=Math.min(lo,Math.max(floor2,c.cavY-(1.6+(c.cavM-0.6)*11+roomB)-1));
+   if(c.cav2M>0.62)lo=Math.min(lo,Math.max(floor2,c.cav2Y-(1.6+(c.cav2M-0.62)*11+roomB)-1));
+  }
   let hi=colTop(x,z)+1;
   if(eb){lo=Math.min(lo,eb.lo-1);hi=Math.max(hi,eb.hi+1);}
   if(vb){lo=Math.min(lo,vb.lo-1);hi=Math.max(hi,vb.hi+1);}
@@ -1844,7 +1850,7 @@ function movePlayer(dt,mx,mz,jump){
  if(aabbHit(P.x,P.y,P.z)){ /* embedded somehow: rise until free, never stay stuck */
   P.y+=6*dt;P.vy=0;P.onG=false;P.inWater=false;return;
  }
- const inW=P.y+0.5<SEA+0.42&&!solid(getBlockAll(Math.floor(P.x),Math.floor(P.y),Math.floor(P.z)));
+ const inW=P.y+0.5<SEA+0.42&&waterCol(P.x,P.z)&&!solid(getBlockAll(Math.floor(P.x),Math.floor(P.y),Math.floor(P.z)));
  P.inWater=inW;
  const sp=inW?3.4:4.6;
  const cos=Math.cos(P.yaw),sin=Math.sin(P.yaw);
@@ -2994,7 +3000,7 @@ function ballsTick(dt){
   b.mesh.position.set(b.x,b.y,b.z);
   if(b.life<=0){killBall(b,i);continue;}
   const ws=SEA+0.3+waveH(b.x,b.z);
-  if(b.y<ws-0.1){burst(b.x,ws+0.2,b.z,8,[0.8,0.92,1],3.5);AU.splash();killBall(b,i);continue;}
+  if(b.y<ws-0.1&&waterCol(b.x,b.z)){burst(b.x,ws+0.2,b.z,8,[0.8,0.92,1],3.5);AU.splash();killBall(b,i);continue;}
   if(solid(getBlock(Math.floor(b.x),Math.floor(b.y),Math.floor(b.z)))){burst(b.x,b.y,b.z,8,[0.5,0.45,0.4],4);killBall(b,i);continue;}
   if(b.from==='player'){
    let hit=false;
@@ -3833,8 +3839,8 @@ function faint(why){
 }
 function vitalsTick(dt){
  if(G.mode!=='walk'){G.breath=breathMax();return;}
- /* the sea takes its breath back: head under = lungs burning */
- const under=P.y+PEYE<SEA+0.42&&!solid(getBlockAll(Math.floor(P.x),Math.floor(P.y+1),Math.floor(P.z)));
+ /* the sea takes its breath back: head under, in true water — dry caves don't drown */
+ const under=P.y+PEYE<SEA+0.42&&waterCol(P.x,P.z)&&!solid(getBlockAll(Math.floor(P.x),Math.floor(P.y+1),Math.floor(P.z)));
  if(under){
   G.breath=Math.max(0,G.breath-dt);
   if(G.breath<=0&&Math.random()<dt*2){dmgPlayer(2,'the drowning dark');if(Math.random()<dt*8)spawnPart(P.x,P.y+1.6,P.z,0,1.5,0,0.7,[0.8,0.95,1],-2);}
@@ -6508,7 +6514,7 @@ function buildHelp(){
   '<div class="card"><h3>The long voyage</h3>Danger lives in geography: <b>Home Waters</b> are gentle and poor, the <b>Trade Winds</b> bite and pay, the <b>Outer Reaches</b> are deadly and rich — galleons, fleets, blackwood groves and starmetal seams found nowhere else. The chart shows the rings. Renown (earned from contracts, discovery, hard-won fights — not from clubbing sloops) opens specialist berths, contract tiers, rare chandlery and the port forges. Three <b>rival captains</b> are out there taking prizes and growing their ships plank by plank; their bounties are posted once you have a name.</div>'+
   '<div class="card"><h3>Powder & shot</h3>Every gun fired eats one round shot. Buy it at yards (4g), craft 2 from an iron, or fish it from sunken warships. Run dry mid-fight and you board, flee, or pray. Guns also want hands: two fire free, each crew member mans another.</div>'+
   '<div class="card"><h3>Ashore & below</h3>You bleed now, captain: falls hurt, beasts bite, and lungs hold only so long (the ♥ and ◍ chips). Crabs hold the beaches, boars the woods, and drowned buccaneers walk at night, in caves and around their old camps — hold the mine button to fight: cutlass up close, flintlock at range (it fires your round shot). If you fall, you wake among friends, lighter of purse.</div>'+
-  '<div class="card"><h3>Diving</h3>To go under: <b>look down and swim forward</b> — you dive the way you face (works the same on the stick). Shift sinks you straight down; Space strokes for the surface. The deeper you go, the darker it gets: kelp forests, coral, oyster pearls, drowned cave mouths, sunken wrecks — and the trenches, where the light gives out entirely. Mind the ◍ breath chip; a diving helm doubles it.</div>'+
+  '<div class="card"><h3>Diving</h3>To go under: <b>look down and swim forward</b> — you dive the way you face (works the same on the stick). Shift sinks you straight down; Space strokes for the surface. The deeper you go, the darker it gets: kelp forests, coral, oyster pearls, sunken wrecks — and the trenches, where the light gives out entirely. Mind the ◍ breath chip; a diving helm doubles it. The caves under the isles run <b>dry</b>, however deep — only the open sea drowns you.</div>'+
   '<div class="card"><h3>Getting iron</h3>Three honest ways and they all work: <b>buy it</b> — mining isles (the grey crags) sell iron cheap at market; <b>dig for it</b> — break into stone and follow the speckled seams, easiest where caves have already opened the rock (gold-veined crystal marks rich ground); or <b>loot it</b> — crags wear stray nuggets right on the surface, and wrecks give it up. Iron makes shot, cutlasses, pistols, cannons and steel.</div>'+
   '<div class="card"><h3>Wind & weather</h3>The wind chip (and the chart’s wind rose) show direction and strength — run with the wind and you fly; beat against it and you crawl. Storms tear fast sails, hurl lightning and breed wreck fields. Fog hides everything. Doldrums becalm you. Royal sails (sewn with starmetal thread) never tear.</div>'+
   '<div class="card"><h3>Work & standing</h3>Every port posts contracts: deliveries, couriers, bounties, salvage, construction, escorts and smuggling. Each faction remembers what you do — standing buys discounts or slammed doors. Crimes raise your wanted level: patrols, bounty hunters, then real trouble. Pardons are sold at lawful taverns; pirates respect a black name.</div>'+
@@ -6974,8 +6980,9 @@ function frame(now){
   /* speed-of-sail FOV kick */
   const fT=72+(G.mode==='sail'?clamp(Math.abs(G.ship.spd)*0.8,0,12):0);
   if(Math.abs(camera.fov-fT)>0.08){camera.fov=lerp(camera.fov,fT,clamp(dt*3,0,1));camera.updateProjectionMatrix();}
-  /* underwater: the light dies with the fathoms; lanterns cut the night fog a little */
-  const uw=camera.position.y<SEA+0.42;
+  /* underwater: the light dies with the fathoms; lanterns cut the night fog a little.
+     dry caves under the isles are not underwater, however deep they run */
+  const uw=camera.position.y<SEA+0.42&&waterCol(camera.position.x,camera.position.z);
   const lantB=G.ship&&G.ship.lant>0&&SKY.day<0.3?0.85:1;
   const dk=uw?clamp((SEA-camera.position.y)/42,0,1):0;
   scene.fog.density=uw?0.05+dk*0.16:WX.fog*lantB;
