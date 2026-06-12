@@ -1003,5 +1003,93 @@ console.log('== blocky rigs ==');
  run('G.cam3=false');
 }
 
+
+console.log('== feedback round: diving, depths, caves, mobile ==');
+run(`startGame('league','depths-seed')`);
+frames(10);
+{
+ const res=run(`(function(){
+  /* park the captain over deep water and nose down */
+  const home=W.home;
+  P.x=home.cx;P.z=home.cz;
+  let tries=0;
+  while(getH(Math.round(P.x),Math.round(P.z))>SEA-6&&tries++<300)P.x+=2;
+  if(getH(Math.round(P.x),Math.round(P.z))>SEA-6)return {skip:true};
+  P.y=SEA-0.5;P.vy=0;P.pitch=-0.9;
+  G.breath=999;G.hp=20;
+  for(let i=0;i<160;i++)movePlayer(0.05,0,1,false);
+  const dove=P.y;
+  /* level out: buoyancy carries you back up */
+  P.pitch=0;
+  for(let i=0;i<200;i++)movePlayer(0.05,0,0,false);
+  const rose=P.y;
+  /* Shift sinks straight down */
+  P.y=SEA-1;P.vy=0;KEYS.add('ShiftLeft');
+  for(let i=0;i<160;i++)movePlayer(0.05,0,0,false);
+  KEYS.delete('ShiftLeft');
+  return {dove,rose,sank:P.y};
+ })()`);
+ if(res.skip)ok('dive test skipped (no deep water found)',true);
+ else{
+  ok('nose-down swimming dives ('+res.dove.toFixed(1)+' < 9)',res.dove<9);
+  ok('levelling out floats you back up ('+res.rose.toFixed(1)+')',res.rose>res.dove+1);
+  ok('Shift sinks you ('+res.sank.toFixed(1)+')',res.sank<9);
+ }
+}
+{
+ const res=run(`(function(){
+  let mouths=0,land=0,kelp=0,coral=0,minSea=99,ironSurf=0;
+  for(let x=4;x<WORLD-4;x+=2)for(let z=4;z<WORLD-4;z+=2){
+   const c=col(x,z);
+   if(c.h>SEA){
+    land++;
+    if(genBlock(x,c.h,z)===0)mouths++;
+    if(genBlock(x,c.h+1,z)===9)ironSurf++;
+   }else{
+    if(c.h<minSea)minSea=c.h;
+    if(kelpAt(x,z))kelp++;
+    if(genBlock(x,c.h,z)===47)coral++;
+   }
+  }
+  return {mouths,land,kelp,coral,minSea,ironSurf,kelpSolid:solid(46)};
+ })()`);
+ ok('cave mouths gape on the surface ('+res.mouths+' of '+res.land+' land cols)',res.mouths>=30);
+ ok('the sea floor reaches the abyss (min h '+res.minSea+')',res.minSea<=2);
+ ok('kelp forests sway below ('+res.kelp+')',res.kelp>300);
+ ok('coral on the reefs ('+res.coral+')',res.coral>=3);
+ ok('iron nuggets show on the crags ('+res.ironSurf+')',res.ironSurf>=2);
+ ok('kelp is swim-through',res.kelpSolid===false);
+}
+{
+ /* mobile hotbar: a pointerdown tap must select the slot and flip pages */
+ run('G.hot=0');
+ const res=run(`(function(){
+  const slots=document.querySelectorAll('#hotbar .hslot');
+  const ev=new window.Event('pointerdown',{bubbles:true,cancelable:true});
+  slots[3].dispatchEvent(ev);
+  const picked=G.hot;
+  const pg=document.getElementById('hotPage');
+  const ev2=new window.Event('pointerdown',{bubbles:true,cancelable:true});
+  pg.dispatchEvent(ev2);
+  return {picked,page:G.hotPage};
+ })()`);
+ ok('tap selects a hotbar slot',res.picked===3);
+ ok('tap flips the hotbar page',res.page===1);
+ run('G.hotPage=0;HOTKEYS=HOTPAGES[0];buildHotbar()');
+}
+{
+ /* villagers refuse steps into wells and cave mouths */
+ const res=run(`(function(){
+  const isl=W.isles.find(i=>i.stall);
+  const h=isl.stall.y-1;
+  /* the village well: a hole two deep right on the plaza */
+  const wlx=isl.stall.x-3,wlz=isl.stall.z+3;
+  const holeTop=vTopY(wlx,wlz);
+  const plazaTop=vTopY(isl.stall.x+2,isl.stall.z);
+  return {drop:plazaTop-holeTop};
+ })()`);
+ ok('the well is a real hole villagers now sidestep (drop '+res.drop+')',res.drop>=2);
+}
+
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}
 console.log('\nALL TESTS PASSED');

@@ -61,7 +61,7 @@ body.touch #topbar{right:120px}
  -webkit-mask:radial-gradient(circle, #0000 8px, #000 9px);mask:radial-gradient(circle, #0000 8px, #000 9px);
  display:none}
 #mineRing.on{display:block}
-#prompt{position:absolute;left:50%;bottom:128px;transform:translateX(-50%);
+#prompt{position:absolute;left:50%;bottom:128px;transform:translateX(-50%);z-index:30;
  background:var(--pane);border:2px solid #000;border-bottom:4px solid var(--gold);padding:4px 14px;
  font-size:1.3rem;display:none;text-align:center;pointer-events:auto;cursor:pointer}
 #prompt.on{display:block}
@@ -72,7 +72,7 @@ body.touch #topbar{right:120px}
 @keyframes tin{from{opacity:0;transform:translateY(-6px)}to{opacity:1}}
 
 /* hotbar */
-#hotbar{position:absolute;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:4px;pointer-events:auto}
+#hotbar{position:absolute;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:4px;pointer-events:auto;z-index:30}
 .hslot{width:52px;height:52px;background:var(--slot);border:3px solid #000;
  box-shadow:inset 0 0 0 2px var(--slotE), inset 0 3px 0 #ffffff14;position:relative;cursor:pointer}
 .hslot.on{box-shadow:inset 0 0 0 3px var(--hi), 0 0 0 2px #fff8}
@@ -359,7 +359,7 @@ const T={grassT:0,grassS:1,dirt:2,sand:3,stone:4,logS:5,logT:6,plank:7,
  stall:16,sailW:17,sailB:18,palm:19,
  cargo:20,reinf:21,lightp:22,sailF:23,sailH:24,hid:25,keg:26,bunk:27,
  chart:28,bench:29,lant:30,flagB:31,fig:32,rud:33,
- bwS:34,bwT:35,star:36,steelP:37,sailR:38,hcS:39,hcF:40,oys:41,crys:42};
+ bwS:34,bwT:35,star:36,steelP:37,sailR:38,hcS:39,hcF:40,oys:41,crys:42,kelp:43,coral:44};
 /* faces order: +x,-x,+y(top),-y,+z,-z */
 const BLK={
  1:{n:'Grass', f:[T.grassS,T.grassS,T.grassT,T.dirt,T.grassS,T.grassS], hard:.35, drop:'dirt'},
@@ -367,7 +367,7 @@ const BLK={
  3:{n:'Sand',  f:[T.sand,T.sand,T.sand,T.sand,T.sand,T.sand], hard:.25, drop:'sand'},
  4:{n:'Stone', f:[T.stone,T.stone,T.stone,T.stone,T.stone,T.stone], hard:.9, drop:'stone'},
  5:{n:'Log',   f:[T.logS,T.logS,T.logT,T.logT,T.logS,T.logS], hard:.55, drop:'log'},
- 6:{n:'Leaves',f:[T.leaf,T.leaf,T.leaf,T.leaf,T.leaf,T.leaf], hard:.12, drop:null},
+ 6:{n:'Leaves',f:[T.leaf,T.leaf,T.leaf,T.leaf,T.leaf,T.leaf], hard:.12, drop:null, nc:1},
  7:{n:'Planks',f:[T.plank,T.plank,T.plank,T.plank,T.plank,T.plank], hard:.45, drop:'planks'},
  9:{n:'Iron ore',f:[T.iron,T.iron,T.iron,T.iron,T.iron,T.iron], hard:1.1, drop:'iron'},
  10:{n:'Gold ore',f:[T.gold,T.gold,T.gold,T.gold,T.gold,T.gold], hard:1.1, drop:'gold'},
@@ -380,7 +380,7 @@ const BLK={
  14:{n:'Market stall',f:[T.stall,T.stall,T.stall,T.plank,T.stall,T.stall], hard:99, drop:null},
  16:{n:'Sail', f:[T.sailW,T.sailW,T.sailW,T.sailW,T.sailW,T.sailW], hard:.3, drop:'sail'},
  17:{n:'Black sail',f:[T.sailB,T.sailB,T.sailB,T.sailB,T.sailB,T.sailB], hard:.3, drop:'blacksail'},
- 18:{n:'Palm leaves',f:[T.palm,T.palm,T.palm,T.palm,T.palm,T.palm], hard:.12, drop:null},
+ 18:{n:'Palm leaves',f:[T.palm,T.palm,T.palm,T.palm,T.palm,T.palm], hard:.12, drop:null, nc:1},
  22:{n:'Cargo hold',f:[T.cargo,T.cargo,T.cargo,T.cargo,T.cargo,T.cargo], hard:.5, drop:'cargohold'},
  23:{n:'Reinforced planks',f:[T.reinf,T.reinf,T.reinf,T.reinf,T.reinf,T.reinf], hard:.75, drop:'reinf'},
  24:{n:'Light planks',f:[T.lightp,T.lightp,T.lightp,T.lightp,T.lightp,T.lightp], hard:.3, drop:'lightp'},
@@ -405,6 +405,8 @@ const BLK={
  43:{n:'Heavy cannon',f:[T.hcS,T.hcS,T.hcS,T.hcS,T.hcF,T.hcS], hard:.7, drop:'hcannon'},
  44:{n:'Oyster bed',f:[T.oys,T.oys,T.oys,T.oys,T.oys,T.oys], hard:.5, drop:'pearl'},
  45:{n:'Gold-veined crystal',f:[T.crys,T.crys,T.crys,T.crys,T.crys,T.crys], hard:1.0, drop:'gold'},
+ 46:{n:'Kelp',f:[T.kelp,T.kelp,T.kelp,T.kelp,T.kelp,T.kelp], hard:.1, drop:null, nc:1},
+ 47:{n:'Coral',f:[T.coral,T.coral,T.coral,T.coral,T.coral,T.coral], hard:.5, drop:null},
 };
 const ITEM2BLK={planks:7,log:5,stone:4,dirt:2,sand:3,sail:16,cannon:11,helm:12,
  blacksail:17,cargohold:22,reinf:23,lightp:24,fastsail:25,heavysail:26,hiddenc:27,keg:28,
@@ -543,6 +545,8 @@ function buildAtlas(){
  at(T.hcF,'#23252c',.18,(c,ox,oy)=>{c.fillStyle='#050608';c.beginPath();c.arc(ox+8,oy+8,5,0,7);c.fill();c.strokeStyle='#6b7682';c.stroke();c.strokeStyle='#9fe8ff';c.strokeRect(ox+1.5,oy+1.5,13,13);});
  at(T.oys,'#5a7a78',.16,(c,ox,oy,r)=>{for(let i=0;i<4;i++){const x=ox+2+(r()*11|0),y=oy+2+(r()*11|0);c.fillStyle='#3a5654';c.fillRect(x,y,3,2);c.fillStyle='#f0ecf4';c.fillRect(x+1,y,1,1);}});
  at(T.crys,'#8a8d92',.14,(c,ox,oy,r)=>{for(let i=0;i<3;i++){const x=ox+2+(r()*10|0),y=oy+2+(r()*10|0);c.fillStyle='#ffe9a8';c.fillRect(x,y,2,3);c.fillStyle='#fff8dc';c.fillRect(x,y,1,1);c.fillStyle='#caa53c';c.fillRect(x+1,y+2,1,1);}});
+ at(T.kelp,'#1e5e3a',.2,(c,ox,oy,r)=>{for(let x=2;x<16;x+=5){for(let y=0;y<16;y++)if(r()<.8)px(c,ox+x+((y>>2)%2),oy+y,'#2e8a52');}for(let i=0;i<6;i++)c.clearRect(ox+(r()*16|0),oy+(r()*16|0),2,1);});
+ at(T.coral,'#c4564a',.18,(c,ox,oy,r)=>{for(let i=0;i<5;i++){const x=ox+1+(r()*13|0),y=oy+1+(r()*13|0);c.fillStyle='#e8847a';c.fillRect(x,y,2,2);c.fillStyle='#f4c4be';c.fillRect(x,y,1,1);}});
  ATLAS.cnv=cnv;
  const tex=new THREE.CanvasTexture(cnv);
  tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestFilter;
@@ -628,6 +632,9 @@ function col(x,z){
  }
  /* shelf seabed rises toward land; reefs climb almost to the light */
  let seabed=SEA-7.2+(vnoise(x*0.045+11.3,z*0.045+71.9)-0.5)*4+mask*4.8;
+ /* abyssal trenches wander the open sea: black water, bad feelings */
+ const tr=vnoise(x*0.012+71.7,z*0.012+377.3);
+ if(tr>0.58&&mask<0.05)seabed-=(tr-0.58)*26*(1-mask/0.05);
  if(reef>0)seabed=Math.max(seabed,lerp(seabed,reef>0.85?SEA+0.4:SEA-1.1,reef));
  let e=lerp(seabed,SEA+0.9,clamp(mask*3.3,0,1));
  /* lone sea stacks haunt the rocky coasts */
@@ -678,13 +685,16 @@ function col(x,z){
   }
   e+=Math.max(-2.5,land);
  }
- c={h:Math.floor(clamp(e,3,WH-9)),isl,tree:-1,top:-1,sl:-1,cv,reef,
+ c={h:Math.floor(clamp(e,1,WH-9)),isl,tree:-1,top:-1,sl:-1,cv,reef,
   va:vnoise(x*0.085+501.3,z*0.085+167.9),
   vy:5+vnoise(x*0.035+901.1,z*0.035+13.7)*(SEA-9),
   gy:4+vnoise(x*0.03+311.9,z*0.03+419.3)*(SEA-9),
   mo:vnoise(x*0.03+777.7,z*0.03+99.1),
   cavM:vnoise(x*0.028+517.1,z*0.028+733.9),
-  cavY:5+vnoise(x*0.045+913.7,z*0.045+157.3)*14};
+  cavY:5+vnoise(x*0.045+913.7,z*0.045+157.3)*14,
+  cav2M:vnoise(x*0.021+217.9,z*0.021+941.1),
+  cav2Y:4+vnoise(x*0.05+613.3,z*0.05+357.9)*9,
+  room:vnoise(x*0.06+157.1,z*0.06+89.9)};
  if(COLS.size>140000)COLS.clear();
  COLS.set(key,c);
  return c;
@@ -716,12 +726,24 @@ function treeAt(ax,az){
  c.tree=t;
  return t;
 }
+/* kelp forests in the deeper water; seagrass tufts in the shallows */
+function kelpAt(x,z){
+ const c=col(x,z);
+ if(c.h>SEA-3||c.reef>0.3)return 0;
+ const room=SEA-2-c.h;
+ if(room<1)return 0;
+ const r=hash2(x*9+31,z*9+77);
+ if(r<0.05)return Math.min(room,2+(((r*1000)|0)%5));
+ if(r<0.11&&c.h>=SEA-7)return 1;
+ return 0;
+}
 function colTop(x,z){
  const c=col(x,z);
  if(c.top>=0)return c.top;
  let top=c.h;
  for(let ax=x-2;ax<=x+2;ax++)for(let az=z-2;az<=z+2;az++)
   if(treeAt(ax,az))top=Math.max(top,col(ax,az).h+8);
+ top=Math.max(top,c.h+kelpAt(x,z));
  c.top=top;
  return top;
 }
@@ -732,14 +754,25 @@ function genBlock(x,y,z){
   const isl=c.isl;
   const sl=colSlope(x,z);
   const rocky=sl>=3||(!isl&&h>SEA)||(isl&&((isl.type==='mining'&&h>SEA+5)||(isl.type==='rock'&&h>SEA+2)));
-  /* oyster beds crust the reef tops — pearls for whoever can hold their breath */
+  /* oyster beds and coral crust the reef tops */
   if(y===h&&h<=SEA-2&&c.reef>0.3&&hash2(x*13+5,z*7+9)<0.16)return 44;
-  /* worm caves riddle the isles: dry galleries in the hills, drowned ones below the line */
-  if(c.cavM>0.62&&y>3&&!W.flat.has(x+'|'+z)){
-   const r=1.4+(c.cavM-0.62)*6;
-   const dy=y-c.cavY;
-   if(Math.abs(dy)<r&&(y<h-2||c.cavM>0.74))return 0; /* only the strong veins break the surface: entrances */
-   if(dy>=r&&dy<r+1&&c.cavM>0.7&&hash2(x*31+y*7,z*17+y*3)<0.06)return 45; /* crystal in the gallery roof */
+  if(y===h&&h<=SEA-2&&c.reef>0.25&&hash2(x*11+3,z*17+1)>0.8)return 47;
+  /* two cave systems worm through the rock, swelling into caverns where they cross
+     the room field; the strong veins yawn open at the surface as cave mouths */
+  if(y>2&&!W.flat.has(x+'|'+z)){
+   const roomB=c.room>0.6?(c.room-0.6)*9:0;
+   const dig=(M,Y,th)=>{
+    if(M<=th)return 0;
+    const r=1.6+(M-th)*11+roomB;
+    const dy=y-Y;
+    if(Math.abs(dy)<r&&(y<h-1||M>th+0.06))return 1;
+    if(dy>=r&&dy<r+1&&M>th+0.07&&hash2(x*31+y*7,z*17+y*3)<0.07)return 2;
+    return 0;
+   };
+   const k1=dig(c.cavM,c.cavY,0.6);
+   const k2=k1===1?0:dig(c.cav2M,c.cav2Y,0.62);
+   if(k1===1||k2===1)return 0;
+   if(k1===2||k2===2)return 45; /* crystal in the gallery roof */
   }
   if(y===h){
    if(h<=SEA+1)return 3;
@@ -763,13 +796,19 @@ function genBlock(x,y,z){
   }
   return 4;
  }
- /* above ground: bushes, boulders, trees */
+ /* above ground (and above seabed): kelp, bushes, boulders, trees */
  if(y>colTop(x,z)+1)return 0;
- if(y===c.h+1&&c.h>SEA+1&&c.isl&&!W.flat.has(x+'|'+z)&&c.cv<0.4&&colSlope(x,z)<3){
+ const kh=kelpAt(x,z);
+ if(kh&&y>c.h&&y<=c.h+kh)return 46; /* kelp sways in the green dark */
+ if(y===c.h+1&&c.h>SEA+1&&c.isl&&!W.flat.has(x+'|'+z)){
   const r2=hash2(x*7+3,z*7+9);
-  if(c.isl.type==='mining'||c.isl.type==='rock'){
-   if(r2<0.008)return 4; /* scattered boulders */
-  }else if(r2<0.02&&c.mo>0.45)return 6; /* low bushes in the damp */
+  /* the crags wear their iron on their sleeves — steep ground included */
+  if((c.isl.type==='mining'||c.isl.type==='rock')&&r2<0.008)return 9;
+  if(c.cv<0.4&&colSlope(x,z)<3){
+   if(c.isl.type==='mining'||c.isl.type==='rock'){
+    if(r2<0.014)return 4; /* scattered boulders */
+   }else if(r2<0.02&&c.mo>0.45)return 6; /* low bushes in the damp */
+  }
  }
  /* blackwood groves grow only on the wild isles of the Outer Reaches */
  const bw=c.isl&&c.isl.ring===2&&(c.isl.type==='forest'||c.isl.type==='tropical')?36:5;
@@ -805,7 +844,7 @@ function getBlockAll(x,y,z){
  }
  return getBlock(x,y,z);
 }
-function solid(id){return id!==0;}
+function solid(id){return id!==0&&id!==46;} /* kelp parts before you like weed should */
 
 function setBlock(x,y,z,id){
  ED.set(K(x,y,z),id);
@@ -1312,7 +1351,7 @@ function bakeDepth(cx,cz){
  let i=0;
  for(let ty=0;ty<DTEX.size;ty++)for(let tx=0;tx<DTEX.size;tx++){
   const h=getH(Math.round(DTEX.ox+tx*st),Math.round(DTEX.oz+ty*st));
-  DTEX.data[i++]=clamp(((SEA+0.42)-(h+1))/6,0,1)*255;
+  DTEX.data[i++]=clamp(((SEA+0.42)-(h+1))/14,0,1)*255;
  }
  DTEX.tex.needsUpdate=true;
  if(waterUni){
@@ -1452,8 +1491,8 @@ function initThree(){
    'varying vec3 vP;varying vec3 vN;varying float vCrest;',
    'void main(){',
    ' vec2 duv=(vP.xz-dOrg)*dInv;',
-   ' float depth=texture2D(tDepth,duv).r*6.0;',
-   ' if(duv.x<0.0||duv.x>1.0||duv.y<0.0||duv.y>1.0)depth=6.0;',
+   ' float depth=texture2D(tDepth,duv).r*14.0;',
+   ' if(duv.x<0.0||duv.x>1.0||duv.y<0.0||duv.y>1.0)depth=14.0;',
    ' vec3 n=normalize(vN);',
    ' /* fine scrolling ripples */',
    ' float r1=sin(vP.x*1.9+t*2.4)+sin(vP.z*2.3-t*2.0);',
@@ -1461,8 +1500,9 @@ function initThree(){
    ' n=normalize(n+vec3(r1*0.035,0.0,r2*0.035));',
    ' vec3 v=normalize(camPos-vP);',
    ' float fres=pow(1.0-abs(dot(n,v)),2.4);',
-   ' float dmix=clamp(depth/5.0,0.0,1.0);',
+   ' float dmix=clamp(depth/6.0,0.0,1.0);',
    ' vec3 col=mix(cShal,mix(cMid,cDeep,clamp(dmix*1.4-0.4,0.0,1.0)),clamp(dmix*1.6,0.0,1.0));',
+   ' col=mix(col,cDeep*0.25,smoothstep(8.0,14.0,depth));', /* the trenches read black from the deck */
    ' col=mix(col,fogColor*0.9,fres*0.45);',
    ' /* surf foam at the shore + whitecaps on crests */',
    ' float band=0.55+0.45*sin(depth*7.0-t*2.4+r1*0.8);',
@@ -1546,7 +1586,7 @@ function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn){
   for(let fi=0;fi<6;fi++){
    const f=FACES[fi];
    const nb=getter(x+f.d[0],y+f.d[1],z+f.d[2]);
-   if(nb&&BLK[nb]&&!(BLK[nb].n==='Leaves'&&id!==nb))continue;
+   if(nb&&BLK[nb]&&!(BLK[nb].nc&&id!==nb))continue;
    if(nb&&nb===id)continue;
    const tint=tintFn?tintFn(x,y,z,id,fi):null;
    pushFace(arr,x,y,z,fi,def.f[fi],f.s,getter,tint);
@@ -1750,8 +1790,12 @@ function movePlayer(dt,mx,mz,jump){
    spawnPart(P.x+(Math.random()-0.5)*0.5,P.y+1.2,P.z+(Math.random()-0.5)*0.5,0,0.6,0,0.8,[0.8,0.95,1],-2);
   P.vy-=3.5*dt;
   P.vy*=Math.pow(0.92,dt*60);
+  /* swim where you look: nose down and kick to dive; Shift tucks and sinks */
+  const diveIn=(mz>0.2&&P.pitch<-0.25)||KEYS.has('ShiftLeft')||KEYS.has('ShiftRight');
+  if(mz>0.2)P.vy+=Math.sin(P.pitch)*sp*dt*3.2;
+  if(KEYS.has('ShiftLeft')||KEYS.has('ShiftRight'))P.vy-=10*dt;
   if(jump)P.vy=Math.min(P.vy+16*dt,3.4);
-  else if(P.y<SEA-1.4)P.vy+=5*dt; /* gentle buoyancy from the deep */
+  else if(P.y<SEA-1.4&&!diveIn)P.vy+=5*dt; /* gentle buoyancy, unless you're swimming down */
  }else{
   P.vy-=22*dt;
   if(jump&&P.onG){P.vy=7.6;P.onG=false;}
@@ -3092,12 +3136,15 @@ function tickVillagers(dt){
    for(let k=0;k<n;k++){
     const role=VROLES[(isl.id+k)%4];
     const a=k*2.4+isl.id;
+    /* stand them on honest ground, not down a well or a cave mouth */
+    let vx2=isl.stall.x+Math.cos(a)*3.5,vz2=isl.stall.z+Math.sin(a)*3.5;
+    if(Math.abs(vTopY(Math.round(vx2),Math.round(vz2))-(isl.stall.y-1))>2){vx2=isl.stall.x+1.5;vz2=isl.stall.z+1.5;}
     VNPCS.push({isle:isl,role:role[0],
      p:makePerson(role[1],{
       skin:[0xd8a06a,0xb98052,0xeab98a,0x9a6a42][(isl.id+k)%4],
       legs:[0x3a3d44,0x5a4a30,0x44505c][(isl.id*3+k)%3],
       hat:((isl.id+k)%3===0)?0xc8b06a:null,hat2:false}),
-     x:isl.stall.x+Math.cos(a)*3.5,z:isl.stall.z+Math.sin(a)*3.5,
+     x:vx2,z:vz2,
      tx:isl.stall.x,tz:isl.stall.z,wait:1+k,yaw:0,say:0});
    }
   }
@@ -3122,7 +3169,10 @@ function tickVillagers(dt){
    if(md>0.4){
     const st=Math.min(1,1.5*dt/md);
     const nx2=v.x+mx*st,nz2=v.z+mz*st;
-    if(getH(Math.round(nx2),Math.round(nz2))>SEA){v.x=nx2;v.z=nz2;moving=true;}
+    /* no strolling into wells, cave mouths or off the quay */
+    const ct=vTopY(Math.round(v.x),Math.round(v.z));
+    const nt=vTopY(Math.round(nx2),Math.round(nz2));
+    if(nt>SEA&&Math.abs(nt-ct)<=1){v.x=nx2;v.z=nz2;moving=true;}
     else v.wait=0.2;
     v.yaw=Math.atan2(mx,mz);
    }
@@ -3842,10 +3892,10 @@ function mobTick(dt){
   mobSpawnT=2.5;
   const isl=islandAt(Math.round(P.x),Math.round(P.z));
   const underground=isl&&P.y<getH(Math.round(P.x),Math.round(P.z))-3;
-  const nearVillage=isl&&isl.stall&&Math.hypot(isl.stall.x-P.x,isl.stall.z-P.z)<40;
+  const nearVillage=isl&&isl.stall&&Math.hypot(isl.stall.x-P.x,isl.stall.z-P.z)<24;
   const wildCount=MOBS.filter(m=>!m.camp).length;
-  if(isl&&!nearVillage&&wildCount<3&&Math.random()<0.35){
-   const a=Math.random()*6.28,d=16+Math.random()*16;
+  if(isl&&!nearVillage&&wildCount<3&&Math.random()<0.55){
+   const a=Math.random()*6.28,d=12+Math.random()*16;
    const x=P.x+Math.cos(a)*d,z=P.z+Math.sin(a)*d;
    const h=getH(Math.round(x),Math.round(z));
    if(underground){
@@ -5283,14 +5333,15 @@ function buildHotbar(){
   sl.appendChild(cn);
   const ky=document.createElement('span');ky.className='ky';ky.textContent=i+1;sl.appendChild(ky);
   const ct=document.createElement('span');ct.className='ct';sl.appendChild(ct);
-  sl.onclick=()=>{G.hot=i;AU.sel();updateHotbar();};
+  /* pointerdown, not click: the touch joystick zone must never steal the tap */
+  sl.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();G.hot=i;AU.sel();updateHotbar();});
   hb.appendChild(sl);HOTCNV.push(ct);
  });
  const pg=document.createElement('button');
  pg.id='hotPage';
  pg.textContent=(G.hotPage+1)+'⇄';
  pg.title='Cycle block pages (Tab)';
- pg.onclick=()=>{G.hotPage=(G.hotPage+1)%HOTPAGES.length;HOTKEYS=HOTPAGES[G.hotPage];buildHotbar();AU.sel();};
+ pg.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();G.hotPage=(G.hotPage+1)%HOTPAGES.length;HOTKEYS=HOTPAGES[G.hotPage];buildHotbar();AU.sel();});
  hb.appendChild(pg);
  updateHotbar();
 }
@@ -6386,13 +6437,15 @@ function buildHelp(){
   '<div class="card"><h3>Your ship</h3>Drop anchor (use the helm) and she becomes solid — walk her deck, place blocks against her hull to extend her, mine blocks off to reshape. Sails make speed; every block adds hull and hold. She needs one helm and one sail to leave port. Tab (or the ⇄ button) flips the hotbar to ship parts: cargo holds, reinforced and light planks, fast and heavy sails, bunks, rudders, lanterns, powder magazines, hidden compartments, chart tables, repair benches, flags and figureheads.</div>'+
   '<div class="card"><h3>The long voyage</h3>Danger lives in geography: <b>Home Waters</b> are gentle and poor, the <b>Trade Winds</b> bite and pay, the <b>Outer Reaches</b> are deadly and rich — galleons, fleets, blackwood groves and starmetal seams found nowhere else. The chart shows the rings. Renown (earned from contracts, discovery, hard-won fights — not from clubbing sloops) opens specialist berths, contract tiers, rare chandlery and the port forges. Three <b>rival captains</b> are out there taking prizes and growing their ships plank by plank; their bounties are posted once you have a name.</div>'+
   '<div class="card"><h3>Powder & shot</h3>Every gun fired eats one round shot. Buy it at yards (4g), craft 2 from an iron, or fish it from sunken warships. Run dry mid-fight and you board, flee, or pray. Guns also want hands: two fire free, each crew member mans another.</div>'+
-  '<div class="card"><h3>Ashore & below</h3>You bleed now, captain: falls hurt, beasts bite, and lungs hold only so long (the ♥ and ◍ chips). Crabs hold the beaches, boars the woods, and drowned buccaneers walk at night, in caves and around their old camps — hold the mine button to fight: cutlass up close, flintlock at range (it fires your round shot). Worm caves riddle the isles with ore and gold-veined crystal; oyster beds crust the reefs with pearls; sunken wrecks keep chests in the gloom. A diving helm doubles your breath. If you fall, you wake among friends, lighter of purse.</div>'+
+  '<div class="card"><h3>Ashore & below</h3>You bleed now, captain: falls hurt, beasts bite, and lungs hold only so long (the ♥ and ◍ chips). Crabs hold the beaches, boars the woods, and drowned buccaneers walk at night, in caves and around their old camps — hold the mine button to fight: cutlass up close, flintlock at range (it fires your round shot). If you fall, you wake among friends, lighter of purse.</div>'+
+  '<div class="card"><h3>Diving</h3>To go under: <b>look down and swim forward</b> — you dive the way you face (works the same on the stick). Shift sinks you straight down; Space strokes for the surface. The deeper you go, the darker it gets: kelp forests, coral, oyster pearls, drowned cave mouths, sunken wrecks — and the trenches, where the light gives out entirely. Mind the ◍ breath chip; a diving helm doubles it.</div>'+
+  '<div class="card"><h3>Getting iron</h3>Three honest ways and they all work: <b>buy it</b> — mining isles (the grey crags) sell iron cheap at market; <b>dig for it</b> — break into stone and follow the speckled seams, easiest where caves have already opened the rock (gold-veined crystal marks rich ground); or <b>loot it</b> — crags wear stray nuggets right on the surface, and wrecks give it up. Iron makes shot, cutlasses, pistols, cannons and steel.</div>'+
   '<div class="card"><h3>Wind & weather</h3>The wind chip (and the chart’s wind rose) show direction and strength — run with the wind and you fly; beat against it and you crawl. Storms tear fast sails, hurl lightning and breed wreck fields. Fog hides everything. Doldrums becalm you. Royal sails (sewn with starmetal thread) never tear.</div>'+
   '<div class="card"><h3>Work & standing</h3>Every port posts contracts: deliveries, couriers, bounties, salvage, construction, escorts and smuggling. Each faction remembers what you do — standing buys discounts or slammed doors. Crimes raise your wanted level: patrols, bounty hunters, then real trouble. Pardons are sold at lawful taverns; pirates respect a black name.</div>'+
   '<div class="card"><h3>Damage at sea</h3>Shot can tear sails, dismount guns, spring leaks (X patches with planks) and start fires (C douses). Powder magazines speed reloads but explode. A repair bench aboard mends at sea; the shipwright does it properly in port.</div>'+
   '<div class="card"><h3>Fighting</h3>Cannons fire the way they point — place them facing where you look. Space (or FIRE) lets every gun speak. Beaten ships may strike their colours: come alongside and press F to board — loot, press crew, spare or burn. If your hull reaches zero, you lose your cargo and wash up at home.</div>'+
   '<div class="card"><h3>Treasure & secrets</h3>Tavern maps mark an X — dig it up. Torn map fragments (three make a legend) come from castaways, bottles and chests. Hidden coves don’t appear on any chart until you find them: smugglers, wreckers, healers and pirate dens trade there.</div>'+
-  '<div class="card"><h3>Keys</h3>WASD move · mouse look (click once) · hold L-click mine/fight · R-click place · 1-8 hotbar · Tab block pages · V first/third person · E sea chest · F use/helm/board · M map (click to plot a course) · L ledger · P profile · X patch leak · C douse fire · Space jump / fire · H this page</div>'+
+  '<div class="card"><h3>Keys</h3>WASD move · mouse look (click once) · hold L-click mine/fight · R-click place · 1-8 hotbar · Tab block pages · V first/third person · Shift sink (in water) · E sea chest · F use/helm/board · M map (click to plot a course) · L ledger · P profile · X patch leak · C douse fire · Space jump / swim up / fire · H this page</div>'+
   '<div class="card"><h3>Phone</h3>Touch anywhere lower-left and the stick appears under your thumb · drag the right side to look · hold the big button to mine or fire · PLACE sets blocks ashore and patches leaks at sea · JUMP douses fires at sea · tap the gold prompt for stalls, helm, anchor and boarding.</div>';
  $('saveNow').onclick=()=>manualSave();
  $('profBtn').onclick=()=>{closePanel('helpM');openProfile();};
@@ -6851,12 +6904,18 @@ function frame(now){
   /* speed-of-sail FOV kick */
   const fT=72+(G.mode==='sail'?clamp(Math.abs(G.ship.spd)*0.8,0,12):0);
   if(Math.abs(camera.fov-fT)>0.08){camera.fov=lerp(camera.fov,fT,clamp(dt*3,0,1));camera.updateProjectionMatrix();}
-  /* underwater tint; lanterns cut the night fog a little */
+  /* underwater: the light dies with the fathoms; lanterns cut the night fog a little */
   const uw=camera.position.y<SEA+0.42;
   const lantB=G.ship&&G.ship.lant>0&&SKY.day<0.3?0.85:1;
-  scene.fog.density=uw?0.09:WX.fog*lantB;
-  if(waterUni)waterUni.fogDensity.value=uw?0.09:WX.fog*lantB;
-  if(uw)scene.background=new THREE.Color(0x16475e);
+  const dk=uw?clamp((SEA-camera.position.y)/9,0,1):0;
+  scene.fog.density=uw?0.06+dk*0.14:WX.fog*lantB;
+  if(waterUni)waterUni.fogDensity.value=scene.fog.density;
+  if(uw){
+   const bg=new THREE.Color(0x16475e);
+   if(bg.setHSL)bg.setHSL(0.56,0.55,Math.max(0.015,0.16*(1-dk)));
+   scene.background=bg;
+   scene.fog.color=bg;
+  }
  }
  renderer.render(scene,camera);
 }
