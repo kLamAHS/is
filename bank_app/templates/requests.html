@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% set active_tab = 'requests' %}
+{% block title %}Requests — Diamond Bank{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <button class="btn btn-green" onclick="approveSelected()">Approve Selected</button>
+    <button class="btn btn-red" onclick="denySelected()">Deny Selected</button>
+    <form method="get" action="/requests" style="display:contents">
+        <select name="status">
+            {% for s in ['pending','approved','denied','cancelled','All'] %}
+            <option value="{{ s }}" {% if s == filter_status %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-muted btn-sm">Filter</button>
+    </form>
+    <div class="toolbar-spacer"></div>
+    <button class="btn btn-muted" onclick="openModal('links-modal')">View Links</button>
+    <a href="/requests" class="btn btn-muted">Refresh</a>
+</div>
+
+<div style="font-size:12px;color:var(--fg2);margin-bottom:8px;padding:0 4px">
+    Showing {{ reqs|length }} requests | Pending: {{ reqs|selectattr('status','equalto','pending')|list|length }}
+</div>
+
+<div class="split">
+    <div>
+        <div class="table-wrap" style="max-height:65vh;overflow-y:auto">
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Type</th><th>Player</th><th>Amount</th><th>Discord ID</th><th>Time</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for r in reqs %}
+                    <tr onclick="selectRequest({{ r.id }})" class="req-row" data-id="{{ r.id }}">
+                        <td>{{ r.id }}</td>
+                        <td>{{ r.type }}</td>
+                        <td>{{ r.player or '' }}</td>
+                        <td>{% if r.amount %}{{ "{:,.0f}".format(r.amount) }}{% endif %}</td>
+                        <td style="font-family:monospace;font-size:11px">{{ r.discord_id }}</td>
+                        <td>{{ (r.created_at or '')[:16] }}</td>
+                        <td>{{ r.status }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not reqs %}
+                    <tr><td colspan="7" style="text-align:center;color:var(--fg2)">No requests found</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div>
+        <div class="detail-panel" id="request-detail">
+            <pre id="request-detail-text" style="color:var(--fg2)">Select a request to view details</pre>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="btn btn-yellow btn-sm" onclick="revokeSelectedLink()">Revoke Link</button>
+        </div>
+    </div>
+</div>
+
+<!-- Links Modal -->
+<div class="modal-backdrop" id="links-modal">
+    <div class="modal" style="width:650px">
+        <h3>Discord Links</h3>
+        <div class="table-wrap" id="links-table" style="max-height:50vh;overflow-y:auto">
+            <p class="text-muted">Loading...</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-muted" onclick="closeModal('links-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal-backdrop" id="approve-modal">
+    <div class="modal">
+        <h3>Approve Request</h3>
+        <div class="form-group">
+            <label>Admin Notes (optional)</label>
+            <input type="text" id="approve-notes" style="width:100%">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-muted" onclick="closeModal('approve-modal')">Cancel</button>
+            <button class="btn btn-green" onclick="confirmApprove()">Approve</button>
+        </div>
+    </div>
+</div>
+
+<!-- Deny Modal -->
+<div class="modal-backdrop" id="deny-modal">
+    <div class="modal">
+        <h3>Deny Request</h3>
+        <div class="form-group">
+            <label>Reason for denial</label>
+            <input type="text" id="deny-reason" style="width:100%">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-muted" onclick="closeModal('deny-modal')">Cancel</button>
+            <button class="btn btn-red" onclick="confirmDeny()">Deny</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedRequestId = null;
+let selectedDiscordId = null;
+
+async function selectRequest(rid) {
+    selectedRequestId = rid;
+    document.querySelectorAll('.req-row').forEach(r => r.classList.remove('selected'));
+    const row = document.querySelector(`[data-id="${rid}"]`);
+    if (row) row.classList.add('selected');
+
+    const data = await api('/api/requests/' + rid);
+    if (!data) return;
+    selectedDiscordId = data.discord_id;
+    const details = data.parsed_details || {};
+
+    let lines = [
+        `Request #${data.id}  [${data.status.toUpperCase()}]`,
+        `Type: ${data.type}`,
+        `Player: ${data.player || 'N/A'}`,
+    ];
+    if (data.amount) lines.push(`Amount: ${fmt(data.amount)}`);
+    lines.push(
+        `Discord ID: ${data.discord_id}`,
+        `Discord Link: ${data.link_status}`,
+        `Created: ${data.created_at}`,
+        `Resolved: ${data.resolved_at || 'Pending'}`, ''
+    );
+
+    if (data.type === 'link_account') {
+        lines.push('-- Account Link Request --',
+            `Requested Username: ${data.player}`,
+            `Verification Code: ${details.code || 'N/A'}`,
+            '', `Verify: ask the player in-game to`,
+            `confirm this code: ${details.code || 'N/A'}`);
+    } else if (data.type === 'transfer') {
+        lines.push('-- Transfer Request --',
+            `From: ${data.player}`,
+            `To: ${details.to_player || '?'}`,
+            `Amount: ${fmt(data.amount)}`,
+            `Reason: ${details.reason || 'None'}`);
+        if (data.sender_balance !== undefined)
+            lines.push('', `Sender balance: ${fmt(data.sender_balance)} notes`);
+    } else if (data.type === 'loan_request') {
+        lines.push('-- Loan Request --',
+            `Borrower: ${data.player}`,
+            `Amount: ${fmt(data.amount)}`,
+            `Term: ${details.term_days || 30} days`,
+            `Collateral: ${details.collateral || 'None'}`,
+            `Reason: ${details.reason || 'None'}`);
+        if (data.existing_loans)
+            lines.push('', `[!] Player has ${data.existing_loans} active loan(s)`);
+    } else if (data.type === 'loan_payment') {
+        lines.push('-- Loan Payment --',
+            `Loan #${details.loan_id || '?'}`,
+            `Payment: ${fmt(data.amount)}`);
+        if (data.loan_remaining !== undefined) {
+            lines.push(`Remaining: ${fmt(data.loan_remaining)}`);
+            lines.push(`Owed: ${fmt(data.loan_owed, 1)}`);
+        }
+    }
+
+    if (data.admin_notes) lines.push('', `Admin notes: ${data.admin_notes}`);
+    document.getElementById('request-detail-text').textContent = lines.join('\n');
+}
+
+function approveSelected() {
+    if (!selectedRequestId) { toast('Select a request first', 'error'); return; }
+    openModal('approve-modal');
+}
+
+async function confirmApprove() {
+    const notes = document.getElementById('approve-notes').value;
+    const data = await api(`/api/requests/${selectedRequestId}/approve`, {
+        method:'POST', body:{admin_notes: notes}
+    });
+    if (data) { toast(`Request #${selectedRequestId} approved`); closeModal('approve-modal'); location.reload(); }
+}
+
+function denySelected() {
+    if (!selectedRequestId) { toast('Select a request first', 'error'); return; }
+    openModal('deny-modal');
+}
+
+async function confirmDeny() {
+    const reason = document.getElementById('deny-reason').value;
+    const data = await api(`/api/requests/${selectedRequestId}/deny`, {
+        method:'POST', body:{reason}
+    });
+    if (data) { toast(`Request #${selectedRequestId} denied`); closeModal('deny-modal'); location.reload(); }
+}
+
+async function revokeSelectedLink() {
+    if (!selectedDiscordId) { toast('Select a request to get Discord ID', 'error'); return; }
+    if (!confirm(`Revoke Discord link for ${selectedDiscordId}?`)) return;
+    const data = await api('/api/links/revoke', {method:'POST', body:{discord_id: selectedDiscordId}});
+    if (data) { toast('Link revoked'); location.reload(); }
+}
+
+// Links modal
+document.getElementById('links-modal')?.addEventListener('transitionend', async () => {
+    if (!document.getElementById('links-modal').classList.contains('active')) return;
+    const links = await api('/api/links');
+    if (!links) return;
+    let html = '<table><thead><tr><th>Discord ID</th><th>MC Username</th><th>Status</th><th>Code</th><th>Created</th><th>Verified</th></tr></thead><tbody>';
+    links.forEach(l => {
+        html += `<tr><td style="font-family:monospace;font-size:11px">${l.discord_id}</td>`;
+        html += `<td>${l.minecraft_username||l.requested_username||''}</td>`;
+        html += `<td>${l.status}</td><td>${l.verification_code||''}</td>`;
+        html += `<td>${(l.created_at||'').substring(0,16)}</td>`;
+        html += `<td>${(l.verified_at||'').substring(0,16)}</td></tr>`;
+    });
+    if (!links.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--fg2)">No links</td></tr>';
+    html += '</tbody></table>';
+    document.getElementById('links-table').innerHTML = html;
+});
+// Also load links when the modal button is clicked
+const linksBtn = document.querySelector('[onclick="openModal(\'links-modal\')"]');
+if (linksBtn) {
+    const origOnclick = linksBtn.onclick;
+    linksBtn.onclick = async function() {
+        openModal('links-modal');
+        const links = await api('/api/links');
+        if (!links) return;
+        let html = '<table><thead><tr><th>Discord ID</th><th>MC Username</th><th>Status</th><th>Code</th><th>Created</th><th>Verified</th></tr></thead><tbody>';
+        links.forEach(l => {
+            html += `<tr><td style="font-family:monospace;font-size:11px">${l.discord_id}</td>`;
+            html += `<td>${l.minecraft_username||l.requested_username||''}</td>`;
+            html += `<td>${l.status}</td><td>${l.verification_code||''}</td>`;
+            html += `<td>${(l.created_at||'').substring(0,16)}</td>`;
+            html += `<td>${(l.verified_at||'').substring(0,16)}</td></tr>`;
+        });
+        if (!links.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--fg2)">No links</td></tr>';
+        html += '</tbody></table>';
+        document.getElementById('links-table').innerHTML = html;
+    };
+}
+</script>
+{% endblock %}

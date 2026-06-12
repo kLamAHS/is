@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% set active_tab = 'settings' %}
+{% block title %}Settings — Diamond Bank{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div class="card-header" style="margin:0">Settings</div>
+    <div style="display:flex;gap:8px">
+        <button class="btn btn-green" onclick="saveSettings()">Save All</button>
+        <button class="btn btn-accent" onclick="backupDb()">Backup Database</button>
+    </div>
+</div>
+
+<div style="max-width:600px">
+    <!-- Currency -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Currency</div>
+        <div class="form-group">
+            <label>Currency Name</label>
+            <input type="text" class="setting" data-key="currency_name" value="{{ settings.currency_name }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Denominations (comma-separated)</label>
+            <input type="text" class="setting" data-key="denominations" value="{{ settings.denominations }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Serial Prefix</label>
+            <input type="text" class="setting" data-key="serial_prefix" value="{{ settings.serial_prefix }}" style="width:100%">
+        </div>
+    </div>
+
+    <!-- Loan Defaults -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Loan Defaults</div>
+        <div class="form-group">
+            <label>Default Interest Rate (%)</label>
+            <input type="text" class="setting" data-key="default_interest_rate" value="{{ settings.default_interest_rate }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Compounding (daily/weekly/bi-weekly)</label>
+            <input type="text" class="setting" data-key="default_compounding" value="{{ settings.default_compounding }}" style="width:100%">
+        </div>
+    </div>
+
+    <!-- Savings Interest -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Savings Interest</div>
+        <div class="form-group">
+            <label>Savings Interest Rate (% annual)</label>
+            <input type="text" class="setting" data-key="savings_interest_rate" value="{{ settings.savings_interest_rate }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Payout Interval (days)</label>
+            <input type="text" class="setting" data-key="savings_payout_days" value="{{ settings.savings_payout_days }}" style="width:100%">
+        </div>
+    </div>
+
+    <!-- Reserve Thresholds -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Reserve Thresholds</div>
+        <div class="form-group">
+            <label>Yellow Warning (%)</label>
+            <input type="text" class="setting" data-key="reserve_warning_yellow" value="{{ settings.reserve_warning_yellow }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Red Warning (%)</label>
+            <input type="text" class="setting" data-key="reserve_warning_red" value="{{ settings.reserve_warning_red }}" style="width:100%">
+        </div>
+    </div>
+
+    <!-- Fees -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Fees</div>
+        <div class="form-group">
+            <label>Redemption Fee (%)</label>
+            <input type="text" class="setting" data-key="redemption_fee_pct" value="{{ settings.redemption_fee_pct }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Redemption Fee (flat)</label>
+            <input type="text" class="setting" data-key="redemption_fee_flat" value="{{ settings.redemption_fee_flat }}" style="width:100%">
+        </div>
+    </div>
+
+    <!-- Discord Bot -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Discord Bot</div>
+        <div class="form-group">
+            <label>Bot Token</label>
+            <input type="password" class="setting" data-key="discord_bot_token" value="{{ settings.discord_bot_token }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Admin Notification Channel ID</label>
+            <input type="text" class="setting" data-key="discord_admin_channel" value="{{ settings.discord_admin_channel }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Your Discord User ID (for admin commands)</label>
+            <input type="text" class="setting" data-key="discord_admin_user_id" value="{{ settings.discord_admin_user_id }}" style="width:100%">
+        </div>
+    </div>
+
+    <!-- Limits -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Limits</div>
+        <div class="form-group">
+            <label>Max Loan Request Amount</label>
+            <input type="text" class="setting" data-key="max_loan_amount" value="{{ settings.max_loan_amount }}" style="width:100%">
+        </div>
+        <div class="form-group">
+            <label>Max Transfer Amount</label>
+            <input type="text" class="setting" data-key="max_transfer_amount" value="{{ settings.max_transfer_amount }}" style="width:100%">
+        </div>
+    </div>
+
+    <!-- Database -->
+    <div class="card">
+        <div class="card-header" style="color:var(--accent)">Database</div>
+        <div style="font-size:12px;color:var(--fg2)">
+            Database: {{ db_path }}
+        </div>
+        <div id="backup-status" style="font-size:12px;color:var(--fg2);margin-top:4px"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function saveSettings() {
+    const data = {};
+    document.querySelectorAll('.setting').forEach(el => {
+        data[el.dataset.key] = el.value;
+    });
+    const result = await api('/api/settings', {method:'POST', body:data});
+    if (result) toast('Settings saved');
+}
+
+async function backupDb() {
+    const data = await api('/api/backup', {method:'POST'});
+    if (data) {
+        document.getElementById('backup-status').textContent = 'Last backup: ' + data.path;
+        toast('Database backed up');
+    }
+}
+</script>
+{% endblock %}

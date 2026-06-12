@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% set active_tab = 'dashboard' %}
+{% block title %}Dashboard — Diamond Bank{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Vault Diamonds</div>
+        <div class="stat-value">{{ "{:,.0f}".format(stats.vault) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Circulating</div>
+        <div class="stat-value" style="color:var(--yellow)">{{ "{:,.0f}".format(stats.circ) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Reserve Ratio</div>
+        {% set ratio = stats.ratio %}
+        <div class="stat-value" style="color:{% if ratio < rd %}var(--red){% elif ratio < yw %}var(--yellow){% else %}var(--green){% endif %}">
+            {{ "{:.1f}".format(ratio) }}%
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Active Players</div>
+        <div class="stat-value" style="color:var(--accent)">{{ stats.players }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Active Loans</div>
+        <div class="stat-value" style="color:var(--red)">{{ stats.loans_count }} ({{ "{:,.0f}".format(stats.loans_value) }})</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Pending Requests</div>
+        <div class="stat-value" style="color:{% if stats.pending_requests > 0 %}var(--red){% else %}var(--green){% endif %}">
+            <a href="/requests" style="color:inherit;text-decoration:none">{{ stats.pending_requests }}</a>
+        </div>
+    </div>
+</div>
+
+<div class="split">
+    <div>
+        <!-- Alerts & Stats -->
+        <div class="card">
+            <div class="card-header">Alerts & Stats</div>
+            {% if stats.pending_requests > 0 %}
+                <div class="alert alert-danger">[!] {{ stats.pending_requests }} PENDING REQUEST(S) — <a href="/requests" style="color:inherit">click to review</a></div>
+            {% endif %}
+            {% if stats.overdue > 0 %}
+                <div class="alert alert-danger">[!] {{ stats.overdue }} OVERDUE LOAN(S)!</div>
+            {% endif %}
+            {% if ratio < rd %}
+                <div class="alert alert-danger">[!] Reserve CRITICAL: {{ "{:.1f}".format(ratio) }}%</div>
+            {% elif ratio < yw %}
+                <div class="alert alert-warning">[!] Reserve WARNING: {{ "{:.1f}".format(ratio) }}%</div>
+            {% else %}
+                <div class="alert alert-success">All clear — bank is healthy.</div>
+            {% endif %}
+            <div style="font-size:13px;color:var(--fg2);margin-top:8px;line-height:1.8">
+                Deposits held: {{ "{:,.0f}".format(stats.deposits) }}<br>
+                Note balances: {{ "{:,.0f}".format(stats.note_bals) }}<br>
+                Interest (7d): {{ "{:,.0f}".format(stats.int_7d) }}<br>
+                Interest (30d): {{ "{:,.0f}".format(stats.int_30d) }}<br>
+                Interest (all): {{ "{:,.0f}".format(stats.int_all) }}<br>
+                Fees (all): {{ "{:,.0f}".format(stats.fee_all) }}
+            </div>
+        </div>
+    </div>
+    <div>
+        <!-- Denomination Breakdown -->
+        <div class="card">
+            <div class="card-header">Denomination Breakdown</div>
+            {% if stats.circ_denom %}
+                {% set max_val = namespace(v=1) %}
+                {% for d, cnt in stats.circ_denom.items() %}
+                    {% if d|int * cnt > max_val.v %}{% set max_val.v = d|int * cnt %}{% endif %}
+                {% endfor %}
+                {% for d in stats.circ_denom.keys()|sort %}
+                    {% set cnt = stats.circ_denom[d] %}
+                    {% set val = d|int * cnt %}
+                    <div class="bar-row">
+                        <span class="bar-label">D{{ d }}</span>
+                        <div class="bar-fill" style="width:{{ (val / max_val.v * 200)|int }}px"></div>
+                        <span class="bar-value">{{ cnt }}n = {{ val }}</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-muted" style="text-align:center;padding:20px">No circulating notes yet</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="card-header" style="margin-bottom:0">Recent Transactions</div>
+        <a href="/transactions" class="btn btn-muted btn-sm">View All</a>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>ID</th><th>Time</th><th>Type</th><th>Player</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+                {% for t in stats.recent %}
+                <tr>
+                    <td>{{ t.id }}</td>
+                    <td>{{ (t.timestamp or '')[:16] }}</td>
+                    <td>{{ t.type }}</td>
+                    <td>{{ t.player or '' }}</td>
+                    <td style="text-align:right">{{ "{:,.0f}".format(t.amount) }}</td>
+                </tr>
+                {% endfor %}
+                {% if not stats.recent %}
+                <tr><td colspan="5" style="text-align:center;color:var(--fg2)">No transactions yet</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
