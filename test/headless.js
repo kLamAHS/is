@@ -45,6 +45,7 @@ const THREE={
  DirectionalLight:class extends Obj3D{constructor(){super();this.intensity=1;this.color=new Color();
   this.shadow={mapSize:{},camera:{},bias:0,normalBias:0};this.target=new Obj3D();}},
  HemisphereLight:class extends Obj3D{constructor(){super();this.intensity=1;}},
+ PointLight:class extends Obj3D{constructor(c,i,d,dec){super();this.color=new Color();this.intensity=i||1;this.distance=d||0;this.decay=dec||1;}},
  Mesh:class extends Obj3D{constructor(g,m){super();this.geometry=g||new Geom();this.material=m||new Mat();}},
  Points:class extends Obj3D{constructor(g,m){super();this.geometry=g;this.material=m;}},
  Sprite:class extends Obj3D{constructor(m){super();this.material=m||new Mat();}},
@@ -1272,6 +1273,54 @@ frames(10);
  frames(10);
  const res=run(`(function(){return {found:W.delves[0].found,cleared:W.delves[0].cleared};})()`);
  ok('delve found+cleared persists',res.found===true&&res.cleared===true);
+}
+
+
+console.log('== lanterns burn ==');
+{
+ const res=run(`(function(){
+  /* in hand, underground: the lantern lights */
+  const dv=W.delves[0];
+  P.x=dv.vx+1;P.y=dv.vy+1.05;P.z=dv.vz;G.mode='walk';
+  G.inv.lantern=0;
+  lampTick(0.1);
+  const off=LAMP.hand.intensity;
+  G.inv.lantern=1;
+  lampTick(0.1);
+  const on=LAMP.hand.intensity;
+  const near=Math.hypot(LAMP.hand.position.x-P.x,LAMP.hand.position.z-P.z)<1;
+  return {off,on,near};
+ })()`);
+ ok('hand lantern dark without, bright with ('+res.off.toFixed(2)+' -> '+res.on.toFixed(2)+')',res.off===0&&res.on>0.8&&res.near);
+}
+{
+ const res=run(`(function(){
+  /* aboard: every lantern block casts its own glow at night */
+  const s=G.ship;
+  s.blocks.set(K(0,2,0),32);s.blocks.set(K(3,2,0),32);
+  rebuildShip();
+  G.time=Math.floor(G.time/DAY)*DAY+DAY*0.97; /* the dead of night */
+  skyTick(0.01);
+  lampTick(0.1);
+  const lit=LAMP.ship.filter(l=>l.intensity>0.5).length;
+  const w=shipLocalToWorld(s.lantPos[0][0],s.lantPos[0][1],s.lantPos[0][2]);
+  const near=Math.hypot(LAMP.ship[0].position.x-w[0],LAMP.ship[0].position.z-w[2])<2;
+  return {n:s.lantPos.length,lit,near};
+ })()`);
+ ok('ship lanterns tracked ('+res.n+') and lit at night ('+res.lit+')',res.n>=2&&res.lit>=2&&res.near);
+}
+{
+ const res=run(`(function(){
+  /* a placed torch is found by the scan and glows */
+  const px=Math.round(P.x),py=Math.round(P.y),pz=Math.round(P.z);
+  setBlock(px+2,py+1,pz,51);
+  LAMP.scanT=0;
+  lampTick(0.1);
+  const lit=LAMP.world.filter(l=>l.intensity>0.3).length;
+  setBlock(px+2,py+1,pz,0);
+  return {lit};
+ })()`);
+ ok('placed torches glow nearby ('+res.lit+')',res.lit>=1);
 }
 
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}
