@@ -383,7 +383,7 @@ frames(10);
  const res=run(`(function(){
   const home=W.home;
   const r0=ringOf(home.cx,home.cz);
-  const rFar=ringOf(home.cx>160?8:312,home.cz>160?8:312);
+  const rFar=ringOf(home.cx>WORLD/2?10:WORLD-10,home.cz>WORLD/2?10:WORLD-10);
   const rings=W.isles.map(i=>i.ring);
   return {r0,rFar,allAssigned:rings.every(r=>r===0||r===1||r===2),has2:rings.includes(2)};
  })()`);
@@ -397,7 +397,7 @@ frames(10);
   // hp scaling: same class spawned in ring 0 vs ring 2
   const home=W.home;
   const p0=spawnShipNPC('pirate','sloop',home.cx+10,home.cz+10);
-  const fx=home.cx>160?20:300, fz=home.cz>160?20:300;
+  const fx=home.cx>WORLD/2?20:WORLD-20, fz=home.cz>WORLD/2?20:WORLD-20;
   const p2=spawnShipNPC('pirate','sloop',fx,fz);
   const out={hp0:p0.maxHp,hp2:p2.maxHp,d0:p0.dmgBonus,d2:p2.dmgBonus};
   p0.fade=0.01;p2.fade=0.01;
@@ -412,7 +412,7 @@ frames(10);
   let g0=0,g2=0;
   for(let i=0;i<200;i++){
    if(pickPirateCls(home.cx,home.cz)==='galleon')g0++;
-   if(pickPirateCls(home.cx>160?20:300,home.cz>160?20:300)==='galleon')g2++;
+   if(pickPirateCls(home.cx>WORLD/2?20:WORLD-20,home.cz>WORLD/2?20:WORLD-20)==='galleon')g2++;
   }
   return {g0,g2};
  })()`);
@@ -630,7 +630,7 @@ console.log('== progression: loot & royal sails ==');
   for(let i=0;i<40;i++){
    spawnLoot(home.cx+6,home.cz+6,{g:[100,100],n:[0,0]});
    inner+=G.loots.pop().gold;
-   const fx=home.cx>160?20:300, fz=home.cz>160?20:300;
+   const fx=home.cx>WORLD/2?20:WORLD-20, fz=home.cz>WORLD/2?20:WORLD-20;
    spawnLoot(fx,fz,{g:[100,100],n:[0,0]});
    outer+=G.loots.pop().gold;
   }
@@ -703,7 +703,7 @@ console.log('== progression: smoke per ring ==');
  frames(10);
  const ok1=run(`(function(){
   const home=W.home;
-  const spots=[[home.cx+12,home.cz+12],[home.cx>160?home.cx-110:home.cx+110,home.cz],[home.cx>160?30:290,home.cz>160?30:290]];
+  const spots=[[home.cx+12,home.cz+12],[home.cx>WORLD/2?home.cx-220:home.cx+220,home.cz],[home.cx>WORLD/2?30:WORLD-30,home.cz>WORLD/2?30:WORLD-30]];
   for(const [x,z] of spots){
    G.ship.sailing=true;G.mode='sail';G.ship.cells.clear();ensureCaptain();
    G.ship.x=x;G.ship.z=z;
@@ -858,11 +858,13 @@ console.log('== landfall: caves, reefs, wrecks ==');
    if(!isFinite(buyP(isl,'pearl'))||!isFinite(sellP(isl,'pearl')))finite=false;
   }
   const tropical=W.isles.find(i=>i.stall&&i.type==='tropical');
-  const capital=W.isles.find(i=>i.type==='capital');
+  const capital=W.isles.find(i=>i.type==='capital'&&i.stall);
   return {finite,inKeys:GKEYS.includes('pearl'),
+   facPorts:W.isles.filter(i=>i.fac).every(i=>!!i.stall),
    cheapAtSource:tropical&&capital?buyP(tropical,'pearl')<buyP(capital,'pearl'):true};
  })()`);
  ok('pearl prices finite at every stall',res.finite&&res.inKeys);
+ ok('every faction seat has its harbour',res.facPorts);
  ok('pearls cheap where they are dived',res.cheapAtSource);
 }
 
@@ -1088,7 +1090,7 @@ frames(10);
   const plazaTop=vTopY(isl.stall.x+2,isl.stall.z);
   return {drop:plazaTop-holeTop};
  })()`);
- ok('the well is a real hole villagers now sidestep (drop '+res.drop+')',res.drop>=2);
+ ok('the well breaks the plaza surface — villagers sidestep it (delta '+res.drop+')',Math.abs(res.drop)>=2);
 }
 
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}

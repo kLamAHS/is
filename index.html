@@ -476,7 +476,7 @@ const RINGS=[
 function ringOf(x,z){
  if(!W||!W.home)return 0;
  const d=Math.hypot(x-W.home.cx,z-W.home.cz);
- return d<80?0:d<160?1:2;
+ return d<150?0:d<300?1:2;
 }
 function computeRings(home){
  W.home=home;
@@ -574,7 +574,7 @@ function iconFor(item){
  return cn;
 }
 /* ---------------- world ---------------- */
-const WORLD=320, SEA=12, WH=48, CHS=16;
+const WORLD=640, SEA=12, WH=64, CHS=16;
 let W=null;     /* world meta */
 let ED=new Map();   /* player edits key->id (0=forced air) */
 let VB=new Map();   /* village/static blocks key->id */
@@ -691,9 +691,9 @@ function col(x,z){
   gy:4+vnoise(x*0.03+311.9,z*0.03+419.3)*(SEA-9),
   mo:vnoise(x*0.03+777.7,z*0.03+99.1),
   cavM:vnoise(x*0.028+517.1,z*0.028+733.9),
-  cavY:5+vnoise(x*0.045+913.7,z*0.045+157.3)*14,
+  cavY:5+vnoise(x*0.045+913.7,z*0.045+157.3)*22,
   cav2M:vnoise(x*0.021+217.9,z*0.021+941.1),
-  cav2Y:4+vnoise(x*0.05+613.3,z*0.05+357.9)*9,
+  cav2Y:4+vnoise(x*0.05+613.3,z*0.05+357.9)*13,
   room:vnoise(x*0.06+157.1,z*0.06+89.9)};
  if(COLS.size>140000)COLS.clear();
  COLS.set(key,c);
@@ -765,7 +765,7 @@ function genBlock(x,y,z){
     if(M<=th)return 0;
     const r=1.6+(M-th)*11+roomB;
     const dy=y-Y;
-    if(Math.abs(dy)<r&&(y<h-1||M>th+0.06))return 1;
+    if(Math.abs(dy)<r&&(y<h-1||(M>th+0.105&&Math.abs(dy)<2.4&&hash2((x>>2)*13+7,(z>>2)*29+3)<0.3)))return 1; /* mouths come as scattered walk-in openings */
     if(dy>=r&&dy<r+1&&M>th+0.07&&hash2(x*31+y*7,z*17+y*3)<0.07)return 2;
     return 0;
    };
@@ -965,11 +965,11 @@ function buildTower(tx,tz,h){
 function scanDock(isl,rng){
  const base=Math.atan2(W.cz0-isl.cz,W.cx0-isl.cx);
  let fallback=null;
- for(let k=0;k<24;k++){
-  const ang=base+(k%2?1:-1)*Math.ceil(k/2)*0.28+(rng()-0.5)*0.06;
+ for(let k=0;k<32;k++){
+  const ang=base+(k%2?1:-1)*Math.ceil(k/2)*0.22+(rng()-0.5)*0.06;
   const dx=Math.cos(ang),dz=Math.sin(ang);
   let i0=-1;
-  for(let i=Math.floor(isl.r*0.5);i<isl.r*1.7;i++){
+  for(let i=Math.floor(isl.r*0.4);i<isl.r*2.1;i++){
    if(getH(Math.round(isl.cx+dx*i),Math.round(isl.cz+dz*i))<=SEA){i0=i;break;}
   }
   if(i0<0)continue;
@@ -985,7 +985,16 @@ function scanDock(isl,rng){
   }
   if(ok)return{dx,dz,i0};
  }
- return fallback;
+ if(fallback)return fallback;
+ /* last resort: any shoreline at all — a faction seat must have its harbour */
+ for(let a=0;a<32;a++){
+  const ang=base+a*Math.PI/16;
+  const dx=Math.cos(ang),dz=Math.sin(ang);
+  for(let i=4;i<isl.r*2.4;i++){
+   if(getH(Math.round(isl.cx+dx*i),Math.round(isl.cz+dz*i))<=SEA)return {dx,dz,i0:i};
+  }
+ }
+ return null;
 }
 function buildVillage(isl,rng){
  const sc=scanDock(isl,rng);
@@ -1008,15 +1017,15 @@ function buildVillage(isl,rng){
  vset(wlx-1,h+3,wlz,7);vset(wlx,h+3,wlz,7);vset(wlx+1,h+3,wlz,7);
  /* cottages ringed about the plaza, doors facing in, footpaths worn between */
  const dockA=Math.atan2(dz,dx);
- const n=3+((rng()*2)|0);
+ const n=4+((rng()*2)|0);
  const base=rng()*Math.PI*2;
  let built=0;
- for(let i=0;i<8&&built<n;i++){
-  const a=base+i*(Math.PI*2/8);
+ for(let i=0;i<10&&built<n;i++){
+  const a=base+i*(Math.PI*2/10);
   let da=a-dockA;
   while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
-  if(Math.abs(da)<0.6)continue; /* keep the way to the dock clear */
-  const hxp=Math.round(sx+Math.cos(a)*(9+rng()*2)),hzp=Math.round(sz+Math.sin(a)*(9+rng()*2));
+  if(Math.abs(da)<0.55)continue; /* keep the way to the dock clear */
+  const hxp=Math.round(sx+Math.cos(a)*(9+rng()*5)),hzp=Math.round(sz+Math.sin(a)*(9+rng()*5));
   const hh=getH(hxp,hzp);
   if(hh<=SEA)continue;
   const fh=Math.max(SEA+1,hh);
@@ -1144,32 +1153,32 @@ function genWorld(seedStr){
  const rng=mulberry32(WSEED);
  W={seed:seedStr,isles:[],flat:new Set(),cx0:WORLD/2,cz0:WORLD/2,treasures:[]};
  ED=new Map();VB=new Map();DIRTY=new Set();COLS=new Map();
- /* place islands on a loose ring + center */
- const n=10+((rng()*3)|0);
+ /* place islands on a loose ring + center: big, sprawling landmasses now */
+ const n=11+((rng()*3)|0);
  let id=0;
  const tries=[];
- for(let i=0;i<34&&tries.length<n;i++){
+ for(let i=0;i<60&&tries.length<n;i++){
   const a=(i%n/n)*Math.PI*2+rng()*0.9;
-  const rad=58+rng()*88;
+  const rad=95+rng()*195;
   const cx=Math.round(W.cx0+Math.cos(a)*rad),cz=Math.round(W.cz0+Math.sin(a)*rad);
-  const r=17+rng()*16;
-  if(cx-r<8||cz-r<8||cx+r>WORLD-8||cz+r>WORLD-8)continue;
-  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<r+o.r+12)ok=false;
+  const r=36+rng()*34;
+  if(cx-r<10||cz-r<10||cx+r>WORLD-10||cz+r>WORLD-10)continue;
+  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<(r+o.r)*1.15+16)ok=false;
   if(!ok)continue;
   const type=TYPES[id%TYPES.length];
-  const isl={id:id++,cx,cz,r,peak:type==='mining'?16+rng()*8:7+rng()*6,type,
+  const isl={id:id++,cx,cz,r,peak:type==='mining'?20+rng()*14:9+rng()*10,type,
    name:isleName(rng,type),fac:null,disc:false};
   tries.push(isl);W.isles.push(isl);
  }
  /* scattered rock islets: navigation texture, ore and buried gold */
- for(let i=0;i<6;i++){
-  const a=rng()*Math.PI*2,rad=36+rng()*108;
+ for(let i=0;i<10;i++){
+  const a=rng()*Math.PI*2,rad=70+rng()*220;
   const cx=Math.round(W.cx0+Math.cos(a)*rad),cz=Math.round(W.cz0+Math.sin(a)*rad);
-  const r=5+rng()*6;
-  if(cx-r<8||cz-r<8||cx+r>WORLD-8||cz+r>WORLD-8)continue;
-  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<r+o.r+10)ok=false;
+  const r=8+rng()*10;
+  if(cx-r<10||cz-r<10||cx+r>WORLD-10||cz+r>WORLD-10)continue;
+  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<r+o.r+12)ok=false;
   if(!ok)continue;
-  const isl={id:id++,cx,cz,r,peak:6+rng()*7,type:'rock',name:isleName(rng,'rock'),fac:null,disc:false};
+  const isl={id:id++,cx,cz,r,peak:7+rng()*9,type:'rock',name:isleName(rng,'rock'),fac:null,disc:false};
   tries.push(isl);W.isles.push(isl);
  }
  for(const isl of W.isles)if(isl.type==='tropical')isl.atoll=hash2(isl.id*77,3)<0.5;
@@ -1275,8 +1284,8 @@ function genWorld(seedStr){
  }
  /* sunken wrecks: ribs in the gloom, chests no honest diver has touched */
  W.sunk=[];
- for(let i=0;i<24&&W.sunk.length<5;i++){
-  const a=rng()*Math.PI*2,rad=40+rng()*120;
+ for(let i=0;i<40&&W.sunk.length<8;i++){
+  const a=rng()*Math.PI*2,rad=60+rng()*240;
   const sx2=Math.round(W.cx0+Math.cos(a)*rad),sz2=Math.round(W.cz0+Math.sin(a)*rad);
   const sb=getH(sx2,sz2);
   if(sb>SEA-5||sb<4)continue;
@@ -1653,7 +1662,7 @@ function updateChunks(px,pz){
 }
 
 /* ---------------- day / sky / atmosphere ---------------- */
-const DAY=110;
+const DAY=140;
 const C_TOP_D=new THREE.Color(0x3a7cb8),C_TOP_N=new THREE.Color(0x070d1d);
 const C_HOR_D=new THREE.Color(0x9cc8de),C_HOR_N=new THREE.Color(0x101a30);
 const C_DAWN=new THREE.Color(0xe08a4e);
@@ -3521,8 +3530,9 @@ function spawnGhost(){
 }
 function spawnFleet(){
  const a=Math.random()*Math.PI*2;
- const sx=clamp(WORLD/2+Math.cos(a)*150,12,WORLD-12),sz=clamp(WORLD/2+Math.sin(a)*150,12,WORLD-12);
- const ex=clamp(WORLD/2-Math.cos(a)*150,12,WORLD-12),ez=clamp(WORLD/2-Math.sin(a)*150,12,WORLD-12);
+ const R=WORLD*0.47;
+ const sx=clamp(WORLD/2+Math.cos(a)*R,12,WORLD-12),sz=clamp(WORLD/2+Math.sin(a)*R,12,WORLD-12);
+ const ex=clamp(WORLD/2-Math.cos(a)*R,12,WORLD-12),ez=clamp(WORLD/2-Math.sin(a)*R,12,WORLD-12);
  for(let i=0;i<3;i++){
   const x=sx+Math.cos(a+Math.PI/2)*i*8,z=sz+Math.sin(a+Math.PI/2)*i*8;
   if(getH(Math.round(x),Math.round(z))>SEA-2)continue;
@@ -4325,14 +4335,14 @@ function makeJob(t,isl,ports,rng){
   const cls=tier>=3?'galleon':tier===2?(rng()<0.5?'brigantine':'galleon'):(rng()<0.6?'sloop':'brigantine');
   const kinds=['pirate','navy deserter','smuggler','rogue merchant'];
   const kind=kinds[(rng()*kinds.length)|0];
-  const a=rng()*6.28,d=40+rng()*50+tier*15;
+  const a=rng()*6.28,d=70+rng()*90+tier*25;
   const tx=clamp(isl.cx+Math.cos(a)*d,12,WORLD-12),tz=clamp(isl.cz+Math.sin(a)*d,12,WORLD-12);
   const pay=Math.round((tier>=3?600+rng()*300:tier===2?220+rng()*200:120+rng()*120)*ringPay);
   return {id,t,isl:isl.id,to:isl.id,name:nm,cls,kindTxt:kind,tx,tz,pay,dl,rep:6,tier,got:false,
    txt:'Sink the '+kind+' “'+nm+'” and return to '+isl.name};
  }
  if(t==='salvage'){
-  const a=rng()*6.28,d=35+rng()*55;
+  const a=rng()*6.28,d=55+rng()*100;
   const tx=clamp(isl.cx+Math.cos(a)*d,12,WORLD-12),tz=clamp(isl.cz+Math.sin(a)*d,12,WORLD-12);
   const pay=Math.round((110+((rng()*120)|0))*ringPay);
   return {id,t,isl:isl.id,to:isl.id,tx,tz,pay,dl,rep:4,got:false,
@@ -6074,7 +6084,7 @@ function routeCourse(x0,z0,x1,z1){
  gsc[id0]=0;hpush(heur(s0[0],s0[1]),id0);
  const DIRS=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
  let found=false,guard=0;
- while(heap.length&&guard++<26000){
+ while(heap.length&&guard++<70000){
   const cur=hpop()[1];
   if(closed[cur])continue;
   closed[cur]=1;
@@ -6253,20 +6263,20 @@ function openMap(){
   c.globalAlpha=0.5;
   c.setLineDash([8,6]);
   c.lineWidth=2;
-  for(const [rr,ri] of [[80,1],[160,2]]){
+  for(const [rr,ri] of [[150,1],[300,2]]){
    c.strokeStyle=RINGS[ri].c;
    c.beginPath();c.arc(hx,hz,rr*S,0,7);c.stroke();
   }
   c.setLineDash([]);
   c.font='13px VT323';
-  c.fillStyle=RINGS[0].c;c.fillText(RINGS[0].n,hx-24,hz+30*S+12);
+  c.fillStyle=RINGS[0].c;c.fillText(RINGS[0].n,hx-24,hz+56*S+12);
   c.fillStyle=RINGS[1].c;
-  let lx=hx,lz=hz-110*S;
-  if(lz<14){lz=hz+110*S;}
+  let lx=hx,lz=hz-220*S;
+  if(lz<14){lz=hz+220*S;}
   c.fillText(RINGS[1].n,lx-26,clamp(lz,14,cn.height-6));
   c.fillStyle=RINGS[2].c;
-  let lz2=hz-200*S;
-  if(lz2<14)lz2=hz+200*S;
+  let lz2=hz-340*S;
+  if(lz2<14)lz2=hz+340*S;
   c.fillText(RINGS[2].n,clamp(lx-30,6,cn.width-90),clamp(lz2,14,cn.height-6));
   c.restore();
  }
