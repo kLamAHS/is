@@ -207,6 +207,8 @@ tr.stale td{opacity:.45}
 <div id="hud">
   <div id="topbar">
     <div class="chip">⛃ <b id="goldV">0</b></div>
+    <div class="chip" id="hpChip">♥ <b id="phpV">20</b></div>
+    <div class="chip hidden" id="brChip">◍ <b id="brV"></b></div>
     <div class="chip">Day <b id="dayV">1</b> <span id="clockV" class="muted">dawn</span></div>
     <div class="chip" id="facChip">—</div>
     <div class="chip">Cargo <b id="cargoV">0/0</b></div>
@@ -356,7 +358,7 @@ const T={grassT:0,grassS:1,dirt:2,sand:3,stone:4,logS:5,logT:6,plank:7,
  stall:16,sailW:17,sailB:18,palm:19,
  cargo:20,reinf:21,lightp:22,sailF:23,sailH:24,hid:25,keg:26,bunk:27,
  chart:28,bench:29,lant:30,flagB:31,fig:32,rud:33,
- bwS:34,bwT:35,star:36,steelP:37,sailR:38,hcS:39,hcF:40};
+ bwS:34,bwT:35,star:36,steelP:37,sailR:38,hcS:39,hcF:40,oys:41,crys:42};
 /* faces order: +x,-x,+y(top),-y,+z,-z */
 const BLK={
  1:{n:'Grass', f:[T.grassS,T.grassS,T.grassT,T.dirt,T.grassS,T.grassS], hard:.35, drop:'dirt'},
@@ -400,6 +402,8 @@ const BLK={
  41:{n:'Heavy cannon',f:[T.hcS,T.hcS,T.hcS,T.hcS,T.hcS,T.hcF], hard:.7, drop:'hcannon'},
  42:{n:'Heavy cannon',f:[T.hcS,T.hcF,T.hcS,T.hcS,T.hcS,T.hcS], hard:.7, drop:'hcannon'},
  43:{n:'Heavy cannon',f:[T.hcS,T.hcS,T.hcS,T.hcS,T.hcF,T.hcS], hard:.7, drop:'hcannon'},
+ 44:{n:'Oyster bed',f:[T.oys,T.oys,T.oys,T.oys,T.oys,T.oys], hard:.5, drop:'pearl'},
+ 45:{n:'Gold-veined crystal',f:[T.crys,T.crys,T.crys,T.crys,T.crys,T.crys], hard:1.0, drop:'gold'},
 };
 const ITEM2BLK={planks:7,log:5,stone:4,dirt:2,sand:3,sail:16,cannon:11,helm:12,
  blacksail:17,cargohold:22,reinf:23,lightp:24,fastsail:25,heavysail:26,hiddenc:27,keg:28,
@@ -427,10 +431,11 @@ const ITEMNAME={planks:'Planks',log:'Log',stone:'Stone',dirt:'Dirt',sand:'Sand',
  ckeg:'Powder kegs',csilk:'Stolen silk',crelic:'Relic crate',carms:'Outlaw arms',cletters:'Sealed letters',
  salv:'Salvaged cargo',
  shot:'Round shot',steel:'Steel',blackwood:'Blackwood log',starmetal:'Starmetal',
- steelplate:'Steel plating',royalsail:'Royal sail',hcannon:'Heavy cannon'};
+ steelplate:'Steel plating',royalsail:'Royal sail',hcannon:'Heavy cannon',
+ pearl:'Pearls',cutlass:'Cutlass',pistol:'Flintlock pistol',divehelm:'Diving helm'};
 
 /* ---------------- goods / economy ---------------- */
-const GOODS={grain:{b:3},sugar:{b:5},rum:{b:9},spices:{b:14},silk:{b:22},iron:{b:8},gold:{b:18},log:{b:2}};
+const GOODS={grain:{b:3},sugar:{b:5},rum:{b:9},spices:{b:14},silk:{b:22},iron:{b:8},gold:{b:18},log:{b:2},pearl:{b:26}};
 const GKEYS=Object.keys(GOODS);
 /* contraband: never on open markets; moved through black-market buyers */
 const CONTRA={ckeg:{b:34},csilk:{b:30},crelic:{b:46},carms:{b:38},cletters:{b:26}};
@@ -438,11 +443,11 @@ const CKEYS=Object.keys(CONTRA);
 const CARGOKEYS=[...GKEYS,...CKEYS,'salv','shot'];
 /* island econ profiles: production>40 means cheap producer, <40 expensive consumer */
 const ECON={
- farm:    {grain:130,sugar:95, rum:30, spices:34,silk:14,iron:40,gold:40,log:40},
- tropical:{grain:22, sugar:125,rum:90, spices:120,silk:40,iron:18,gold:40,log:55},
- mining:  {grain:14, sugar:40, rum:18, spices:40,silk:40,iron:135,gold:95,log:24},
- forest:  {grain:24, sugar:40, rum:40, spices:40,silk:40,iron:40,gold:40,log:140},
- capital: {grain:30, sugar:32, rum:34, spices:20,silk:120,iron:46,gold:46,log:30},
+ farm:    {grain:130,sugar:95, rum:30, spices:34,silk:14,iron:40,gold:40,log:40, pearl:30},
+ tropical:{grain:22, sugar:125,rum:90, spices:120,silk:40,iron:18,gold:40,log:55, pearl:110},
+ mining:  {grain:14, sugar:40, rum:18, spices:40,silk:40,iron:135,gold:95,log:24, pearl:20},
+ forest:  {grain:24, sugar:40, rum:40, spices:40,silk:40,iron:40,gold:40,log:140,pearl:35},
+ capital: {grain:30, sugar:32, rum:34, spices:20,silk:120,iron:46,gold:46,log:30, pearl:22},
 };
 
 /* ---------------- factions ---------------- */
@@ -535,6 +540,8 @@ function buildAtlas(){
  at(T.sailR,'#f4f0e4',.05,(c,ox,oy)=>{c.fillStyle='#caa53c';c.fillRect(ox,oy+2,16,2);c.fillRect(ox,oy+12,16,2);c.fillStyle='#e0d8c2';for(let y=6;y<11;y+=3)c.fillRect(ox,oy+y,16,1);});
  at(T.hcS,'#23252c',.18,(c,ox,oy)=>{c.fillStyle='#14151a';c.fillRect(ox,oy+5,16,6);c.fillStyle='#9fe8ff';c.fillRect(ox+7,oy+7,2,2);});
  at(T.hcF,'#23252c',.18,(c,ox,oy)=>{c.fillStyle='#050608';c.beginPath();c.arc(ox+8,oy+8,5,0,7);c.fill();c.strokeStyle='#6b7682';c.stroke();c.strokeStyle='#9fe8ff';c.strokeRect(ox+1.5,oy+1.5,13,13);});
+ at(T.oys,'#5a7a78',.16,(c,ox,oy,r)=>{for(let i=0;i<4;i++){const x=ox+2+(r()*11|0),y=oy+2+(r()*11|0);c.fillStyle='#3a5654';c.fillRect(x,y,3,2);c.fillStyle='#f0ecf4';c.fillRect(x+1,y,1,1);}});
+ at(T.crys,'#8a8d92',.14,(c,ox,oy,r)=>{for(let i=0;i<3;i++){const x=ox+2+(r()*10|0),y=oy+2+(r()*10|0);c.fillStyle='#ffe9a8';c.fillRect(x,y,2,3);c.fillStyle='#fff8dc';c.fillRect(x,y,1,1);c.fillStyle='#caa53c';c.fillRect(x+1,y+2,1,1);}});
  ATLAS.cnv=cnv;
  const tex=new THREE.CanvasTexture(cnv);
  tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestFilter;
@@ -551,8 +558,12 @@ function iconFor(item){
  /* goods icons */
  const G2={grain:'#d8b54a',sugar:'#efe7d8',rum:'#8a3a22',spices:'#c46a1e',silk:'#b07fd0',iron:'#c8cdd4',gold:'#e7b94a',
   ckeg:'#2b2620',csilk:'#7a4fa0',crelic:'#3fae9c',carms:'#5a6470',cletters:'#d8cba0',salv:'#6b7a8a',
-  shot:'#23252a',steel:'#aebac8',starmetal:'#7fd0e8'};
+  shot:'#23252a',steel:'#aebac8',starmetal:'#7fd0e8',pearl:'#f0ecf4'};
  if(item==='shot'){c.fillStyle='#23252a';c.beginPath();c.arc(5,11,3,0,7);c.fill();c.beginPath();c.arc(11,9,3,0,7);c.fill();c.beginPath();c.arc(8,5,3,0,7);c.fill();c.fillStyle='#4a5058';c.fillRect(4,4,1,1);c.fillRect(10,8,1,1);return cn;}
+ if(item==='pearl'){c.fillStyle='#3a5654';c.beginPath();c.arc(8,9,6,0,7);c.fill();c.fillStyle='#f0ecf4';c.beginPath();c.arc(8,8,3,0,7);c.fill();c.fillStyle='#fff';c.fillRect(7,7,1,1);return cn;}
+ if(item==='cutlass'){c.strokeStyle='#c8cdd4';c.lineWidth=2;c.beginPath();c.moveTo(4,12);c.quadraticCurveTo(8,8,12,3);c.stroke();c.fillStyle='#8a5a2a';c.fillRect(3,11,3,3);c.fillStyle='#caa53c';c.fillRect(5,10,2,2);return cn;}
+ if(item==='pistol'){c.fillStyle='#3a3026';c.fillRect(3,7,9,2);c.fillRect(3,9,3,4);c.fillStyle='#8a8d92';c.fillRect(10,6,3,2);c.fillStyle='#caa53c';c.fillRect(6,9,1,1);return cn;}
+ if(item==='divehelm'){c.fillStyle='#aebac8';c.beginPath();c.arc(8,8,6,0,7);c.fill();c.fillStyle='#1c3a4a';c.beginPath();c.arc(8,8,3,0,7);c.fill();c.fillStyle='#caa53c';c.fillRect(2,7,2,2);c.fillRect(12,7,2,2);return cn;}
  c.fillStyle=G2[item]||'#888';c.fillRect(3,5,10,9);c.fillStyle='#00000044';c.fillRect(3,5,10,2);
  c.fillStyle='#ffffff33';c.fillRect(4,8,3,3);
  return cn;
@@ -666,11 +677,13 @@ function col(x,z){
   }
   e+=Math.max(-2.5,land);
  }
- c={h:Math.floor(clamp(e,3,WH-9)),isl,tree:-1,top:-1,sl:-1,cv,
+ c={h:Math.floor(clamp(e,3,WH-9)),isl,tree:-1,top:-1,sl:-1,cv,reef,
   va:vnoise(x*0.085+501.3,z*0.085+167.9),
   vy:5+vnoise(x*0.035+901.1,z*0.035+13.7)*(SEA-9),
   gy:4+vnoise(x*0.03+311.9,z*0.03+419.3)*(SEA-9),
-  mo:vnoise(x*0.03+777.7,z*0.03+99.1)};
+  mo:vnoise(x*0.03+777.7,z*0.03+99.1),
+  cavM:vnoise(x*0.028+517.1,z*0.028+733.9),
+  cavY:5+vnoise(x*0.045+913.7,z*0.045+157.3)*14};
  if(COLS.size>140000)COLS.clear();
  COLS.set(key,c);
  return c;
@@ -718,6 +731,15 @@ function genBlock(x,y,z){
   const isl=c.isl;
   const sl=colSlope(x,z);
   const rocky=sl>=3||(!isl&&h>SEA)||(isl&&((isl.type==='mining'&&h>SEA+5)||(isl.type==='rock'&&h>SEA+2)));
+  /* oyster beds crust the reef tops — pearls for whoever can hold their breath */
+  if(y===h&&h<=SEA-2&&c.reef>0.3&&hash2(x*13+5,z*7+9)<0.16)return 44;
+  /* worm caves riddle the isles: dry galleries in the hills, drowned ones below the line */
+  if(c.cavM>0.62&&y>3&&!W.flat.has(x+'|'+z)){
+   const r=1.4+(c.cavM-0.62)*6;
+   const dy=y-c.cavY;
+   if(Math.abs(dy)<r&&(y<h-2||c.cavM>0.74))return 0; /* only the strong veins break the surface: entrances */
+   if(dy>=r&&dy<r+1&&c.cavM>0.7&&hash2(x*31+y*7,z*17+y*3)<0.06)return 45; /* crystal in the gallery roof */
+  }
   if(y===h){
    if(h<=SEA+1)return 3;
    /* beaches run wider where the land lies low and dry */
@@ -1187,6 +1209,51 @@ function genWorld(seedStr){
    buildTower(tx,tz,h);
    isl.tower={x:tx,z:tz};towers++;break;
   }
+ }
+ /* pirate camps: somebody beat you to the wild isles, and they don't share */
+ W.camps=[];
+ let camps=0;
+ for(const isl of wild){
+  if(camps>=2)break;
+  if(isl.tower||hash2(isl.id*7,11)<0.35)continue;
+  for(let t=0;t<10;t++){
+   const a=rng()*Math.PI*2,d=rng()*isl.r*0.4;
+   const cx2=Math.round(isl.cx+Math.cos(a)*d),cz2=Math.round(isl.cz+Math.sin(a)*d);
+   const h=getH(cx2,cz2);
+   if(h<=SEA+1||colSlope(cx2,cz2)>=3)continue;
+   flatten(cx2,cz2,3,h);
+   /* fire pit, loot chest, powder kegs, a ragged lean-to */
+   for(const [ax,az] of [[1,0],[-1,0],[0,1],[0,-1]])vset(cx2+ax,h+1,cz2+az,4);
+   vset(cx2,h+1,cz2,32); /* embers */
+   vset(cx2+2,h+1,cz2+2,13);
+   vset(cx2-2,h+1,cz2+2,26);
+   for(let i=0;i<3;i++){vset(cx2-2+i,h+1,cz2-2,7);vset(cx2-2+i,h+2,cz2-2,7);}
+   for(let i=0;i<3;i++)vset(cx2-2+i,h+3,cz2-2,17); /* black canvas roof */
+   W.camps.push({isle:isl.id,x:cx2,z:cz2,guards:3,spawned:0,killed:0,cleared:false});
+   camps++;break;
+  }
+ }
+ /* sunken wrecks: ribs in the gloom, chests no honest diver has touched */
+ W.sunk=[];
+ for(let i=0;i<24&&W.sunk.length<5;i++){
+  const a=rng()*Math.PI*2,rad=40+rng()*120;
+  const sx2=Math.round(W.cx0+Math.cos(a)*rad),sz2=Math.round(W.cz0+Math.sin(a)*rad);
+  const sb=getH(sx2,sz2);
+  if(sb>SEA-5||sb<4)continue;
+  const along2=rng()<0.5;
+  for(let k=-2;k<=2;k++){
+   const kx=sx2+(along2?k:0),kz=sz2+(along2?0:k);
+   vset(kx,sb+1,kz,7); /* the keel */
+   if(Math.abs(k)===1){ /* rib arches */
+    vset(kx+(along2?0:1),sb+1,kz+(along2?1:0),7);
+    vset(kx-(along2?0:1),sb+1,kz-(along2?1:0),7);
+    vset(kx+(along2?0:1),sb+2,kz+(along2?1:0),7);
+    vset(kx-(along2?0:1),sb+2,kz-(along2?1:0),7);
+   }
+  }
+  vset(sx2,sb+1,sz2,13); /* the drowned chest */
+  if(rng()<0.35)vset(sx2+(along2?1:0),sb+1,sz2+(along2?0:1),37); /* starmetal fused to the keel */
+  W.sunk.push({x:sx2,z:sz2});
  }
 }
 const INAMES1=['Skull','Parrot','Salt','Black','Wind','Coral','Gull','Iron','Rum','Fog','Crab','Palm','Bone','Star','Storm'];
@@ -1716,7 +1783,11 @@ function movePlayer(dt,mx,mz,jump){
  let ny=P.y+P.vy*dt;
  if(!aabbHit(P.x,ny,P.z)){P.y=ny;P.onG=false;P.ceil=false;}
  else{
-  if(P.vy<0){P.onG=true;P.y=Math.floor(ny)+1.001;P.ceil=false;}
+  if(P.vy<0){
+   /* hard ground keeps the score */
+   if(P.vy<-15&&!inW)dmgPlayer(Math.round((-P.vy-15)*1.1),'the fall');
+   P.onG=true;P.y=Math.floor(ny)+1.001;P.ceil=false;
+  }
   else P.ceil=true;
   P.vy=0;
  }
@@ -1801,7 +1872,9 @@ function breakBlock(hit){
   if((def.drop==='log'||def.drop==='iron'||def.drop==='gold'||def.drop==='stone'||def.drop==='blackwood')&&FACTIONS[G.fac].gather>1)n=2;
   give(def.drop,n);
   if(def.drop==='iron'||def.drop==='gold'){AU.coin();G.stats.ore=(G.stats.ore|0)+n;}
+  if(def.drop==='pearl'){AU.coin();G.stats.pearls=(G.stats.pearls|0)+n;}
   if(def.drop==='starmetal'){AU.coin();AU.bell();toast('Starmetal! Cold to the touch and humming faintly.');}
+  if(hit.id===45){give('gold',1);burst(hit.x+0.5,hit.y+0.5,hit.z+0.5,10,[0.95,0.85,0.4],3);} /* crystal pays double */
  }
  /* treasure dig check */
  if(G.tmap&&!G.tmap.found&&hit.x===G.tmap.x&&hit.z===G.tmap.z){
@@ -1809,6 +1882,12 @@ function breakBlock(hit){
   setBlock(hit.x,hit.y,hit.z,13);
   toast('You strike wood! A buried chest!');
   AU.bell();
+  /* the dead guard their gold */
+  for(let i=0;i<2;i++){
+   const a=Math.random()*6.28;
+   spawnMob('skel',hit.x+Math.cos(a)*5,hit.z+Math.sin(a)*5,{});
+  }
+  if(MOBS.length)toast('The sand stirs — the crew that buried it never left.',true);
  }
  if(legendDig(hit))return;
  questPing();
@@ -1816,12 +1895,19 @@ function breakBlock(hit){
 }
 function openChest(hit){
  const g=150+Math.floor(Math.random()*250);
- G.gold+=g;G.tmap=null;
+ G.gold+=g;
+ if(G.tmap&&hit.x===G.tmap.x&&hit.z===G.tmap.z)G.tmap=null; /* only the marked chest closes the map */
  G.stats.chests++;
  addRenown(10);
  moraleAdd(10);
  if(Math.random()<0.25)mapPiece();
  toast('Treasure! +'+g+' gold');
+ /* drowned caches carry what the sea hoards */
+ if(hit.y<SEA-2){
+  give('pearl',1+((Math.random()*2)|0));
+  if(Math.random()<0.4){give('starmetal',1);toast('Starmetal in the drowned chest — cold and humming.');}
+  else toast('Pearls in the silt-heavy chest.');
+ }
  burst(hit.x+0.5,hit.y+0.7,hit.z+0.5,20,[0.95,0.78,0.3],4);
  AU.coin();AU.bell();
  questPing();titleTick();
@@ -3507,6 +3593,253 @@ function serpentHit(dmg){
  AU.hit();
 }
 
+/* ================= FLESH & BONE: PLAYER VITALS ================= */
+function breathMax(){return (G&&(G.inv.divehelm|0)>0)?26:12;}
+let lastHurtT=0;
+function dmgPlayer(n,why){
+ if(!G||G.mode!=='walk')return;
+ G.hp=Math.max(0,G.hp-n);
+ lastHurtT=G.time;
+ flashHurt();AU.hit();
+ updateHUD();
+ if(G.hp<=0)faint(why||'your wounds');
+}
+function faint(why){
+ toast('You black out — '+why+'. You wake among friends, lighter of purse.',true);
+ G.gold=Math.max(0,Math.floor(G.gold*0.92));
+ moraleAdd(-10);
+ G.hp=12;
+ G.breath=breathMax();
+ const s=G.ship;
+ if(s&&!s.sailing){
+  const h=s.helm||[0,0,0];
+  const w=shipLocalToWorld(h[0],h[1]+1,h[2]);
+  P.x=w[0];P.y=SEA+h[1]+2;P.z=w[2];
+ }else{
+  const home=W.isles.find(i=>i.fac===G.fac)||W.isles[0];
+  const d=home.dock||{x:home.cx,z:home.cz};
+  P.x=d.x+0.5;P.y=SEA+3;P.z=d.z+0.5;
+ }
+ P.vx=P.vy=P.vz=0;
+ for(let t=0;t<14&&aabbHit(P.x,P.y,P.z);t++)P.y+=1;
+ for(const mb of MOBS)if(Math.hypot(mb.x-P.x,mb.z-P.z)<30)mb.dead=Math.max(mb.dead,0.01);
+ AU.bad();
+ updateHUD();autosave();
+}
+function vitalsTick(dt){
+ if(G.mode!=='walk'){G.breath=breathMax();return;}
+ /* the sea takes its breath back: head under = lungs burning */
+ const under=P.y+PEYE<SEA+0.42&&!solid(getBlockAll(Math.floor(P.x),Math.floor(P.y+1),Math.floor(P.z)));
+ if(under){
+  G.breath=Math.max(0,G.breath-dt);
+  if(G.breath<=0&&Math.random()<dt*2){dmgPlayer(2,'the drowning dark');if(Math.random()<dt*8)spawnPart(P.x,P.y+1.6,P.z,0,1.5,0,0.7,[0.8,0.95,1],-2);}
+ }else G.breath=Math.min(breathMax(),G.breath+dt*5);
+ /* wounds knit when the fighting stops */
+ if(G.hp<20&&G.time-lastHurtT>8)G.hp=Math.min(20,G.hp+dt*0.4);
+}
+
+/* ================= BEASTS & BONES: LAND CREATURES ================= */
+const MOBT={
+ crab:{n:'reef crab',hp:12,spd:1.7,dmg:3,aggro:6,col:0xc0563a,headCol:0x8a3a26,w:0.9,h:0.4,gold:[2,6]},
+ boar:{n:'wild boar',hp:16,spd:3.4,dmg:5,aggro:10,col:0x6b4a2e,headCol:0x4a3018,w:0.8,h:0.7,gold:[3,8],grain:2},
+ skel:{n:'drowned buccaneer',hp:20,spd:2.3,dmg:6,aggro:14,col:0xd8d4c4,headCol:0xe8e4d4,w:0.5,h:1.5,gold:[4,12],shot:0.25,piece:0.06},
+};
+let MOBS=[];
+let mobSpawnT=0,atkCD=0;
+function floorYAt(x,z,nearY){
+ const bx=Math.round(x),bz=Math.round(z);
+ for(let y=Math.min(WH-2,Math.floor(nearY)+4);y>Math.max(1,Math.floor(nearY)-8);y--){
+  if(solid(getBlock(bx,y,bz))&&!solid(getBlock(bx,y+1,bz))&&!solid(getBlock(bx,y+2,bz)))return y+1;
+ }
+ return null;
+}
+function spawnMob(type,x,z,opts){
+ if(MOBS.length>=5)return null;
+ const t=MOBT[type];
+ const y=(opts&&opts.y!==undefined)?opts.y:floorYAt(x,z,getH(Math.round(x),Math.round(z))+1);
+ if(y===null||y===undefined)return null;
+ const body=new THREE.Mesh(new THREE.BoxGeometry(t.w,t.h,t.w*1.1),new THREE.MeshLambertMaterial({color:t.col}));
+ const head=new THREE.Mesh(new THREE.BoxGeometry(t.w*0.55,t.w*0.55,t.w*0.55),new THREE.MeshLambertMaterial({color:t.headCol}));
+ body.castShadow=true;head.castShadow=true;
+ scene.add(body);scene.add(head);
+ const mb={type,t,x,y,z,yaw:Math.random()*6.28,hp:t.hp,body,head,dead:0,atk:1+Math.random(),
+  wx:x,wz:z,wT:0,camp:(opts&&opts.camp)||null,night:!!(opts&&opts.night),hurtT:0};
+ MOBS.push(mb);
+ return mb;
+}
+function killMob(mb,i){
+ const t=mb.t;
+ const g=t.gold[0]+((Math.random()*(t.gold[1]-t.gold[0]+1))|0);
+ G.gold+=g;
+ let extra='';
+ if(t.grain&&Math.random()<0.7){give('grain',t.grain);extra=', '+t.grain+' grain';}
+ if(t.shot&&Math.random()<t.shot){const n=1+((Math.random()*3)|0);give('shot',n);extra=', '+n+' shot';}
+ if(t.piece&&Math.random()<t.piece){mapPiece();}
+ toast('The '+t.n+' is done for. +'+g+'g'+extra);
+ G.stats.mobKills=(G.stats.mobKills|0)+1;
+ addRenown(mb.type==='skel'?4:2);
+ burst(mb.x,mb.y+0.5,mb.z,12,mb.type==='skel'?[0.85,0.83,0.75]:[0.6,0.35,0.25],4);
+ AU.coin();
+ if(mb.camp)campKill(mb.camp);
+ scene.remove(mb.body);scene.remove(mb.head);
+ MOBS.splice(i,1);
+ questPing();titleTick();
+ updateHUD();
+}
+function clearMobs(){
+ for(const mb of MOBS){scene.remove(mb.body);scene.remove(mb.head);}
+ MOBS=[];
+}
+/* pick the creature under your eye, if any */
+function mobUnderCross(maxD){
+ const cp=Math.cos(P.pitch);
+ const vx=Math.sin(P.yaw)*cp,vy=Math.sin(P.pitch),vz=Math.cos(P.yaw)*cp;
+ let best=null,bd=maxD;
+ for(const mb of MOBS){
+  if(mb.dead)continue;
+  const dx=mb.x-P.x,dy=(mb.y+mb.t.h*0.6)-(P.y+PEYE),dz=mb.z-P.z;
+  const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  if(d>bd||d<0.01)continue;
+  const dot=(dx*vx+dy*vy+dz*vz)/d;
+  if(dot>(d<3?0.7:0.92)){bd=d;best=mb;}
+ }
+ return best;
+}
+/* one button, two weapons: steel up close, powder at range */
+function attackTick(dt,mb){
+ atkCD-=dt;
+ if(atkCD>0)return;
+ const d=Math.hypot(mb.x-P.x,mb.z-P.z);
+ if(d<3.4){
+  const dmg=(G.inv.cutlass|0)>0?8:3;
+  atkCD=0.6;
+  mb.hp-=dmg;
+  mb.hurtT=0.15;
+  /* knockback */
+  const il=Math.max(0.01,d);
+  mb.x+=((mb.x-P.x)/il)*0.8;mb.z+=((mb.z-P.z)/il)*0.8;
+  burst(mb.x,mb.y+0.6,mb.z,6,[0.9,0.3,0.2],3);
+  AU.hit();
+ }else if((G.inv.pistol|0)>0&&(G.inv.shot|0)>0){
+  atkCD=1.2;
+  G.inv.shot--;
+  mb.hp-=9;
+  mb.hurtT=0.15;
+  burst(P.x+Math.sin(P.yaw)*0.8,P.y+1.4,P.z+Math.cos(P.yaw)*0.8,4,[0.95,0.85,0.5],3);
+  burst(mb.x,mb.y+0.6,mb.z,6,[0.9,0.3,0.2],3);
+  AU.boom();
+  updateHotbar();
+ }else return; /* too far and no powder: close the distance */
+ if(mb.hp<=0){
+  const i=MOBS.indexOf(mb);
+  if(i>=0)killMob(mb,i);
+ }
+}
+function mobTick(dt){
+ /* the wild places push back */
+ mobSpawnT-=dt;
+ if(mobSpawnT<=0&&G.mode==='walk'){
+  mobSpawnT=2.5;
+  const isl=islandAt(Math.round(P.x),Math.round(P.z));
+  const underground=isl&&P.y<getH(Math.round(P.x),Math.round(P.z))-3;
+  const nearVillage=isl&&isl.stall&&Math.hypot(isl.stall.x-P.x,isl.stall.z-P.z)<40;
+  const wildCount=MOBS.filter(m=>!m.camp).length;
+  if(isl&&!nearVillage&&wildCount<3&&Math.random()<0.35){
+   const a=Math.random()*6.28,d=16+Math.random()*16;
+   const x=P.x+Math.cos(a)*d,z=P.z+Math.sin(a)*d;
+   const h=getH(Math.round(x),Math.round(z));
+   if(underground){
+    const y=floorYAt(x,z,P.y);
+    if(y!==null&&y<h-2)spawnMob('skel',x,z,{y});
+   }else if(h>SEA&&!W.flat.has(Math.round(x)+'|'+Math.round(z))){
+    const night=SKY.day<0.35;
+    let type=null;
+    if(night)type='skel';
+    else if(h<=SEA+2&&Math.random()<0.6)type='crab';
+    else if((isl.type==='forest'||isl.type==='tropical'||isl.type==='farm')&&Math.random()<0.5)type='boar';
+    if(type){
+     const mb=spawnMob(type,x,z,{night});
+     if(mb&&type==='skel')toast('Something claws out of the sand behind you…',true);
+    }
+   }
+  }
+  campTick();
+ }
+ for(let i=MOBS.length-1;i>=0;i--){
+  const mb=MOBS[i];
+  if(mb.dead>0){
+   mb.dead+=dt;
+   mb.body.position.y-=dt*1.5;
+   if(mb.dead>0.6){scene.remove(mb.body);scene.remove(mb.head);MOBS.splice(i,1);}
+   continue;
+  }
+  const dP=Math.hypot(mb.x-P.x,mb.z-P.z);
+  /* skeletons crumble at dawn; everything forgets you far away */
+  if(dP>70||(mb.night&&SKY.day>0.5&&!mb.camp)){
+   scene.remove(mb.body);scene.remove(mb.head);MOBS.splice(i,1);
+   continue;
+  }
+  mb.hurtT=Math.max(0,mb.hurtT-dt);
+  let tx,tz,sp=mb.t.spd;
+  if(G.mode==='walk'&&dP<mb.t.aggro){
+   tx=P.x;tz=P.z;
+   if(mb.type==='boar')sp*=1.4; /* the charge */
+  }else{
+   mb.wT-=dt;
+   if(mb.wT<=0){mb.wT=2+Math.random()*4;mb.wx=mb.x+(Math.random()-0.5)*10;mb.wz=mb.z+(Math.random()-0.5)*10;}
+   tx=mb.wx;tz=mb.wz;sp*=0.45;
+  }
+  const dx=tx-mb.x,dz=tz-mb.z,dd=Math.hypot(dx,dz);
+  if(dd>0.6){
+   const nx=mb.x+(dx/dd)*sp*dt,nz=mb.z+(dz/dd)*sp*dt;
+   const ny=floorYAt(nx,nz,mb.y);
+   if(ny!==null&&Math.abs(ny-mb.y)<=1.6){mb.x=nx;mb.z=nz;mb.y=lerp(mb.y,ny,clamp(dt*8,0,1));}
+   else mb.wT=0.2;
+   mb.yaw=Math.atan2(dx,dz);
+  }
+  /* the bite */
+  mb.atk-=dt;
+  if(G.mode==='walk'&&dP<1.6&&Math.abs(mb.y-P.y)<2&&mb.atk<=0){
+   mb.atk=1.4;
+   dmgPlayer(mb.t.dmg,'the '+mb.t.n);
+   toast('The '+mb.t.n+' '+(mb.type==='crab'?'pinches':mb.type==='boar'?'gores':'cuts')+' you!',true);
+  }
+  const wob=Math.abs(Math.sin(G.time*8+mb.x))*0.08;
+  mb.body.position.set(mb.x,mb.y+mb.t.h/2+wob+(mb.hurtT>0?0.06:0),mb.z);
+  mb.head.position.set(mb.x+Math.sin(mb.yaw)*mb.t.w*0.5,mb.y+mb.t.h+(mb.type==='crab'?0:0.15),mb.z+Math.cos(mb.yaw)*mb.t.w*0.5);
+  mb.body.rotation.y=mb.yaw;mb.head.rotation.y=mb.yaw;
+  if(mb.hp<=0)mb.dead=0.01;
+ }
+}
+/* pirate camps: someone got to the wild isles first */
+function campTick(){
+ if(!W.camps)return;
+ for(const cp of W.camps){
+  if(cp.cleared)continue;
+  const d=Math.hypot(cp.x-P.x,cp.z-P.z);
+  if(d<34&&cp.spawned<cp.guards&&MOBS.filter(m=>m.camp===cp).length<2){
+   const a=Math.random()*6.28;
+   const mb=spawnMob('skel',cp.x+Math.cos(a)*4,cp.z+Math.sin(a)*4,{camp:cp});
+   if(mb){
+    cp.spawned++;
+    if(!cp.warned){cp.warned=true;toast('A ragged camp — and its keepers are not dead enough to mind it.',true);}
+   }
+  }
+ }
+}
+function campKill(cp){
+ cp.killed=(cp.killed|0)+1;
+ if(cp.killed>=cp.guards&&!cp.cleared){
+  cp.cleared=true;
+  G.stats.camps=(G.stats.camps|0)+1;
+  addRenown(25);
+  toast('The camp is yours. Whatever they buried, the chest by the fire holds it.');
+  AU.bell();
+  if(Math.random()<0.5)mapPiece();
+  questPing();
+ }
+}
+
 /* ================= SEA EVENTS & HIDDEN COVES ================= */
 const EVT={t:50};
 function spawnWreckField(){
@@ -3767,6 +4100,8 @@ const TITLES=[
  ['Treasure Hunter','Dig up 3 chests',()=>G.stats.chests>=3],
  ['Outer Reacher','Dock at a port in the Outer Reaches',()=>W.isles.some(i=>i.ring===2&&G.visitedP[i.id])],
  ['Rival’s Bane','Send a rival captain to the deep',()=>(G.stats.rivalKills|0)>=1],
+ ['Pearl Diver','Bring up 20 pearls',()=>(G.stats.pearls|0)>=20],
+ ['Bonebreaker','Put down 25 beasts ashore',()=>(G.stats.mobKills|0)>=25],
 ];
 function titleTick(){
  for(const [t,d,c] of TITLES){void d;if(!G.titles.includes(t)&&c())addTitle(t);}
@@ -4096,6 +4431,11 @@ function legendDig(hit){
  leg.found=true;
  const g=900+(Math.random()*500|0);
  G.gold+=g;
+ for(let i=0;i<3;i++){
+  const a=Math.random()*6.28;
+  spawnMob('skel',hit.x+Math.cos(a)*5,hit.z+Math.sin(a)*5,{});
+ }
+ toast('The ground heaves — the legend has keepers!',true);
  gainRelic();
  G.stats.chests++;G.stats.legends++;
  G.quests.maps.pieces=0;G.quests.maps.site=null;
@@ -4242,7 +4582,7 @@ function recordLedger(isl){
  for(const g of GKEYS){e.buy[g]=buyP(isl,g);e.sell[g]=sellP(isl,g);}
  G.ledger[isl.id]=e;
 }
-const LCATS={all:null,food:['grain','sugar','rum'],luxury:['spices','silk'],ore:['iron','gold'],materials:['log']};
+const LCATS={all:null,food:['grain','sugar','rum'],luxury:['spices','silk','pearl'],ore:['iron','gold'],materials:['log']};
 let ledgCat='all',ledgView='prices';
 function openLedger(){
  renderLedger();
@@ -4281,7 +4621,7 @@ function renderLedger(){
    if(!isl||!e)continue;
    const age=G.day-e.day;
    html+='<tr'+(age>4?' class="stale"':'')+'><td>'+esc(isl.name)+(isl.state?' <span class="badge warn">'+STATES[isl.state.type].n+'</span>':'')+'</td>';
-   for(const g of cats)html+='<td>'+e.buy[g]+'/'+e.sell[g]+'</td>';
+   for(const g of cats)html+='<td>'+(e.buy[g]!=null?e.buy[g]+'/'+e.sell[g]:'—')+'</td>';
    html+='<td>'+(age<1?'fresh':age+'d')+'</td></tr>';
   }
   html+='</table><div class="muted" style="margin-top:6px">Faded rows are stale — markets move. A chart table aboard records prices on every docking.</div>';
@@ -4300,7 +4640,7 @@ function renderLedger(){
    if(!ia||!ib)continue;
    for(const g of GKEYS){
     const margin=eb.sell[g]-ea.buy[g];
-    if(margin<=0)continue;
+    if(!(margin>0))continue;
     const stale=Math.max(G.day-ea.day,G.day-eb.day);
     routes.push({g,a:ia,b:ib,margin,profit:margin*cargoCap(),stale});
    }
@@ -4459,6 +4799,8 @@ function saveBlob(){
   smug:G.smug,forged:G.forged,aggro:G.aggro,kills:G.kills,stats:G.stats,titles:G.titles,relics:G.relics,
   perks:G.perks,quests:G.quests,jobs:G.jobs,tmap:G.tmap,buffs:G.buffs,course:G.course,fakeX:G.fakeX,
   ledger:G.ledger,jobseq:JOBSEQ,war:G.war,
+  hp:G.hp,
+  camps:(W.camps||[]).map(c2=>({cleared:c2.cleared,killed:c2.killed})),
   renown:G.renown,
   rivals:(G.rivals||[]).map(r=>({id:r.id,name:r.name,seed:r.seed,lvl:r.lvl,xp:r.xp,alive:r.alive,respawnDay:r.respawnDay,diedLvl:r.diedLvl})),
   wx:{wdir:WX.wdir,wstr:WX.wstr,kind:WX.kind,until:WX.until},
@@ -4531,6 +4873,9 @@ function applySave(d){
  }
  G.renown.lvl=renownLvl();
  G.rivals=(d.rivals&&d.rivals.length)?d.rivals:makeRivals(WSEED,G.day);
+ G.hp=d.hp!=null?d.hp:20;
+ G.breath=breathMax();
+ (d.camps||[]).forEach((c2,i)=>{if(W.camps&&W.camps[i]){W.camps[i].cleared=!!c2.cleared;W.camps[i].killed=c2.killed|0;if(c2.cleared)W.camps[i].spawned=99;}});
  JOBSEQ=Math.max(JOBSEQ,d.jobseq||1);
  if(d.wx){WX.wdir=d.wx.wdir;WX.wstr=d.wx.wstr;WX.kind=d.wx.kind;WX.until=d.wx.until;}
  ED=new Map(d.ed||[]);
@@ -4541,7 +4886,10 @@ function applySave(d){
   const isl=W.isles.find(o=>o.id===si.id);
   if(!isl)continue;
   isl.disc=!!si.disc;
-  if(si.stock)isl.stock=si.stock;
+  if(si.stock){
+   isl.stock=si.stock;
+   for(const g of GKEYS)if(!(isl.stock[g]>=0))isl.stock[g]=isl.ideal[g]||40; /* goods added since the save */
+  }
   isl.state=si.state||null;
   isl.jobs=si.jobs||null;
   isl.jobsDay=si.jobsDay!=null?si.jobsDay:-99;
@@ -4623,7 +4971,8 @@ function initStats(){
  return {mined:0,built:0,bought:0,sold:0,soldAbroad:0,tradeProfit:0,lootGold:0,ore:0,
   pirateKills:0,merchKills:0,navyKills:0,ghosts:0,serpents:0,plundered:0,
   portsVisited:0,chests:0,legends:0,rescues:0,coves:0,crimes:0,contra:0,
-  bribes:0,slips:0,jobsDone:0,jobs:{},rivalKills:0,outerGalleons:0,dayKills:{}};
+  bribes:0,slips:0,jobsDone:0,jobs:{},rivalKills:0,outerGalleons:0,dayKills:{},
+  mobKills:0,pearls:0,camps:0};
 }
 function initQuests(){return {tut:0,league:0,crown:0,brotherhood:0,compact:0,maps:{pieces:0,site:null}};}
 const ENDGOALS=[
@@ -4692,6 +5041,9 @@ function openProfile(){
   '<div>Blocks mined <b>'+st.mined+'</b></div>'+
   '<div>Blocks built <b>'+st.built+'</b></div>'+
   '<div>Coves found <b>'+st.coves+'</b></div>'+
+  '<div>Beasts slain <b>'+(st.mobKills|0)+'</b></div>'+
+  '<div>Pearls dived <b>'+(st.pearls|0)+'</b></div>'+
+  '<div>Camps cleared <b>'+(st.camps|0)+'</b></div>'+
   '<div>Relics <b>'+G.relics.length+'</b></div>'+
   '</div></div>';
  if(G.relics.length)html+='<div class="card"><h3>Relics</h3>'+G.relics.map(r=>'<div class="muted">· '+esc(r)+'</div>').join('')+'</div>';
@@ -4768,6 +5120,14 @@ function showDlg(title,html,btns){
 function updateHUD(){
  if(!G)return;
  $('goldV').textContent=G.gold;
+ $('phpV').textContent=Math.ceil(G.hp);
+ $('hpChip').style.color=G.hp<=6?'var(--bad)':G.hp<=12?'var(--gold)':'';
+ const under2=G.mode==='walk'&&G.breath<breathMax();
+ $('brChip').classList.toggle('hidden',!under2);
+ if(under2){
+  $('brV').textContent=Math.ceil(G.breath)+'s';
+  $('brChip').style.color=G.breath<4?'var(--bad)':'#7fd0d0';
+ }
  $('dayV').textContent=G.day;
  $('cargoV').textContent=cargoUsed()+'/'+cargoCap();
  $('crewV').textContent=G.crew+'/'+(G.ship.crewMax||4)+(G.crew>0?' · '+moraleName():'');
@@ -4884,8 +5244,9 @@ function startGame(fac,seed,saved,slot){
   rep:{league:0,crown:0,brotherhood:0,compact:0},wanted:0,crimes:[],smug:0,forged:0,
   morale:70,spec:{},jobs:[],quests:initQuests(),stats:initStats(),titles:[],relics:[],perks:{},
   ledger:{},course:null,buffs:{},fakeX:null,war:null,
-  renown:{xp:0,lvl:1},rivals:null,
+  renown:{xp:0,lvl:1},rivals:null,hp:20,breath:12,
   slot:slot!==undefined?slot:freeSlot()};
+ clearMobs();
  G.rep[fac]=30;
  if(fac==='crown')G.rep.brotherhood=-25;
  if(fac==='brotherhood')G.rep.crown=-25;
@@ -5194,6 +5555,13 @@ function renderYard(isl,body){
  html+='<div class="card"><h3>Powder & shot</h3>'+
   '<div class="rowF"><span>Round shot aboard: <b>'+(G.inv.shot|0)+'</b> <span class="muted">(every gun fired eats one)</span></span>'+
   '<span><button id="shot1">1 — 4g</button><button id="shot10">10 — 38g</button></span></div></div>';
+ /* the arms locker: a captain who goes ashore should go armed */
+ html+='<div class="card"><h3>Arms locker</h3>';
+ for(const [it,c] of [['cutlass',60],['pistol',110],['divehelm',130]]){
+  if((G.inv[it]|0)>0)html+='<div class="rowF"><span>'+ITEMNAME[it]+'</span><b class="up">owned</b></div>';
+  else html+='<div class="rowF"><span>'+ITEMNAME[it]+' <span class="muted">'+(it==='cutlass'?'— swing at beasts ashore':it==='pistol'?'— fires your round shot':'— twice the breath below')+'</span></span><button data-part="'+it+'" data-c="'+c+'">'+c+'g</button></div>';
+ }
+ html+='</div>';
  /* the forge: renown opens doors */
  const canForge=(isl.type==='capital'||(isl.up&&isl.up.mkt));
  if(canForge){
@@ -5384,6 +5752,9 @@ const CRAFTS=[
  {out:'figurehead',n:1,need:{gold:2,planks:2},lbl:'2 gold ore + 2 planks → figurehead'},
  {out:'rudder',n:1,need:{planks:3,iron:1},lbl:'3 planks + 1 iron → rudder'},
  {out:'shot',n:2,need:{iron:1},lbl:'1 iron → 2 round shot'},
+ {out:'cutlass',n:1,need:{iron:2,planks:1},lbl:'2 iron + 1 plank → cutlass'},
+ {out:'pistol',n:1,need:{iron:2,planks:2},lbl:'2 iron + 2 planks → flintlock pistol'},
+ {out:'divehelm',n:1,need:{iron:2,gold:1},lbl:'2 iron + 1 gold ore → diving helm'},
  {out:'steelplate',n:2,need:{steel:1,planks:2},lbl:'1 steel + 2 planks → 2 steel plating'},
  {out:'royalsail',n:1,need:{sail:1,silk:2,starmetal:1},lbl:'1 sail + 2 silk + 1 starmetal → royal sail'},
  {out:'hcannon',n:1,need:{cannon:1,steel:2,blackwood:2},lbl:'1 cannon + 2 steel + 2 blackwood → heavy cannon'},
@@ -5394,7 +5765,7 @@ function openInv(){
  const seen={};
  const all=[];
  for(const pg of HOTPAGES)for(const it of pg)if(!seen[it]){seen[it]=1;all.push(it);}
- for(const g of [...GKEYS,...CKEYS,'salv','shot','steel','starmetal'])if(!seen[g]){seen[g]=1;all.push(g);}
+ for(const g of [...GKEYS,...CKEYS,'salv','shot','steel','starmetal','cutlass','pistol','divehelm'])if(!seen[g]){seen[g]=1;all.push(g);}
  for(const it of all){
   const n=G.inv[it]|0;if(n<1&&!(it in ITEM2BLK))continue;
   html+='<div class="islot" data-i="'+it+'" title="'+ITEMNAME[it]+'"><span class="ct">'+n+'</span></div>';
@@ -5904,6 +6275,7 @@ function buildHelp(){
   '<div class="card"><h3>Your ship</h3>Drop anchor (use the helm) and she becomes solid — walk her deck, place blocks against her hull to extend her, mine blocks off to reshape. Sails make speed; every block adds hull and hold. She needs one helm and one sail to leave port. Tab (or the ⇄ button) flips the hotbar to ship parts: cargo holds, reinforced and light planks, fast and heavy sails, bunks, rudders, lanterns, powder magazines, hidden compartments, chart tables, repair benches, flags and figureheads.</div>'+
   '<div class="card"><h3>The long voyage</h3>Danger lives in geography: <b>Home Waters</b> are gentle and poor, the <b>Trade Winds</b> bite and pay, the <b>Outer Reaches</b> are deadly and rich — galleons, fleets, blackwood groves and starmetal seams found nowhere else. The chart shows the rings. Renown (earned from contracts, discovery, hard-won fights — not from clubbing sloops) opens specialist berths, contract tiers, rare chandlery and the port forges. Three <b>rival captains</b> are out there taking prizes and growing their ships plank by plank; their bounties are posted once you have a name.</div>'+
   '<div class="card"><h3>Powder & shot</h3>Every gun fired eats one round shot. Buy it at yards (4g), craft 2 from an iron, or fish it from sunken warships. Run dry mid-fight and you board, flee, or pray. Guns also want hands: two fire free, each crew member mans another.</div>'+
+  '<div class="card"><h3>Ashore & below</h3>You bleed now, captain: falls hurt, beasts bite, and lungs hold only so long (the ♥ and ◍ chips). Crabs hold the beaches, boars the woods, and drowned buccaneers walk at night, in caves and around their old camps — hold the mine button to fight: cutlass up close, flintlock at range (it fires your round shot). Worm caves riddle the isles with ore and gold-veined crystal; oyster beds crust the reefs with pearls; sunken wrecks keep chests in the gloom. A diving helm doubles your breath. If you fall, you wake among friends, lighter of purse.</div>'+
   '<div class="card"><h3>Wind & weather</h3>The wind chip (and the chart’s wind rose) show direction and strength — run with the wind and you fly; beat against it and you crawl. Storms tear fast sails, hurl lightning and breed wreck fields. Fog hides everything. Doldrums becalm you. Royal sails (sewn with starmetal thread) never tear.</div>'+
   '<div class="card"><h3>Work & standing</h3>Every port posts contracts: deliveries, couriers, bounties, salvage, construction, escorts and smuggling. Each faction remembers what you do — standing buys discounts or slammed doors. Crimes raise your wanted level: patrols, bounty hunters, then real trouble. Pardons are sold at lawful taverns; pirates respect a black name.</div>'+
   '<div class="card"><h3>Damage at sea</h3>Shot can tear sails, dismount guns, spring leaks (X patches with planks) and start fires (C douses). Powder magazines speed reloads but explode. A repair bench aboard mends at sea; the shipwright does it properly in port.</div>'+
@@ -6017,6 +6389,12 @@ function promptText(){
   if(G.ship.leak)t+=' · '+(TOUCH?'PLACE':'X')+': patch leak!';
   if(G.ship.fire>0)t+=' · '+(TOUCH?'JUMP':'C')+': douse fire!';
   return t;
+ }
+ const foe=mobUnderCross(14);
+ if(foe&&!foe.dead){
+  const d=Math.hypot(foe.x-P.x,foe.z-P.z);
+  if(d<3.4)return 'Hold '+(TOUCH?'MINE':'L-click')+': fight the '+foe.t.n+((G.inv.cutlass|0)>0?' (cutlass)':' (bare hands!)');
+  if((G.inv.pistol|0)>0)return 'Hold '+(TOUCH?'MINE':'L-click')+': pistol the '+foe.t.n+((G.inv.shot|0)>0?'':' (no shot!)');
  }
  const hit=eyeRay();
  if(hit){
@@ -6257,7 +6635,10 @@ function sim(dt){
   if(KEYS.has('KeyD')||KEYS.has('ArrowRight'))mx+=1;
   if(TT.on){mx+=TT.mx;mz+=TT.mz;}
   movePlayer(dt,clamp(mx,-1,1),clamp(mz,-1,1),jumpHeld);
-  tickMine(dt,mineHeld);
+  /* one trigger: beasts before blocks */
+  const foe=mineHeld?mobUnderCross(14):null;
+  if(foe){attackTick(dt,foe);tickMine(dt,false);}
+  else tickMine(dt,mineHeld);
   updateChunks(P.x,P.z);
  }else{
   let turn=0,thr=0;
@@ -6274,6 +6655,8 @@ function sim(dt){
  for(let i=G.pirates.length-1;i>=0;i--)pirateTick(G.pirates[i],dt,i);
  maintainSea(dt);
  wxTick(dt);
+ vitalsTick(dt);
+ mobTick(dt);
  jobSiteTick();
  courseTick(dt);
  saveFlush(dt);

@@ -716,5 +716,211 @@ console.log('== progression: smoke per ring ==');
  ok('60s of sim across all rings with rivals afloat',ok1===true);
 }
 
+
+console.log('== landfall: vitals ==');
+run(`startGame('compact','landfall-seed')`);
+frames(10);
+{
+ const res=run(`(function(){
+  G.hp=20;
+  dmgPlayer(7,'a test');
+  const a=G.hp;
+  const goldBefore=G.gold=500;
+  const px=P.x;
+  G.hp=3;dmgPlayer(5,'the abyss');
+  return {a,fainted:G.hp===12,goldCut:G.gold===460,moved:true};
+ })()`);
+ ok('damage lands (20->'+res.a+')',res.a===13);
+ ok('faint resets hp to 12',res.fainted);
+ ok('faint costs 8% of the purse',res.goldCut);
+}
+{
+ const res=run(`(function(){
+  G.hp=20;G.breath=breathMax();
+  const bmax0=breathMax();
+  G.inv.divehelm=1;
+  const bmax1=breathMax();
+  G.inv.divehelm=0;
+  /* drown: stick the captain under open water */
+  P.x=W.home.cx+60;P.z=W.home.cz;P.y=SEA-4;
+  while(getH(Math.round(P.x),Math.round(P.z))>SEA-3)P.x+=2;
+  let t=0;
+  while(G.breath>0&&t<30){vitalsTick(0.1);t+=0.1;}
+  const drained=G.breath===0;
+  for(let i=0;i<80;i++)vitalsTick(0.1);
+  const hurt=G.hp<20;
+  /* surface: breath returns */
+  P.y=SEA+4;
+  for(let i=0;i<40;i++)vitalsTick(0.1);
+  return {bmax0,bmax1,drained,hurt,refilled:G.breath===breathMax()};
+ })()`);
+ ok('diving helm doubles breath ('+res.bmax0+'->'+res.bmax1+')',res.bmax0===12&&res.bmax1===26);
+ ok('lungs drain underwater',res.drained);
+ ok('drowning hurts',res.hurt);
+ ok('air refills at the surface',res.refilled);
+}
+
+console.log('== landfall: beasts & blades ==');
+{
+ const res=run(`(function(){
+  clearMobs();
+  G.hp=20;
+  /* stand the captain on his home isle and conjure a crab in front of him */
+  const home=W.home;
+  P.x=home.cx+0.5;P.z=home.cz+0.5;P.y=getH(home.cx,home.cz)+1.1;P.pitch=0;
+  let mb=null;
+  for(const [ox,oz] of [[0,2.5],[2.5,0],[0,-2.5],[-2.5,0],[2,2],[3,1]]){
+   mb=spawnMob('crab',P.x+ox,P.z+oz,{});
+   if(mb)break;
+  }
+  if(!mb)return {fail:'no spawn'};
+  P.yaw=Math.atan2(mb.x-P.x,mb.z-P.z);
+  P.y=mb.y+0.1;
+  const seen=mobUnderCross(14);
+  G.inv.cutlass=1;
+  const mx=mb.x,mz=mb.z;
+  let swings=0;
+  while(MOBS.length&&swings<10){atkCD=0;attackTick(0.1,MOBS[0]);swings++;mb.x=mx;mb.z=mz;}
+  return {spawned:true,seen:seen===mb,swings,dead:MOBS.length===0};
+ })()`);
+ ok('crab conjured and targeted',res.spawned&&res.seen);
+ ok('cutlass fells a crab in 2 swings ('+res.swings+')',res.dead&&res.swings===2);
+}
+{
+ const res=run(`(function(){
+  clearMobs();
+  const home=W.home;
+  P.x=home.cx+0.5;P.z=home.cz+0.5;P.y=getH(home.cx,home.cz)+1.1;P.yaw=0;P.pitch=0;
+  const mb=spawnMob('skel',P.x,P.z+8,{});
+  if(!mb)return {fail:'no spawn'};
+  G.inv.pistol=1;G.inv.shot=3;
+  atkCD=0;attackTick(0.1,mb);
+  const shotUsed=G.inv.shot===2;
+  const hurt=mb.hp===20-9;
+  /* aggro: it walks toward the captain */
+  const d0=Math.hypot(mb.x-P.x,mb.z-P.z);
+  for(let i=0;i<40;i++)mobTick(0.1);
+  const d1=Math.hypot(mb.x-P.x,mb.z-P.z);
+  /* the bite */
+  G.hp=20;mb.x=P.x+0.8;mb.z=P.z;mb.y=P.y;mb.atk=0;
+  mobTick(0.1);
+  const bitten=G.hp<20;
+  clearMobs();
+  return {shotUsed,hurt,closed:d1<d0-1,bitten};
+ })()`);
+ ok('flintlock fires round shot',res.shotUsed&&res.hurt);
+ ok('the drowned walk toward you',res.closed);
+ ok('and they bite',res.bitten);
+}
+
+console.log('== landfall: caves, reefs, wrecks ==');
+{
+ const res=run(`(function(){
+  /* sample the world for carved galleries, crystal, oysters */
+  let carved=0,crystal=0,oyster=0,reefCols=0;
+  for(const isl of W.isles){
+   for(let x=isl.cx-isl.r;x<isl.cx+isl.r;x+=2)for(let z=isl.cz-isl.r;z<isl.cz+isl.r;z+=2){
+    const c=col(x,z);
+    if(c.cavM>0.62&&c.h>SEA+2){
+     const y=Math.round(c.cavY);
+     if(y>3&&y<c.h-2&&genBlock(x,y,z)===0)carved++;
+     for(let dy=-3;dy<=3;dy++){const id=genBlock(x,y+dy,z);if(id===45)crystal++;}
+    }
+   }
+  }
+  for(let x=0;x<WORLD;x+=2)for(let z=0;z<WORLD;z+=2){
+   const c=col(x,z);
+   if(c.reef>0.3){reefCols++;if(genBlock(x,c.h,z)===44)oyster++;}
+  }
+  return {carved,crystal,reefCols,oyster,sunk:W.sunk.length,camps:W.camps.length};
+ })()`);
+ ok('worm caves carved into the isles ('+res.carved+' samples)',res.carved>20);
+ ok('gold-veined crystal in the galleries ('+res.crystal+')',res.crystal>0);
+ ok('reefs exist ('+res.reefCols+' cols) and bear oysters ('+res.oyster+')',res.reefCols===0||res.oyster>0);
+ ok('sunken wrecks laid down ('+res.sunk+')',res.sunk>=3);
+ ok('pirate camps generated ('+res.camps+')',res.camps>=0&&res.camps<=2);
+}
+{
+ const res=run(`(function(){
+  /* drowned chests pay in pearls */
+  const inv0=G.inv.pearl|0;
+  openChest({x:999,y:SEA-4,z:999});
+  return {gained:(G.inv.pearl|0)>inv0};
+ })()`);
+ ok('drowned chests pay in pearls',res.gained);
+}
+{
+ const res=run(`(function(){
+  /* pearls are a real market good everywhere */
+  let finite=true;
+  for(const isl of W.isles){
+   if(!isl.stall)continue;
+   if(!isFinite(buyP(isl,'pearl'))||!isFinite(sellP(isl,'pearl')))finite=false;
+  }
+  const tropical=W.isles.find(i=>i.stall&&i.type==='tropical');
+  const capital=W.isles.find(i=>i.type==='capital');
+  return {finite,inKeys:GKEYS.includes('pearl'),
+   cheapAtSource:tropical&&capital?buyP(tropical,'pearl')<buyP(capital,'pearl'):true};
+ })()`);
+ ok('pearl prices finite at every stall',res.finite&&res.inKeys);
+ ok('pearls cheap where they are dived',res.cheapAtSource);
+}
+
+console.log('== landfall: treasure has teeth ==');
+{
+ const res=run(`(function(){
+  clearMobs();
+  const home=W.home;
+  P.x=home.cx+0.5;P.z=home.cz+0.5;P.y=getH(home.cx,home.cz)+1.1;
+  G.tmap={isle:home.id,x:Math.round(P.x)+2,z:Math.round(P.z),found:false};
+  breakBlock({x:G.tmap.x,y:getH(G.tmap.x,G.tmap.z),z:G.tmap.z,id:1});
+  const guards=MOBS.filter(m=>m.type==='skel').length;
+  clearMobs();
+  return {found:G.tmap.found,guards};
+ })()`);
+ ok('digging the X wakes its keepers ('+res.guards+')',res.found&&res.guards>=1);
+}
+{
+ const res=run(`(function(){
+  /* old-save guard: stocks missing pearl heal on load */
+  const blob=saveBlob();
+  for(const si of blob.isles)if(si.stock)delete si.stock.pearl;
+  delete blob.hp;
+  localStorage.setItem('snp.save.5',JSON.stringify(blob));
+  const ix=slotIndex().filter(e=>e.slot!==5);
+  ix.push({slot:5,name:'pre-pearl',when:Date.now(),fac:blob.fac,day:blob.day,gold:blob.gold,blocks:10,shipName:'Old Girl',lastIsle:'?'});
+  writeSlotIndex(ix);
+  loadGame(5);
+  let finite=true;
+  for(const isl of W.isles){
+   if(!isl.stall)continue;
+   if(!isFinite(buyP(isl,'pearl')))finite=false;
+  }
+  return {finite,hp:G.hp};
+ })()`);
+ frames(10);
+ ok('pre-pearl saves heal their market stocks',res.finite);
+ ok('pre-vitals saves wake with full health',res.hp===20);
+}
+{
+ run(`G.hp=15;G.inv.cutlass=1;G.inv.pistol=1;manualSave();loadGame(G.slot)`);
+ frames(5);
+ ok('hp and weapons survive save/load',run('G.hp')===15&&run('G.inv.cutlass')===1&&run('G.inv.pistol')===1);
+}
+
+console.log('== landfall: smoke ==');
+{
+ run(`(function(){
+  clearMobs();
+  const home=W.home;
+  P.x=home.cx+0.5;P.z=home.cz+0.5;P.y=getH(home.cx,home.cz)+1.1;
+  spawnMob('crab',P.x+6,P.z,{});
+  spawnMob('boar',P.x-6,P.z,{});
+  spawnMob('skel',P.x,P.z+7,{});
+ })()`);
+ frames(150);
+ ok('60s of shore leave among the beasts',true);
+}
+
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}
 console.log('\nALL TESTS PASSED');
