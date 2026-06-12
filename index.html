@@ -238,6 +238,7 @@ tr.stale td{opacity:.45}
   <div id="trCol">
     <button class="tBtn" id="btnBag">BAG</button>
     <button class="tBtn" id="btnMapT">MAP</button>
+    <button class="tBtn" id="btnCam">👁</button>
     <button class="tBtn" id="btnHelp">?</button>
   </div>
 </div>
@@ -2096,7 +2097,7 @@ function setSail(){
  G.mode='sail';
  P.yaw=Math.atan2(Math.cos(s.yaw),-Math.sin(s.yaw)); /* camera starts behind the stern */
  P.pitch=-0.5;
- ensureCaptain();CAPB.visible=true;CAPH.visible=true;
+ ensureCaptain();visRig(CAP,true);
  markDirtyAround(s.ax,s.az);
  toast(TOUCH?'Anchor up. Stick: up = sail, sides = turn. FIRE for broadsides.':'Anchor up. W/S throttle, A/D turn, fire with Space.');
  AU.bell();
@@ -2112,7 +2113,7 @@ function dropAnchor(){
  computeCells();
  syncShipMesh();
  G.mode='walk';
- if(CAPB){CAPB.visible=false;CAPH.visible=false;}
+ visRig(CAP,false);
  const h=s.helm||[0,0,0];
  const w=shipLocalToWorld(h[0],h[1]+1,h[2]);
  P.x=w[0];P.y=SEA+h[1]+1.05;P.z=w[2];P.vx=P.vy=P.vz=0;
@@ -2233,10 +2234,10 @@ function sailTick(dt,turn,thr){
  const h=s.helm;
  const w=shipLocalToWorld(h[0],h[1]+1,h[2]);
  P.x=w[0];P.y=SEA+0.05+s.bob+h[1]+1.0;P.z=w[2];
- if(CAPB){
+ if(CAP){
   const dy=SEA+0.05+s.bob+h[1]+1;
-  CAPB.position.set(w[0],dy+0.58,w[2]);CAPB.rotation.y=s.yaw;
-  CAPH.position.set(w[0],dy+1.37,w[2]);CAPH.rotation.y=s.yaw;
+  /* the captain faces the bow, hands on the wheel */
+  poseRig(CAP,w[0],dy,w[2],Math.atan2(Math.cos(s.yaw),-Math.sin(s.yaw)),{armsFwd:true});
  }
  if(s.hp<=0)sinkPlayer();
  syncShipMesh();
@@ -2303,21 +2304,31 @@ function respawnShip(isl){
  rebuildShip();
  s.hp=s.maxHp;
  G.mode='walk';
- if(CAPB){CAPB.visible=false;CAPH.visible=false;}
+ visRig(CAP,false);
  P.x=d.x+0.5;P.y=SEA+2.2;P.z=d.z+0.5;P.vx=P.vy=P.vz=0;
  for(let t=0;t<14&&aabbHit(P.x,P.y,P.z);t++)P.y+=1; /* never spawn embedded */
  if(isl.stall){P.yaw=Math.atan2(isl.stall.x-P.x,isl.stall.z-P.z);P.pitch=-0.08;}
 }
 
-let CAPB=null,CAPH=null;
-function ensureCaptain(){
- if(CAPB)return;
- CAPB=new THREE.Mesh(new THREE.BoxGeometry(0.55,1.15,0.4),new THREE.MeshLambertMaterial({color:0x7a2f2a}));
- CAPH=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.42,0.42),new THREE.MeshLambertMaterial({color:0xd8a06a}));
- CAPB.visible=false;CAPH.visible=false;
- CAPB.castShadow=true;CAPH.castShadow=true;
- scene.add(CAPB);scene.add(CAPH);
+let CAP=null;
+function capColor(){
+ const c=FACTIONS[G.fac]?FACTIONS[G.fac].c:'#7a2f2a';
+ return parseInt(c.slice(1),16);
 }
+function ensureCaptain(){
+ if(CAP)return;
+ CAP=mkRig({torso:capColor(),legs:0x2a2d33,hat:0x23252a});
+ visRig(CAP,false);
+}
+function rmCaptain(){if(CAP){rmPerson(CAP);CAP=null;}}
+/* your own back, for when you want to see yourself swagger */
+let PLR=null;
+function ensurePlayerRig(){
+ if(PLR)return;
+ PLR=mkRig({torso:capColor(),legs:0x2a2d33,hat:0x23252a});
+ visRig(PLR,false);
+}
+function rmPlayerRig(){if(PLR){rmPerson(PLR);PLR=null;}}
 
 /* ---------------- npc ships: classes ---------------- */
 function bpHull(m,len,w){for(let lx=0;lx<=len;lx++)for(let lz=-w;lz<=w;lz++)m.set(K(lx,0,lz),7);}
@@ -2965,19 +2976,93 @@ function maintainSea(dt){
  if(G.wanted>=50&&hunters<huntCap&&Math.random()<0.3)spawnHunter();
  rivalMaintain();
 }
-/* ---------------- people: voxel figures ---------------- */
-function makePerson(col){
- const body=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.95,0.32),new THREE.MeshLambertMaterial({color:col}));
- const head=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.4,0.4),new THREE.MeshLambertMaterial({color:0xd8a06a}));
- body.castShadow=true;head.castShadow=true;
- scene.add(body);scene.add(head);
- return {body,head};
+/* ---------------- people: blocky rigs — head, torso, two arms, two legs ---------------- */
+const FACETEX={};
+function faceTexture(kind){
+ if(FACETEX[kind])return FACETEX[kind];
+ const cn=document.createElement('canvas');cn.width=32;cn.height=32;
+ const c=cn.getContext('2d');
+ c.fillStyle='#fff';c.fillRect(0,0,32,32); /* white base: tinted by the skin colour */
+ c.fillStyle='#0c0e12';
+ if(kind==='skull'){
+  c.fillRect(6,9,7,7);c.fillRect(19,9,7,7);           /* hollow sockets */
+  c.fillRect(14,17,4,4);                               /* what was a nose */
+  for(let x=7;x<25;x+=4)c.fillRect(x,24,2,4);          /* the grin that stays */
+ }else{
+  c.fillRect(8,10,4,5);c.fillRect(20,10,4,5);          /* the eyes */
+  c.fillRect(10,21,12,3);c.fillRect(8,19,2,3);c.fillRect(22,19,2,3); /* the classic grin */
+ }
+ const t=new THREE.CanvasTexture(cn);
+ t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;
+ FACETEX[kind]=t;
+ return t;
 }
-function setPerson(p,x,y,z,yaw){
- p.body.position.set(x,y+0.48,z);p.head.position.set(x,y+1.16,z);
- p.body.rotation.y=yaw;p.head.rotation.y=yaw;
+function mkRig(o){
+ o=o||{};
+ const s=o.scale||1;
+ const skin=o.skin!==undefined?o.skin:0xd8a06a;
+ const torso=o.torso!==undefined?o.torso:0x2e4a6b;
+ const legs=o.legs!==undefined?o.legs:0x3a3d44;
+ const arms=o.arms!==undefined?o.arms:skin;
+ const mat=c=>new THREE.MeshLambertMaterial({color:c});
+ const skinM=mat(skin);
+ const faceM=new THREE.MeshLambertMaterial({color:skin,map:faceTexture(o.face||'smile')});
+ const head=new THREE.Mesh(new THREE.BoxGeometry(0.42*s,0.42*s,0.42*s),[skinM,skinM,skinM,skinM,faceM,skinM]);
+ const body=new THREE.Mesh(new THREE.BoxGeometry(0.55*s,0.6*s,0.3*s),mat(torso));
+ const armL=new THREE.Mesh(new THREE.BoxGeometry(0.16*s,0.58*s,0.16*s),mat(arms));
+ const armR=new THREE.Mesh(new THREE.BoxGeometry(0.16*s,0.58*s,0.16*s),mat(arms));
+ const legL=new THREE.Mesh(new THREE.BoxGeometry(0.2*s,0.6*s,0.2*s),mat(legs));
+ const legR=new THREE.Mesh(new THREE.BoxGeometry(0.2*s,0.6*s,0.2*s),mat(legs));
+ const parts=[head,body,armL,armR,legL,legR];
+ const rig={head,body,armL,armR,legL,legR,parts,s,seed:Math.random()*6.28};
+ if(o.hat!==undefined&&o.hat!==null){
+  const hb=new THREE.Mesh(new THREE.BoxGeometry(0.6*s,0.08*s,0.6*s),mat(o.hat));
+  rig.hatB=hb;parts.push(hb);
+  if(o.hat2!==false){ /* brim + crown = tricorn-ish; brim alone = bandana / straw hat */
+   const hc=new THREE.Mesh(new THREE.BoxGeometry(0.4*s,0.2*s,0.4*s),mat(o.hat2!==undefined?o.hat2:o.hat));
+   rig.hatC=hc;parts.push(hc);
+  }
+ }
+ for(const m of parts){m.castShadow=true;m.rotation.order='YXZ';scene.add(m);}
+ return rig;
 }
-function rmPerson(p){scene.remove(p.body);scene.remove(p.head);}
+/* plant the rig with its feet at y; swing the limbs if it walks */
+function poseRig(rig,x,y,z,yaw,opt){
+ opt=opt||{};
+ const s=rig.s;
+ const fx=Math.sin(yaw),fz=Math.cos(yaw);
+ const rx=Math.cos(yaw),rz=-Math.sin(yaw);
+ const legH=0.6*s,torH=0.6*s;
+ const ph=(opt.phase!==undefined?opt.phase:(G?G.time*7:0))+rig.seed;
+ const sw=(opt.walk||0)*0.7;
+ const bob=(opt.walk||0)*Math.abs(Math.sin(ph))*0.05*s;
+ const hipY=y+legH+bob;
+ const shY=hipY+torH;
+ rig.body.position.set(x,hipY+torH/2,z);
+ rig.body.rotation.y=yaw;rig.body.rotation.x=0;
+ rig.head.position.set(x,shY+0.21*s,z);
+ rig.head.rotation.y=yaw;rig.head.rotation.x=opt.headPitch||0;
+ if(rig.hatB){rig.hatB.position.set(x,shY+0.44*s,z);rig.hatB.rotation.y=yaw;rig.hatB.rotation.x=0;}
+ if(rig.hatC){rig.hatC.position.set(x,shY+0.56*s,z);rig.hatC.rotation.y=yaw;rig.hatC.rotation.x=0;}
+ const limb=(m,lat,topY,len,a)=>{
+  const hl=len/2;
+  m.position.set(x+rx*lat+fx*Math.sin(a)*hl,topY-Math.cos(a)*hl,z+rz*lat+fz*Math.sin(a)*hl);
+  m.rotation.y=yaw;m.rotation.x=a;
+ };
+ const aL=Math.sin(ph)*sw,aR=-Math.sin(ph)*sw;
+ limb(rig.legL,-0.14*s,hipY,legH,aL);
+ limb(rig.legR,0.14*s,hipY,legH,aR);
+ const armLat=0.37*s,armLen=0.58*s,armTop=shY-0.02*s;
+ const arL=opt.armsFwd?-1.25:-aL*0.9;
+ const arR=opt.armR!==undefined?opt.armR:(opt.armsFwd?-1.25:-aR*0.9);
+ limb(rig.armL,-armLat,armTop,armLen,arL);
+ limb(rig.armR,armLat,armTop,armLen,arR);
+}
+function visRig(rig,v){if(rig)for(const m of rig.parts)m.visible=v;}
+/* back-compatible shims: everything that walked before still walks */
+function makePerson(col,opts){return mkRig(Object.assign({torso:col},opts||{}));}
+function setPerson(p,x,y,z,yaw,moving){poseRig(p,x,y,z,yaw,{walk:moving?1:0});}
+function rmPerson(p){for(const m of p.parts)scene.remove(m);}
 /* ---------------- villagers ---------------- */
 let VNPCS=[];
 const VROLES=[['Dock hand',0x5a6b8a],['Fisher',0x7a5a37],['Trader',0x8a3a2e],['Old salt',0x3a6b4a]];
@@ -3007,7 +3092,11 @@ function tickVillagers(dt){
    for(let k=0;k<n;k++){
     const role=VROLES[(isl.id+k)%4];
     const a=k*2.4+isl.id;
-    VNPCS.push({isle:isl,role:role[0],p:makePerson(role[1]),
+    VNPCS.push({isle:isl,role:role[0],
+     p:makePerson(role[1],{
+      skin:[0xd8a06a,0xb98052,0xeab98a,0x9a6a42][(isl.id+k)%4],
+      legs:[0x3a3d44,0x5a4a30,0x44505c][(isl.id*3+k)%3],
+      hat:((isl.id+k)%3===0)?0xc8b06a:null,hat2:false}),
      x:isl.stall.x+Math.cos(a)*3.5,z:isl.stall.z+Math.sin(a)*3.5,
      tx:isl.stall.x,tz:isl.stall.z,wait:1+k,yaw:0,say:0});
    }
@@ -3039,8 +3128,7 @@ function tickVillagers(dt){
    }
   }
   const gy=vTopY(Math.round(v.x),Math.round(v.z))+1;
-  const wob=moving?Math.abs(Math.sin(G.time*9))*0.06:0;
-  setPerson(v.p,v.x,gy+wob,v.z,v.yaw);
+  setPerson(v.p,v.x,gy,v.z,v.yaw,moving);
  }
 }
 function villagerNear(r){
@@ -3073,7 +3161,7 @@ function deckSlots(){
 function updateCrewFigs(){
  if(!G)return;
  const want=Math.min(G.crew||0,6);
- while(CREWF.length<want)CREWF.push(makePerson(0x2e4a6b));
+ while(CREWF.length<want)CREWF.push(makePerson(0x2e4a6b,{hat:0xc23b2e,hat2:false,skin:[0xd8a06a,0xb98052,0xeab98a][CREWF.length%3]}));
  while(CREWF.length>want)rmPerson(CREWF.pop());
  if(!want)return;
  const slots=(G.ship.slots&&G.ship.slots.length)?G.ship.slots:deckSlots();
@@ -3658,14 +3746,26 @@ function spawnMob(type,x,z,opts){
  const t=MOBT[type];
  const y=(opts&&opts.y!==undefined)?opts.y:floorYAt(x,z,getH(Math.round(x),Math.round(z))+1);
  if(y===null||y===undefined)return null;
- const body=new THREE.Mesh(new THREE.BoxGeometry(t.w,t.h,t.w*1.1),new THREE.MeshLambertMaterial({color:t.col}));
- const head=new THREE.Mesh(new THREE.BoxGeometry(t.w*0.55,t.w*0.55,t.w*0.55),new THREE.MeshLambertMaterial({color:t.headCol}));
- body.castShadow=true;head.castShadow=true;
- scene.add(body);scene.add(head);
- const mb={type,t,x,y,z,yaw:Math.random()*6.28,hp:t.hp,body,head,dead:0,atk:1+Math.random(),
-  wx:x,wz:z,wT:0,camp:(opts&&opts.camp)||null,night:!!(opts&&opts.night),hurtT:0};
+ const mb={type,t,x,y,z,yaw:Math.random()*6.28,hp:t.hp,dead:0,atk:1+Math.random(),
+  wx:x,wz:z,wT:0,camp:(opts&&opts.camp)||null,night:!!(opts&&opts.night),hurtT:0,moving:false};
+ if(type==='skel'){
+  /* what's left of a sailor: bones, rags, sometimes the bandana stayed on */
+  mb.rig=mkRig({skin:0xd8d4c4,arms:0xd8d4c4,torso:0x4a4034,legs:0xcac6b6,scale:0.95,face:'skull',
+   hat:Math.random()<0.5?0x7a2a26:null,hat2:false});
+  mb.body=mb.rig.body;mb.head=mb.rig.head;
+ }else{
+  const body=new THREE.Mesh(new THREE.BoxGeometry(t.w,t.h,t.w*1.1),new THREE.MeshLambertMaterial({color:t.col}));
+  const head=new THREE.Mesh(new THREE.BoxGeometry(t.w*0.55,t.w*0.55,t.w*0.55),new THREE.MeshLambertMaterial({color:t.headCol}));
+  body.castShadow=true;head.castShadow=true;
+  scene.add(body);scene.add(head);
+  mb.body=body;mb.head=head;
+ }
  MOBS.push(mb);
  return mb;
+}
+function mobRemove(mb){
+ if(mb.rig)rmPerson(mb.rig);
+ else{scene.remove(mb.body);scene.remove(mb.head);}
 }
 function killMob(mb,i){
  const t=mb.t;
@@ -3681,13 +3781,13 @@ function killMob(mb,i){
  burst(mb.x,mb.y+0.5,mb.z,12,mb.type==='skel'?[0.85,0.83,0.75]:[0.6,0.35,0.25],4);
  AU.coin();
  if(mb.camp)campKill(mb.camp);
- scene.remove(mb.body);scene.remove(mb.head);
+ mobRemove(mb);
  MOBS.splice(i,1);
  questPing();titleTick();
  updateHUD();
 }
 function clearMobs(){
- for(const mb of MOBS){scene.remove(mb.body);scene.remove(mb.head);}
+ for(const mb of MOBS)mobRemove(mb);
  MOBS=[];
 }
 /* pick the creature under your eye, if any */
@@ -3769,14 +3869,15 @@ function mobTick(dt){
   const mb=MOBS[i];
   if(mb.dead>0){
    mb.dead+=dt;
-   mb.body.position.y-=dt*1.5;
-   if(mb.dead>0.6){scene.remove(mb.body);scene.remove(mb.head);MOBS.splice(i,1);}
+   if(mb.rig)for(const m of mb.rig.parts)m.position.y-=dt*1.5;
+   else mb.body.position.y-=dt*1.5;
+   if(mb.dead>0.6){mobRemove(mb);MOBS.splice(i,1);}
    continue;
   }
   const dP=Math.hypot(mb.x-P.x,mb.z-P.z);
   /* skeletons crumble at dawn; everything forgets you far away */
   if(dP>70||(mb.night&&SKY.day>0.5&&!mb.camp)){
-   scene.remove(mb.body);scene.remove(mb.head);MOBS.splice(i,1);
+   mobRemove(mb);MOBS.splice(i,1);
    continue;
   }
   mb.hurtT=Math.max(0,mb.hurtT-dt);
@@ -3790,10 +3891,11 @@ function mobTick(dt){
    tx=mb.wx;tz=mb.wz;sp*=0.45;
   }
   const dx=tx-mb.x,dz=tz-mb.z,dd=Math.hypot(dx,dz);
+  mb.moving=false;
   if(dd>0.6){
    const nx=mb.x+(dx/dd)*sp*dt,nz=mb.z+(dz/dd)*sp*dt;
    const ny=floorYAt(nx,nz,mb.y);
-   if(ny!==null&&Math.abs(ny-mb.y)<=1.6){mb.x=nx;mb.z=nz;mb.y=lerp(mb.y,ny,clamp(dt*8,0,1));}
+   if(ny!==null&&Math.abs(ny-mb.y)<=1.6){mb.x=nx;mb.z=nz;mb.y=lerp(mb.y,ny,clamp(dt*8,0,1));mb.moving=true;}
    else mb.wT=0.2;
    mb.yaw=Math.atan2(dx,dz);
   }
@@ -3804,10 +3906,17 @@ function mobTick(dt){
    dmgPlayer(mb.t.dmg,'the '+mb.t.n);
    toast('The '+mb.t.n+' '+(mb.type==='crab'?'pinches':mb.type==='boar'?'gores':'cuts')+' you!',true);
   }
-  const wob=Math.abs(Math.sin(G.time*8+mb.x))*0.08;
-  mb.body.position.set(mb.x,mb.y+mb.t.h/2+wob+(mb.hurtT>0?0.06:0),mb.z);
-  mb.head.position.set(mb.x+Math.sin(mb.yaw)*mb.t.w*0.5,mb.y+mb.t.h+(mb.type==='crab'?0:0.15),mb.z+Math.cos(mb.yaw)*mb.t.w*0.5);
-  mb.body.rotation.y=mb.yaw;mb.head.rotation.y=mb.yaw;
+  if(mb.rig){
+   /* the drowned shamble — arms out when they've caught your scent */
+   const chasing=G.mode==='walk'&&dP<mb.t.aggro;
+   poseRig(mb.rig,mb.x,mb.y+(mb.hurtT>0?0.06:0),mb.z,mb.yaw,
+    {walk:mb.moving?1:0,armR:chasing?-1.4:undefined,armsFwd:chasing});
+  }else{
+   const wob=Math.abs(Math.sin(G.time*8+mb.x))*0.08;
+   mb.body.position.set(mb.x,mb.y+mb.t.h/2+wob+(mb.hurtT>0?0.06:0),mb.z);
+   mb.head.position.set(mb.x+Math.sin(mb.yaw)*mb.t.w*0.5,mb.y+mb.t.h+(mb.type==='crab'?0:0.15),mb.z+Math.cos(mb.yaw)*mb.t.w*0.5);
+   mb.body.rotation.y=mb.yaw;mb.head.rotation.y=mb.yaw;
+  }
   if(mb.hp<=0)mb.dead=0.01;
  }
 }
@@ -4799,7 +4908,7 @@ function saveBlob(){
   smug:G.smug,forged:G.forged,aggro:G.aggro,kills:G.kills,stats:G.stats,titles:G.titles,relics:G.relics,
   perks:G.perks,quests:G.quests,jobs:G.jobs,tmap:G.tmap,buffs:G.buffs,course:G.course,fakeX:G.fakeX,
   ledger:G.ledger,jobseq:JOBSEQ,war:G.war,
-  hp:G.hp,
+  hp:G.hp,cam3:!!G.cam3,
   camps:(W.camps||[]).map(c2=>({cleared:c2.cleared,killed:c2.killed})),
   renown:G.renown,
   rivals:(G.rivals||[]).map(r=>({id:r.id,name:r.name,seed:r.seed,lvl:r.lvl,xp:r.xp,alive:r.alive,respawnDay:r.respawnDay,diedLvl:r.diedLvl})),
@@ -4916,8 +5025,9 @@ function applySave(d){
   }
  }
  P.x=d.p.x;P.y=d.p.y;P.z=d.p.z;P.yaw=d.p.yaw;P.pitch=d.p.pitch;
- if(s.sailing){ensureCaptain();CAPB.visible=true;CAPH.visible=true;s.cells.clear();}
+ if(s.sailing){ensureCaptain();visRig(CAP,true);s.cells.clear();}
  else computeCells();
+ G.cam3=!!d.cam3;
  /* the rest of the sea */
  for(const nd of d.npcs||[]){
   if(!CLS[nd.cls])continue;
@@ -5244,9 +5354,10 @@ function startGame(fac,seed,saved,slot){
   rep:{league:0,crown:0,brotherhood:0,compact:0},wanted:0,crimes:[],smug:0,forged:0,
   morale:70,spec:{},jobs:[],quests:initQuests(),stats:initStats(),titles:[],relics:[],perks:{},
   ledger:{},course:null,buffs:{},fakeX:null,war:null,
-  renown:{xp:0,lvl:1},rivals:null,hp:20,breath:12,
+  renown:{xp:0,lvl:1},rivals:null,hp:20,breath:12,cam3:false,
   slot:slot!==undefined?slot:freeSlot()};
  clearMobs();
+ rmCaptain();rmPlayerRig(); /* coats are cut to the new faction's colours */
  G.rep[fac]=30;
  if(fac==='crown')G.rep.brotherhood=-25;
  if(fac==='brotherhood')G.rep.crown=-25;
@@ -6281,7 +6392,7 @@ function buildHelp(){
   '<div class="card"><h3>Damage at sea</h3>Shot can tear sails, dismount guns, spring leaks (X patches with planks) and start fires (C douses). Powder magazines speed reloads but explode. A repair bench aboard mends at sea; the shipwright does it properly in port.</div>'+
   '<div class="card"><h3>Fighting</h3>Cannons fire the way they point — place them facing where you look. Space (or FIRE) lets every gun speak. Beaten ships may strike their colours: come alongside and press F to board — loot, press crew, spare or burn. If your hull reaches zero, you lose your cargo and wash up at home.</div>'+
   '<div class="card"><h3>Treasure & secrets</h3>Tavern maps mark an X — dig it up. Torn map fragments (three make a legend) come from castaways, bottles and chests. Hidden coves don’t appear on any chart until you find them: smugglers, wreckers, healers and pirate dens trade there.</div>'+
-  '<div class="card"><h3>Keys</h3>WASD move · mouse look (click once) · hold L-click mine · R-click place · 1-8 hotbar · Tab block pages · E sea chest · F use/helm/board · M map (click to plot a course) · L ledger · P profile · X patch leak · C douse fire · Space jump / fire · H this page</div>'+
+  '<div class="card"><h3>Keys</h3>WASD move · mouse look (click once) · hold L-click mine/fight · R-click place · 1-8 hotbar · Tab block pages · V first/third person · E sea chest · F use/helm/board · M map (click to plot a course) · L ledger · P profile · X patch leak · C douse fire · Space jump / fire · H this page</div>'+
   '<div class="card"><h3>Phone</h3>Touch anywhere lower-left and the stick appears under your thumb · drag the right side to look · hold the big button to mine or fire · PLACE sets blocks ashore and patches leaks at sea · JUMP douses fires at sea · tap the gold prompt for stalls, helm, anchor and boarding.</div>';
  $('saveNow').onclick=()=>manualSave();
  $('profBtn').onclick=()=>{closePanel('helpM');openProfile();};
@@ -6436,6 +6547,7 @@ function wireInput(){
   if(k==='KeyP'){if($('profM').classList.contains('open'))closePanel('profM');else if(!anyPanelOpen())openProfile();return;}
   if(k==='KeyF'){doAct();return;}
   if(k==='Tab'&&!anyPanelOpen()){e.preventDefault();G.hotPage=(G.hotPage+1)%HOTPAGES.length;HOTKEYS=HOTPAGES[G.hotPage];buildHotbar();AU.sel();return;}
+  if(k==='KeyV'&&!anyPanelOpen()){G.cam3=!G.cam3;toast(G.cam3?'Third person — V to switch back':'First person');AU.sel();return;}
   if(anyPanelOpen())return;
   if(k==='KeyX'&&G.mode==='sail'){patchLeak();return;}
   if(k==='KeyC'&&G.mode==='sail'){douseFire();return;}
@@ -6519,6 +6631,7 @@ function wireInput(){
  $('btnUse').addEventListener('pointerdown',e=>{e.preventDefault();AU.init();doAct();});
  $('btnBag').addEventListener('pointerdown',e=>{e.preventDefault();if(!G)return;if($('invM').classList.contains('open'))closePanel('invM');else openInv();});
  $('btnMapT').addEventListener('pointerdown',e=>{e.preventDefault();if(!G)return;if($('mapM').classList.contains('open'))closePanel('mapM');else openMap();});
+ $('btnCam').addEventListener('pointerdown',e=>{e.preventDefault();if(!G)return;G.cam3=!G.cam3;AU.sel();});
  $('btnHelp').addEventListener('pointerdown',e=>{e.preventDefault();if($('helpM').classList.contains('open'))closePanel('helpM');else openPanel('helpM');});
  $('prompt').addEventListener('pointerdown',e=>{e.preventDefault();AU.init();doAct();});
  $('mini').addEventListener('pointerdown',e=>{e.preventDefault();if(G&&!anyPanelOpen())openMap();});
@@ -6694,6 +6807,7 @@ function frame(now){
   camera.rotation.order='YXZ';
   if(G.mode==='sail'){
    /* chase camera: orbit above & behind the ship; drag to swing around her */
+   if(PLR)visRig(PLR,false);
    const s=G.ship;
    P.pitch=clamp(P.pitch,-1.2,-0.12);
    const cp=Math.cos(P.pitch),sp2=Math.sin(P.pitch);
@@ -6709,12 +6823,30 @@ function frame(now){
    camera.rotation.y=Math.atan2(ddx,ddz)+Math.PI;
    camera.rotation.x=Math.atan2(ddy,Math.hypot(ddx,ddz));
   }else{
-   camera.position.set(P.x,P.y+PEYE,P.z);
-   /* head bob */
    const wsp=Math.hypot(P.vx,P.vz);
-   if(P.onG&&wsp>0.6){bobT+=dt*wsp*1.9;camera.position.y+=Math.sin(bobT*4.4)*0.05*Math.min(1,wsp/4);}
-   camera.rotation.y=P.yaw+Math.PI;
-   camera.rotation.x=P.pitch;
+   if(P.onG&&wsp>0.6)bobT+=dt*wsp*1.9;
+   if(G.cam3){
+    /* over the shoulder: see yourself the way the gulls do */
+    ensurePlayerRig();visRig(PLR,true);
+    const cp3=Math.cos(P.pitch),sp3=Math.sin(P.pitch);
+    const vx=Math.sin(P.yaw)*cp3,vy=sp3,vz=Math.cos(P.yaw)*cp3;
+    const dist=4.4;
+    const cxp=P.x-vx*dist,czp=P.z-vz*dist;
+    let cyp=P.y+1.7-vy*dist;
+    cyp=Math.max(cyp,vTopY(Math.round(cxp),Math.round(czp))+0.7);
+    camera.position.set(cxp,cyp,czp);
+    camera.rotation.y=P.yaw+Math.PI;
+    camera.rotation.x=P.pitch;
+    const swing=mineHeld?(-1.5+Math.sin(G.time*15)*0.8):undefined;
+    poseRig(PLR,P.x,P.y,P.z,P.yaw,{walk:P.onG&&wsp>0.6?Math.min(1,wsp/3):0,phase:bobT*4.4,armR:swing});
+   }else{
+    if(PLR)visRig(PLR,false);
+    camera.position.set(P.x,P.y+PEYE,P.z);
+    /* head bob */
+    if(P.onG&&wsp>0.6)camera.position.y+=Math.sin(bobT*4.4)*0.05*Math.min(1,wsp/4);
+    camera.rotation.y=P.yaw+Math.PI;
+    camera.rotation.x=P.pitch;
+   }
   }
   /* speed-of-sail FOV kick */
   const fT=72+(G.mode==='sail'?clamp(Math.abs(G.ship.spd)*0.8,0,12):0);

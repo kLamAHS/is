@@ -922,5 +922,86 @@ console.log('== landfall: smoke ==');
  ok('60s of shore leave among the beasts',true);
 }
 
+
+console.log('== blocky rigs ==');
+{
+ const res=run(`(function(){
+  const p=makePerson(0x8a3a2e,{hat:0xc8b06a,hat2:false});
+  const six=['head','body','armL','armR','legL','legR'].every(k=>!!p[k]);
+  setPerson(p,10,20,10,0.5,false);
+  const stacked=p.head.position.y>p.body.position.y&&p.body.position.y>p.legL.position.y;
+  const hat=!!p.hatB&&p.hatB.position.y>p.head.position.y;
+  /* walk animation: legs swing in opposition across phases */
+  poseRig(p,10,20,10,0,{walk:1,phase:Math.PI/2-p.seed});
+  const a1=p.legL.rotation.x,b1=p.legR.rotation.x;
+  poseRig(p,10,20,10,0,{walk:1,phase:-Math.PI/2-p.seed});
+  const a2=p.legL.rotation.x;
+  rmPerson(p);
+  return {six,stacked,hat,opposed:Math.sign(a1)!==Math.sign(b1)&&Math.abs(a1)>0.3,swings:a1!==a2};
+ })()`);
+ ok('rig has head, torso, two arms, two legs',res.six);
+ ok('parts stack head-over-torso-over-legs',res.stacked);
+ ok('hat sits on the head',res.hat);
+ ok('legs swing in opposition',res.opposed);
+ ok('walk cycle animates over phase',res.swings);
+}
+{
+ run(`startGame('crown','rig-seed')`);
+ frames(10);
+ const res=run(`(function(){
+  setSail();
+  const visible=CAP&&CAP.parts.every(m=>m.visible);
+  /* a few frames so sailTick poses him */
+  sailTick(0.05,0,0);
+  const wheel=CAP.armR.rotation.x<-1&&CAP.armL.rotation.x<-1;
+  const hat=!!CAP.hatB;
+  dropAnchor();
+  const hidden=CAP.parts.every(m=>!m.visible);
+  return {visible,wheel,hat,hidden};
+ })()`);
+ ok('captain rig mans the helm under sail',res.visible&&res.hat);
+ ok('hands on the wheel',res.wheel);
+ ok('captain stands down at anchor',res.hidden);
+}
+{
+ const res=run(`(function(){
+  clearMobs();
+  const home=W.home;
+  P.x=home.cx+0.5;P.z=home.cz+0.5;P.y=getH(home.cx,home.cz)+1.1;
+  let mb=null;
+  for(const [ox,oz] of [[0,4],[4,0],[0,-4],[-4,0]]){mb=spawnMob('skel',P.x+ox,P.z+oz,{});if(mb)break;}
+  if(!mb)return {fail:1};
+  const rigged=!!mb.rig&&mb.rig.parts.length>=6;
+  mobTick(0.1);
+  const posed=mb.rig.head.position.y>mb.rig.body.position.y;
+  killMob(mb,MOBS.indexOf(mb));
+  return {rigged,posed,gone:MOBS.length===0};
+ })()`);
+ ok('skeletons are full skull-faced rigs',res.rigged);
+ ok('skeleton rig poses upright',res.posed);
+ ok('rig cleaned up on death',res.gone);
+}
+{
+ run('G.cam3=true');
+ frames(10);
+ const res=run(`(function(){
+  const eye={x:P.x,y:P.y+PEYE,z:P.z};
+  const off=Math.hypot(camera.position.x-eye.x,camera.position.z-eye.z);
+  const seen=PLR&&PLR.parts.every(m=>m.visible);
+  G.cam3=false;
+  return {off,seen};
+ })()`);
+ frames(5);
+ ok('third person pulls the camera back ('+res.off.toFixed(1)+')',res.off>2.5);
+ ok('player rig visible in third person',res.seen);
+ ok('rig hidden again in first person',run('PLR.parts.every(m=>!m.visible)'));
+}
+{
+ run('G.cam3=true;manualSave();loadGame(G.slot)');
+ frames(5);
+ ok('camera choice survives save/load',run('G.cam3')===true);
+ run('G.cam3=false');
+}
+
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}
 console.log('\nALL TESTS PASSED');
