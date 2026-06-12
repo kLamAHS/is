@@ -1276,51 +1276,104 @@ frames(10);
 }
 
 
-console.log('== lanterns burn ==');
+console.log('== light bakes & lanterns burn ==');
 {
  const res=run(`(function(){
-  /* in hand, underground: the lantern lights */
+  /* the sun never reaches the vault: cave verts bake dark, surface bakes bright */
+  const dv=W.delves[0];
+  const cx=Math.floor(dv.vx/CHS),cz=Math.floor(dv.vz/CHS);
+  buildChunk(cx,cz);
+  const ge=CHUNKS.get(cx+'|'+cz).mesh.geometry;
+  const pos=ge.attributes.position.array,al=ge.attributes.alight.array;
+  let caveMax=0,caveN=0,surfMax=0;
+  for(let i=0;i<al.length/2;i++){
+   const x=pos[i*3],y=pos[i*3+1],z=pos[i*3+2],s=al[i*2];
+   surfMax=Math.max(surfMax,s);
+   if(Math.abs(x-dv.vx)<5&&Math.abs(z-dv.vz)<5&&y>dv.vy-1&&y<dv.vy+6){caveMax=Math.max(caveMax,s);caveN++;}
+  }
+  return {caveMax,caveN,surfMax};
+ })()`);
+ ok('vault verts bake near-black sky light ('+res.caveN+' verts, max '+res.caveMax.toFixed(2)+')',res.caveN>0&&res.caveMax<0.4);
+ ok('surface verts bake full daylight ('+res.surfMax.toFixed(2)+')',res.surfMax>0.9);
+}
+{
+ const res=run(`(function(){
+  /* a placed torch floods baked block light; breaking it takes the light away.
+     Find a deep cave floor with no source of any kind (placed, vault lamp,
+     glowcap, crystal) within 7 blocks — a truly dark room */
+  let tx=0,ty=0,tz=0,found=false;
+  for(let x=6;x<WORLD-6&&!found;x+=3)for(let z=6;z<WORLD-6&&!found;z+=3){
+   const c=col(x,z);
+   if(c.h<=SEA+6)continue;
+   for(let y=Math.max(6,SEA-30);y<Math.min(SEA,c.h-8)&&!found;y+=2){
+    if(getBlock(x,y,z)!==0||getBlock(x,y-1,z)===0)continue;
+    let clear=true;
+    for(let ox=-7;ox<=7&&clear;ox++)for(let oy=-7;oy<=7&&clear;oy++)for(let oz=-7;oz<=7&&clear;oz++)
+     if(SRC_LVL[getBlock(x+ox,y+oy,z+oz)])clear=false;
+    if(clear){tx=x;ty=y;tz=z;found=true;}
+   }
+  }
+  if(!found)return {fail:'no dark cave cell found'};
+  const cx=Math.floor(tx/CHS),cz=Math.floor(tz/CHS);
+  const sample=()=>{
+   buildChunk(cx,cz);
+   const ge=CHUNKS.get(cx+'|'+cz).mesh.geometry;
+   const pos=ge.attributes.position.array,al=ge.attributes.alight.array;
+   let m=0;
+   for(let i=0;i<al.length/2;i++){
+    const x=pos[i*3],y=pos[i*3+1],z=pos[i*3+2];
+    if(Math.abs(x-tx)<4&&Math.abs(y-ty)<4&&Math.abs(z-tz)<4)m=Math.max(m,al[i*2+1]);
+   }
+   return m;
+  };
+  const before=sample();
+  setBlock(tx,ty,tz,51);
+  const lit=sample();
+  setBlock(tx,ty,tz,0);
+  const after=sample();
+  return {before,lit,after};
+ })()`);
+ if(res.fail)ok('torch test: '+res.fail,false);
+ else{
+  ok('placed torch floods baked light ('+res.before.toFixed(2)+' -> '+res.lit.toFixed(2)+')',res.lit>res.before+0.4&&res.lit>0.5);
+  ok('breaking the torch removes its light ('+res.after.toFixed(2)+')',res.after<res.before+0.1);
+ }
+}
+{
+ const res=run(`(function(){
+  /* in hand, underground: the lantern feeds the shader's dynamic slot 0 */
   const dv=W.delves[0];
   P.x=dv.vx+1;P.y=dv.vy+1.05;P.z=dv.vz;G.mode='walk';
   G.inv.lantern=0;
   lampTick(0.1);
-  const off=LAMP.hand.intensity;
+  const off=MAT.uniforms.dynInt.value[0];
   G.inv.lantern=1;
   lampTick(0.1);
-  const on=LAMP.hand.intensity;
-  const near=Math.hypot(LAMP.hand.position.x-P.x,LAMP.hand.position.z-P.z)<1;
+  const on=MAT.uniforms.dynInt.value[0];
+  const p0=MAT.uniforms.dynPos.value[0];
+  const near=Math.hypot(p0.x-P.x,p0.z-P.z)<1;
   return {off,on,near};
  })()`);
- ok('hand lantern dark without, bright with ('+res.off.toFixed(2)+' -> '+res.on.toFixed(2)+')',res.off===0&&res.on>0.8&&res.near);
+ ok('hand lantern dark without, bright with ('+res.off.toFixed(2)+' -> '+res.on.toFixed(2)+')',res.off===0&&res.on>0.5&&res.near);
 }
 {
  const res=run(`(function(){
-  /* aboard: every lantern block casts its own glow at night */
+  /* aboard: every lantern block feeds a dynamic slot at night */
   const s=G.ship;
   s.blocks.set(K(0,2,0),32);s.blocks.set(K(3,2,0),32);
   rebuildShip();
   G.time=Math.floor(G.time/DAY)*DAY+DAY*0.97; /* the dead of night */
   skyTick(0.01);
   lampTick(0.1);
-  const lit=LAMP.ship.filter(l=>l.intensity>0.5).length;
+  const inten=MAT.uniforms.dynInt.value;
+  let lit=0;
+  for(let i=1;i<DYNL;i++)if(inten[i]>0.4)lit++;
   const w=shipLocalToWorld(s.lantPos[0][0],s.lantPos[0][1],s.lantPos[0][2]);
-  const near=Math.hypot(LAMP.ship[0].position.x-w[0],LAMP.ship[0].position.z-w[2])<2;
+  const p1=MAT.uniforms.dynPos.value[1];
+  const near=Math.hypot(p1.x-w[0],p1.z-w[2])<2;
   return {n:s.lantPos.length,lit,near};
  })()`);
  ok('ship lanterns tracked ('+res.n+') and lit at night ('+res.lit+')',res.n>=2&&res.lit>=2&&res.near);
-}
-{
- const res=run(`(function(){
-  /* a placed torch is found by the scan and glows */
-  const px=Math.round(P.x),py=Math.round(P.y),pz=Math.round(P.z);
-  setBlock(px+2,py+1,pz,51);
-  LAMP.scanT=0;
-  lampTick(0.1);
-  const lit=LAMP.world.filter(l=>l.intensity>0.3).length;
-  setBlock(px+2,py+1,pz,0);
-  return {lit};
- })()`);
- ok('placed torches glow nearby ('+res.lit+')',res.lit>=1);
 }
 
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}

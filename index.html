@@ -906,6 +906,7 @@ function bumpB(map,x,y,z){
 function setBlock(x,y,z,id){
  ED.set(K(x,y,z),id);
  bumpB(EDB,x,y,z);
+ lsrcSet(x,y,z,id);
  markDirty(x,y,z);
 }
 function markDirty(x,y,z){
@@ -918,7 +919,7 @@ function markDirty(x,y,z){
 }
 
 /* ---------------- villages & ports ---------------- */
-function vset(x,y,z,id){VB.set(K(x,y,z),id);bumpB(VBB,x,y,z);}
+function vset(x,y,z,id){VB.set(K(x,y,z),id);bumpB(VBB,x,y,z);lsrcSet(x,y,z,id);}
 /* level ground with a round, feathered skirt so plazas melt into the
    hillside — and re-skin every touched column so no raw dirt shelf shows */
 function flatten(cx,cz,r,h){
@@ -1217,7 +1218,7 @@ function genWorld(seedStr){
  const rng=mulberry32(WSEED);
  W={seed:seedStr,isles:[],flat:new Set(),noTree:new Set(),cx0:WORLD/2,cz0:WORLD/2,treasures:[]};
  ED=new Map();VB=new Map();DIRTY=new Set();COLS=new Map();
- EDB.clear();VBB.clear();
+ EDB.clear();VBB.clear();LSRC.clear();
  /* place islands on a loose ring + center: big, sprawling landmasses now */
  const n=11+((rng()*3)|0);
  let id=0;
@@ -1559,7 +1560,7 @@ function initThree(){
  hemi=new THREE.HemisphereLight(0xbfd8ea,0x4a4438,0.6);
  scene.add(hemi);
  buildAtlas();
- MAT=new THREE.MeshLambertMaterial({map:ATLAS.tex,vertexColors:true,alphaTest:0.5});
+ MAT=makeTerrainMat();
  /* sky dome */
  const sg=new THREE.SphereGeometry(430,16,10);
  skyUni={top:{value:new THREE.Color(0x3f7fb6)},bot:{value:new THREE.Color(0x87bcd8)}};
@@ -1681,7 +1682,64 @@ function initThree(){
  });
 }
 
-/* ---------------- chunk meshing with ambient occlusion ---------------- */
+/* ---------------- voxel lighting: the dark is real ----------------
+   Terrain carries two baked light channels per vertex: SKY (how open to the
+   heavens — caves bake to black) and BLOCK (flood-filled from placed torches,
+   lanterns, glowcaps). The shader combines them with the day cycle and a
+   handful of dynamic lights (your fist, your ship's lanterns). Sun and
+   ambient never leak underground again. */
+const SRC_LVL={32:14,51:13,50:9,45:7}; /* lantern, torch, glowcap, crystal */
+const EMITV={32:1.0,51:0.95,50:0.7,45:0.5}; /* the source blocks glow themselves */
+const LSRC=new Map(); /* K(x,y,z) -> light level, for placed sources */
+function lsrcSet(x,y,z,id){
+ const k=K(x,y,z);
+ if(SRC_LVL[id])LSRC.set(k,SRC_LVL[id]);
+ else if(LSRC.size&&LSRC.has(k))LSRC.delete(k);
+}
+const DYNL=6;
+function makeTerrainMat(){
+ const u={
+  map:{value:ATLAS.tex},
+  sunI:{value:1},
+  sunC:{value:new THREE.Color(1,0.95,0.85)},
+  torchC:{value:new THREE.Color(1.0,0.78,0.45)},
+  fogColor:{value:new THREE.Color(0x87bcd8)},
+  fogDensity:{value:0.012},
+  dynPos:{value:Array.from({length:DYNL},()=>new THREE.Vector3(0,-999,0))},
+  dynInt:{value:new Float32Array(DYNL)},
+ };
+ return new THREE.ShaderMaterial({uniforms:u,vertexColors:true,
+  vertexShader:[
+   'attribute vec2 alight;',
+   'varying vec2 vUv;varying vec3 vC;varying vec2 vL;varying vec3 vW;',
+   'void main(){',
+   ' vUv=uv;vC=color;vL=alight;',
+   ' vec4 wp=modelMatrix*vec4(position,1.0);',
+   ' vW=wp.xyz;',
+   ' gl_Position=projectionMatrix*viewMatrix*wp;',
+   '}'].join('\n'),
+  fragmentShader:[
+   'uniform sampler2D map;uniform float sunI;uniform vec3 sunC;uniform vec3 torchC;',
+   'uniform vec3 fogColor;uniform float fogDensity;',
+   'uniform vec3 dynPos['+DYNL+'];uniform float dynInt['+DYNL+'];',
+   'varying vec2 vUv;varying vec3 vC;varying vec2 vL;varying vec3 vW;',
+   'void main(){',
+   ' vec4 tex=texture2D(map,vUv);',
+   ' if(tex.a<0.5)discard;',
+   ' float dyn=0.0;',
+   ' for(int i=0;i<'+DYNL+';i++){',
+   '  float d=distance(vW,dynPos[i]);',
+   '  dyn+=dynInt[i]*clamp(1.0-d/13.0,0.0,1.0);',
+   ' }',
+   ' vec3 light=vL.x*sunI*sunC;',
+   ' light=max(light,(vL.y+dyn)*torchC);',
+   ' light=max(light,vec3(0.04));',
+   ' vec3 col=tex.rgb*vC*light;',
+   ' float dd=length(cameraPosition-vW);',
+   ' float f=1.0-exp(-fogDensity*fogDensity*dd*dd);',
+   ' gl_FragColor=vec4(mix(col,fogColor,clamp(f,0.0,1.0)),1.0);',
+   '}'].join('\n')});
+}
 const FACES=[
  {d:[1,0,0], c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]], s:.8},
  {d:[-1,0,0],c:[[0,0,1],[0,1,1],[0,1,0],[0,0,0]], s:.8},
@@ -1696,7 +1754,9 @@ const FT=FACES.map(f=>{
  for(let i=0;i<3;i++)if(f.d[i]===0)ax.push(i);
  return ax;
 });
-function pushFace(arr,x,y,z,fi,tile,sh,get,tint){
+function pushFace(arr,x,y,z,fi,tile,sh,get,tint,lv){
+ const ls=lv?lv[0]:1,lb=lv?lv[1]:0;
+ arr.al.push(ls,lb,ls,lb,ls,lb,ls,lb);
  const f=FACES[fi],base=arr.pos.length/3;
  const tr=tint?tint[0]:1,tg=tint?tint[1]:1,tb=tint?tint[2]:1;
  const a1=FT[fi][0],a2=FT[fi][1];
@@ -1728,8 +1788,8 @@ function pushFace(arr,x,y,z,fi,tile,sh,get,tint){
  else
   arr.idx.push(base,base+1,base+2,base,base+2,base+3);
 }
-function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn,colRange){
- const arr={pos:[],nrm:[],col:[],uv:[],idx:[]};
+function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn,colRange,lightFn){
+ const arr={pos:[],nrm:[],col:[],uv:[],idx:[],al:[]};
  for(let x=x0;x<x1;x++)for(let z=z0;z<z1;z++){
  let ya=y0,yb=y1;
  if(colRange){const cr=colRange(x,z);ya=Math.max(ya,cr[0]);yb=Math.min(yb,cr[1]+1);}
@@ -1742,7 +1802,10 @@ function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn,colRange){
    if(nb&&BLK[nb]&&!(BLK[nb].nc&&id!==nb))continue;
    if(nb&&nb===id)continue;
    const tint=tintFn?tintFn(x,y,z,id,fi):null;
-   pushFace(arr,x,y,z,fi,def.f[fi],f.s,getter,tint);
+   /* light of the air cell this face looks into; source blocks glow themselves */
+   let lv=lightFn?lightFn(x+f.d[0],y+f.d[1],z+f.d[2]):null;
+   if(EMITV[id]){lv=lv?[lv[0],Math.max(lv[1],EMITV[id])]:[1,EMITV[id]];}
+   pushFace(arr,x,y,z,fi,def.f[fi],f.s,getter,tint,lv);
   }
  }
  }
@@ -1751,6 +1814,7 @@ function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn,colRange){
  g.setAttribute('normal',new THREE.Float32BufferAttribute(arr.nrm,3));
  g.setAttribute('color',new THREE.Float32BufferAttribute(arr.col,3));
  g.setAttribute('uv',new THREE.Float32BufferAttribute(arr.uv,2));
+ g.setAttribute('alight',new THREE.Float32BufferAttribute(arr.al,2));
  g.setIndex(arr.idx);
  return g;
 }
@@ -1804,7 +1868,76 @@ function buildChunk(cx,cz){
   if(vb){lo=Math.min(lo,vb.lo-1);hi=Math.max(hi,vb.hi+1);}
   return [Math.max(0,Math.floor(lo)),Math.min(WH-1,hi)];
  };
- const g=buildGeomFromCells(get,x0,0,z0,x0+CHS,WH,z0+CHS,chunkTint,colRange);
+ /* --- baked light: sky columns + flood-filled block light --- */
+ /* highest solid per column (ED/VB aware): everything above it sees the sky */
+ const hsCache=new Map();
+ const topSolid=(x,z)=>{
+  const k2=x+'|'+z;
+  let v=hsCache.get(k2);
+  if(v!==undefined)return v;
+  let top=colTop(x,z)+2;
+  if(eb)top=Math.max(top,eb.hi+1);
+  if(vb)top=Math.max(top,vb.hi+1);
+  top=Math.min(WH-1,top);
+  let y=top;
+  for(;y>0;y--)if(solid(get(x,y,z)))break;
+  hsCache.set(k2,y);
+  return y;
+ };
+ const skyAt=(x,y,z)=>{
+  const hs=topSolid(x,z);
+  let s=y>hs?1:clamp(1-(hs-y)/5,0,1);
+  /* daylight spills a little sideways from open shafts and mouths */
+  if(s<1){
+   const n=Math.max(
+    y>topSolid(x+1,z)?1:0, y>topSolid(x-1,z)?1:0,
+    y>topSolid(x,z+1)?1:0, y>topSolid(x,z-1)?1:0);
+   s=Math.max(s,n*0.6);
+  }
+  /* under true water, the light thins with the fathoms */
+  if(y<SEA&&col(x,z).h<SEA)s*=clamp(1-(SEA-y)/30,0.04,1);
+  return s;
+ };
+ /* block light: BFS through air from placed sources near this chunk */
+ const LMAP=new Map();
+ {
+  const q=[];
+  for(const [k2,lvl] of LSRC){
+   const p=k2.split('|');
+   const sx2=+p[0],sy2=+p[1],sz2=+p[2];
+   if(sx2<x0-14||sx2>x0+CHS+14||sz2<z0-14||sz2>z0+CHS+14)continue;
+   LMAP.set(k2,lvl);
+   q.push([sx2,sy2,sz2,lvl]);
+  }
+  /* natural sources the world grew itself (glowcaps, crystal seams): the
+     meshing pass reads these same cells next, so the scan just warms its cache */
+  for(let sx2=x0;sx2<x0+CHS;sx2++)for(let sz2=z0;sz2<z0+CHS;sz2++){
+   const [lo2,hi2]=colRange(sx2,sz2);
+   for(let sy2=lo2;sy2<=hi2;sy2++){
+    const lvl=SRC_LVL[get(sx2,sy2,sz2)];
+    if(!lvl)continue;
+    const k2=K(sx2,sy2,sz2);
+    if((LMAP.get(k2)||0)>=lvl)continue;
+    LMAP.set(k2,lvl);
+    q.push([sx2,sy2,sz2,lvl]);
+   }
+  }
+  while(q.length){
+   const [qx,qy,qz,lvl]=q.pop();
+   if(lvl<=1)continue;
+   for(const d of FACES){
+    const nx2=qx+d.d[0],ny2=qy+d.d[1],nz2=qz+d.d[2];
+    if(ny2<1||ny2>=WH)continue;
+    const nk=K(nx2,ny2,nz2);
+    if((LMAP.get(nk)||0)>=lvl-1)continue;
+    if(solid(get(nx2,ny2,nz2)))continue;
+    LMAP.set(nk,lvl-1);
+    q.push([nx2,ny2,nz2,lvl-1]);
+   }
+  }
+ }
+ const lightFn=(x,y,z)=>[skyAt(x,y,z),LMAP.size?(LMAP.get(K(x,y,z))||0)/14:0];
+ const g=buildGeomFromCells(get,x0,0,z0,x0+CHS,WH,z0+CHS,chunkTint,colRange,lightFn);
  const m=new THREE.Mesh(g,MAT);
  m.castShadow=true;m.receiveShadow=true;
  scene.add(m);
@@ -1856,6 +1989,11 @@ function skyTick(dt){
  skyUni.top.value=top;skyUni.bot.value=hor;
  scene.fog.color=hor;
  scene.background=hor;
+ if(MAT){
+  MAT.uniforms.sunI.value=(0.13+day*0.92)*wxDk;
+  MAT.uniforms.sunC.value.setHSL(0.1-dawn*0.04,0.35+dawn*0.4,0.92-dawn*0.1);
+  MAT.uniforms.fogColor.value.set(hor);
+ }
  starMat.opacity=clamp(0.85-day*1.5,0,0.85);
  stars.rotation.y+=dt*0.005;
  const cx2=camera.position.x,cy2=camera.position.y,cz2=camera.position.z;
@@ -5274,7 +5412,7 @@ function applySave(d){
  JOBSEQ=Math.max(JOBSEQ,d.jobseq||1);
  if(d.wx){WX.wdir=d.wx.wdir;WX.wstr=d.wx.wstr;WX.kind=d.wx.kind;WX.until=d.wx.until;}
  ED=new Map(d.ed||[]);
- for(const k of ED.keys()){const p=k.split('|');bumpB(EDB,+p[0],+p[1],+p[2]);}
+ for(const [k,id] of ED){const p=k.split('|');bumpB(EDB,+p[0],+p[1],+p[2]);lsrcSet(+p[0],+p[1],+p[2],id);}
  if(d.treasures)W.treasures=d.treasures;
  (d.legends||[]).forEach((l,i)=>{if(W.legends[i])W.legends[i].found=l.found;});
  (d.coves||[]).forEach((c,i)=>{if(W.coves[i]){W.coves[i].found=c.found;W.coves[i].rumor=c.rumor;}});
@@ -7128,57 +7266,29 @@ function sim(dt){
  if(hudT<=0){hudT=0.3;updateHUD();}
 }
 /* ---------------- lanterns that actually burn ---------------- */
-const LAMP={hand:null,ship:[],world:[],scanT:0,spots:[]};
-function ensureLamps(){
- if(LAMP.hand)return;
- const mk=(range)=>{const l=new THREE.PointLight(0xffd9a0,0,range,1.8);scene.add(l);return l;};
- LAMP.hand=mk(16);
- for(let i=0;i<4;i++)LAMP.ship.push(mk(18));
- for(let i=0;i<5;i++)LAMP.world.push(mk(11));
-}
+/* dynamic lights live in the terrain shader: slot 0 is the lantern in your
+   fist, the rest are the lantern blocks aboard your ship. Placed torches and
+   lanterns are BAKED into the chunks (see buildChunk) so they always work. */
 function lampTick(dt){
- ensureLamps();
+ if(!MAT)return;
+ const pos=MAT.uniforms.dynPos.value,inten=MAT.uniforms.dynInt.value;
  const night=clamp(1-SKY.day,0,1);
  const ugD=G.mode==='walk'?Math.max(0,getH(Math.round(P.x),Math.round(P.z))-P.y):0;
  const dark=Math.max(night,ugD>3?1:0);
  const fl=0.92+0.08*Math.sin(G.time*9.7)+0.04*Math.sin(G.time*23.3); /* live flame */
  /* the lantern in your fist */
  const held=G.mode==='walk'&&(G.inv.lantern|0)>0;
- LAMP.hand.intensity=held?(0.25+1.2*dark)*fl:0;
- if(held)LAMP.hand.position.set(P.x,P.y+1.35,P.z);
+ inten[0]=held?(0.3+0.8*dark)*fl:0;
+ if(held)pos[0].set(P.x,P.y+1.35,P.z);
  /* lanterns aboard: every lantern block on her casts its own glow */
  const lp=G.ship.lantPos||[];
- for(let i=0;i<LAMP.ship.length;i++){
-  const L=LAMP.ship[i];
-  if(i<lp.length){
-   const w=shipLocalToWorld(lp[i][0],lp[i][1],lp[i][2]);
-   L.position.set(w[0],w[1]+0.2,w[2]);
-   L.intensity=(0.2+1.05*night)*fl;
-  }else L.intensity=0;
- }
- /* placed lights nearby: delve torches, dock lamps, your own torch lines */
- LAMP.scanT-=dt;
- if(LAMP.scanT<=0){
-  LAMP.scanT=0.6;
-  LAMP.spots.length=0;
-  if(G.mode==='walk'){
-   const px=Math.round(P.x),py=Math.round(P.y),pz=Math.round(P.z);
-   for(let x=px-9;x<=px+9&&LAMP.spots.length<12;x++)
-    for(let z=pz-9;z<=pz+9&&LAMP.spots.length<12;z++)
-     for(let y=Math.max(1,py-6);y<=Math.min(WH-1,py+7);y++){
-      const id=getBlock(x,y,z);
-      if(id===32||id===51){LAMP.spots.push([x+0.5,y+0.5,z+0.5,Math.hypot(x-P.x,y-P.y,z-P.z)]);break;}
-     }
-   LAMP.spots.sort((a,b)=>a[3]-b[3]);
-  }
- }
- for(let i=0;i<LAMP.world.length;i++){
-  const L=LAMP.world[i];
-  const sp=LAMP.spots[i];
-  if(sp){
-   L.position.set(sp[0],sp[1],sp[2]);
-   L.intensity=(0.15+1.1*dark)*fl;
-  }else L.intensity=0;
+ for(let i=1;i<DYNL;i++){
+  const j=i-1;
+  if(j<lp.length){
+   const w=shipLocalToWorld(lp[j][0],lp[j][1],lp[j][2]);
+   pos[i].set(w[0],w[1]+0.2,w[2]);
+   inten[i]=(0.12+0.85*night)*fl;
+  }else inten[i]=0;
  }
 }
 function frame(now){
@@ -7242,13 +7352,10 @@ function frame(now){
   const uw=camera.position.y<SEA+0.42&&waterCol(camera.position.x,camera.position.z);
   const lantB=G.ship&&G.ship.lant>0&&SKY.day<0.3?0.85:1;
   const dk=uw?clamp((SEA-camera.position.y)/42,0,1):0;
-  /* underground, the dark is real: torches and lanterns push it back */
+  /* underground the darkness is in the LIGHTING now; fog only deepens slightly */
   const ugD=!uw&&G.mode==='walk'?getH(Math.round(P.x),Math.round(P.z))-P.y:0;
   let fogD=WX.fog*lantB;
-  if(ugD>3){
-   const held=((G.inv.torch|0)>0||(G.inv.lantern|0)>0)?0.5:1;
-   fogD=Math.max(fogD,(0.02+Math.min(0.11,ugD*0.0022))*held);
-  }
+  if(ugD>3)fogD=Math.max(fogD,0.014+Math.min(0.035,ugD*0.0006));
   scene.fog.density=uw?0.05+dk*0.16:fogD;
   if(waterUni)waterUni.fogDensity.value=scene.fog.density;
   if(uw){
@@ -7256,6 +7363,15 @@ function frame(now){
    if(bg.setHSL)bg.setHSL(0.56,0.55,Math.max(0.015,0.16*(1-dk)));
    scene.background=bg;
    scene.fog.color=bg;
+  }else if(ugD>3){
+   const bg=new THREE.Color(0x000000);
+   if(bg.setHSL)bg.setHSL(0.08,0.1,0.02);
+   scene.background=bg;
+   scene.fog.color=bg;
+  }
+  if(MAT){
+   MAT.uniforms.fogDensity.value=scene.fog.density;
+   if(uw||ugD>3)MAT.uniforms.fogColor.value.set(scene.fog.color);
   }
  }
  renderer.render(scene,camera);
