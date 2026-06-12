@@ -1675,7 +1675,8 @@ function buildChunk(cx,cz){
  const x0=cx*CHS,z0=cz*CHS,NX=CHS+2,NY=WH+2,NZ=CHS+2;
  const buf=new Int16Array(NX*NY*NZ).fill(-1);
  const get=(x,y,z)=>{
-  if(y<0||y>=WH)return 0;
+  if(y<0)return 4; /* below the world is bedrock: no useless bottom faces */
+  if(y>=WH)return 0;
   const lx=x-x0+1,lz=z-z0+1;
   if(lx<0||lz<0||lx>=NX||lz>=NZ)return getBlock(x,y,z);
   const i=(lx*NZ+lz)*NY+(y+1);
@@ -1684,15 +1685,23 @@ function buildChunk(cx,cz){
   return v;
  };
  const eb=EDB.get(key),vb=VBB.get(key);
- const colRange=(x,z)=>{
+ /* the lowest air a column can hold: open sky above its surface, plus any cave body */
+ const airLo=(x,z)=>{
   const c=col(x,z);
-  let lo=c.h-2;
-  if(c.h>SEA+2){ /* only land columns carry caves */
+  let lo=c.h+1;
+  if(c.h>SEA+2){
    const floor2=c.h>SEA+6?3:SEA-1;
    const roomB=c.room>0.6?(c.room-0.6)*9:0;
    if(c.cavM>0.6)lo=Math.min(lo,Math.max(floor2,c.cavY-(1.6+(c.cavM-0.6)*11+roomB)-1));
    if(c.cav2M>0.62)lo=Math.min(lo,Math.max(floor2,c.cav2Y-(1.6+(c.cav2M-0.62)*11+roomB)-1));
   }
+  return lo;
+ };
+ /* a column's faces are exposed wherever a NEIGHBOUR holds air: the band must
+    reach down to the lowest air beside it (cliff walls, cave sides), not just
+    its own surface — or steep ground renders with missing faces */
+ const colRange=(x,z)=>{
+  let lo=Math.min(col(x,z).h-2,airLo(x,z),airLo(x+1,z),airLo(x-1,z),airLo(x,z+1),airLo(x,z-1));
   let hi=colTop(x,z)+1;
   if(eb){lo=Math.min(lo,eb.lo-1);hi=Math.max(hi,eb.hi+1);}
   if(vb){lo=Math.min(lo,vb.lo-1);hi=Math.max(hi,vb.hi+1);}
