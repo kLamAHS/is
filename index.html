@@ -2219,7 +2219,7 @@ function makeShip(fac,ax,az,yawSnap){
   sailDmg:0,leak:0,fire:0,gunsOut:0};
 }
 function shipStats(s){
- s.cannons=[];s.helm=null;s.sails=0;s.fast=0;s.heavy=0;s.royal=0;
+ s.cannons=[];s.helm=null;s.sails=0;s.fast=0;s.heavy=0;s.royal=0;s.lantPos=[];
  s.holds=0;s.bunks=0;s.hidden=0;s.kegs=0;s.chart=0;s.bench=0;s.lant=0;s.fig=0;s.rud=0;s.steel=0;
  let rein=0,light=0;
  for(const [k,id] of s.blocks){
@@ -2239,7 +2239,7 @@ function shipStats(s){
   else if(id===29)s.bunks++;
   else if(id===30)s.chart++;
   else if(id===31)s.bench++;
-  else if(id===32)s.lant++;
+  else if(id===32){s.lant++;s.lantPos.push([lx,ly,lz]);}
   else if(id===34)s.fig++;
   else if(id===35)s.rud++;
  }
@@ -6716,7 +6716,7 @@ function buildHelp(){
   '<div class="card"><h3>Powder & shot</h3>Every gun fired eats one round shot. Buy it at yards (4g), craft 2 from an iron, or fish it from sunken warships. Run dry mid-fight and you board, flee, or pray. Guns also want hands: two fire free, each crew member mans another.</div>'+
   '<div class="card"><h3>Ashore & below</h3>You bleed now, captain: falls hurt, beasts bite, and lungs hold only so long (the ♥ and ◍ chips). Crabs hold the beaches, boars the woods, and drowned buccaneers walk at night, in caves and around their old camps — hold the mine button to fight: cutlass up close, flintlock at range (it fires your round shot). If you fall, you wake among friends, lighter of purse.</div>'+
   '<div class="card"><h3>Diving</h3>To go under: <b>look down and swim forward</b> — you dive the way you face (works the same on the stick). Shift sinks you straight down; Space strokes for the surface. The deeper you go, the darker it gets: kelp forests, coral, oyster pearls, sunken wrecks — and the trenches, where the light gives out entirely. Mind the ◍ breath chip; a diving helm doubles it. The caves under the isles run <b>dry</b>, however deep — only the open sea drowns you.</div>'+
-  '<div class="card"><h3>The dark below</h3>The rock has layers: stone, then <b>deep stone</b>, then <b>black rock</b> where starmetal sleeps (a steel pick makes it bearable; an iron pick helps everywhere). The deep is genuinely dark — carry torches or a lantern. Glowcaps light the cavern floors and cook into healing rations. And on the great isles stand <b>delves</b>: worked stone stairs going down past trial rooms to a black-rock vault — its keeper does not share. Clear one for starmetal, renown and a name.</div>'+
+  '<div class="card"><h3>The dark below</h3>The rock has layers: stone, then <b>deep stone</b>, then <b>black rock</b> where starmetal sleeps (a steel pick makes it bearable; an iron pick helps everywhere). The deep is genuinely dark — carry torches or a lantern and they truly burn: light in your fist, light on the stair, and every lantern block aboard your ship glows through the night. Glowcaps light the cavern floors and cook into healing rations. And on the great isles stand <b>delves</b>: worked stone stairs going down past trial rooms to a black-rock vault — its keeper does not share. Clear one for starmetal, renown and a name.</div>'+
   '<div class="card"><h3>Getting iron</h3>Three honest ways and they all work: <b>buy it</b> — mining isles (the grey crags) sell iron cheap at market; <b>dig for it</b> — break into stone and follow the speckled seams, easiest where caves have already opened the rock (gold-veined crystal marks rich ground); or <b>loot it</b> — crags wear stray nuggets right on the surface, and wrecks give it up. Iron makes shot, cutlasses, pistols, cannons and steel.</div>'+
   '<div class="card"><h3>Wind & weather</h3>The wind chip (and the chart’s wind rose) show direction and strength — run with the wind and you fly; beat against it and you crawl. Storms tear fast sails, hurl lightning and breed wreck fields. Fog hides everything. Doldrums becalm you. Royal sails (sewn with starmetal thread) never tear.</div>'+
   '<div class="card"><h3>Work & standing</h3>Every port posts contracts: deliveries, couriers, bounties, salvage, construction, escorts and smuggling. Each faction remembers what you do — standing buys discounts or slammed doors. Crimes raise your wanted level: patrols, bounty hunters, then real trouble. Pardons are sold at lawful taverns; pirates respect a black name.</div>'+
@@ -7127,6 +7127,60 @@ function sim(dt){
  hudT-=dt;
  if(hudT<=0){hudT=0.3;updateHUD();}
 }
+/* ---------------- lanterns that actually burn ---------------- */
+const LAMP={hand:null,ship:[],world:[],scanT:0,spots:[]};
+function ensureLamps(){
+ if(LAMP.hand)return;
+ const mk=(range)=>{const l=new THREE.PointLight(0xffd9a0,0,range,1.8);scene.add(l);return l;};
+ LAMP.hand=mk(16);
+ for(let i=0;i<4;i++)LAMP.ship.push(mk(18));
+ for(let i=0;i<5;i++)LAMP.world.push(mk(11));
+}
+function lampTick(dt){
+ ensureLamps();
+ const night=clamp(1-SKY.day,0,1);
+ const ugD=G.mode==='walk'?Math.max(0,getH(Math.round(P.x),Math.round(P.z))-P.y):0;
+ const dark=Math.max(night,ugD>3?1:0);
+ const fl=0.92+0.08*Math.sin(G.time*9.7)+0.04*Math.sin(G.time*23.3); /* live flame */
+ /* the lantern in your fist */
+ const held=G.mode==='walk'&&(G.inv.lantern|0)>0;
+ LAMP.hand.intensity=held?(0.25+1.2*dark)*fl:0;
+ if(held)LAMP.hand.position.set(P.x,P.y+1.35,P.z);
+ /* lanterns aboard: every lantern block on her casts its own glow */
+ const lp=G.ship.lantPos||[];
+ for(let i=0;i<LAMP.ship.length;i++){
+  const L=LAMP.ship[i];
+  if(i<lp.length){
+   const w=shipLocalToWorld(lp[i][0],lp[i][1],lp[i][2]);
+   L.position.set(w[0],w[1]+0.2,w[2]);
+   L.intensity=(0.2+1.05*night)*fl;
+  }else L.intensity=0;
+ }
+ /* placed lights nearby: delve torches, dock lamps, your own torch lines */
+ LAMP.scanT-=dt;
+ if(LAMP.scanT<=0){
+  LAMP.scanT=0.6;
+  LAMP.spots.length=0;
+  if(G.mode==='walk'){
+   const px=Math.round(P.x),py=Math.round(P.y),pz=Math.round(P.z);
+   for(let x=px-9;x<=px+9&&LAMP.spots.length<12;x++)
+    for(let z=pz-9;z<=pz+9&&LAMP.spots.length<12;z++)
+     for(let y=Math.max(1,py-6);y<=Math.min(WH-1,py+7);y++){
+      const id=getBlock(x,y,z);
+      if(id===32||id===51){LAMP.spots.push([x+0.5,y+0.5,z+0.5,Math.hypot(x-P.x,y-P.y,z-P.z)]);break;}
+     }
+   LAMP.spots.sort((a,b)=>a[3]-b[3]);
+  }
+ }
+ for(let i=0;i<LAMP.world.length;i++){
+  const L=LAMP.world[i];
+  const sp=LAMP.spots[i];
+  if(sp){
+   L.position.set(sp[0],sp[1],sp[2]);
+   L.intensity=(0.15+1.1*dark)*fl;
+  }else L.intensity=0;
+ }
+}
 function frame(now){
  requestAnimationFrame(frame);
  const dt=Math.min(0.05,(now-last)/1000||0.016);
@@ -7134,6 +7188,7 @@ function frame(now){
  if(G&&!anyPanelOpen())sim(dt);
  if(G){
   skyTick(dt);
+  lampTick(dt);
   tickParts(dt);
   camera.rotation.order='YXZ';
   if(G.mode==='sail'){
