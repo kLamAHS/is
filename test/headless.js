@@ -1129,5 +1129,43 @@ console.log('== dry caves & honest water ==');
  }else ok('dry cave physics skipped (no spot found)',true);
 }
 
+
+console.log('== mesh completeness: every exposed face renders ==');
+{
+ /* ground truth: rebuild interesting chunks with NO column bounds and compare
+    face counts against the real buildChunk path. Any mismatch = invisible-face
+    holes (the "swiss cheese" of the playtest screenshots). */
+ const res=run(`(function(){
+  /* pick chunks that stress the bounds: village, steep cliffs, cave mouths,
+     steep underwater flanks */
+  const picks=[];
+  const home=W.home;
+  picks.push([Math.floor(home.stall.x/CHS),Math.floor(home.stall.z/CHS),'village']);
+  let cliff=null,flank=null,cave=null;
+  for(let x=8;x<WORLD-8&&!(cliff&&flank&&cave);x+=2)for(let z=8;z<WORLD-8;z+=2){
+   const h=getH(x,z),h2=getH(x+1,z);
+   if(!cliff&&h>SEA+4&&h-h2>=7)cliff=[Math.floor(x/CHS),Math.floor(z/CHS),'cliff'];
+   if(!flank&&h<SEA&&h2<SEA&&Math.abs(h-h2)>=7)flank=[Math.floor(x/CHS),Math.floor(z/CHS),'underwater flank'];
+   if(!cave&&surfOpen(x,z))cave=[Math.floor(x/CHS),Math.floor(z/CHS),'cave mouth'];
+   if(cliff&&flank&&cave)break;
+  }
+  for(const p of [cliff,flank,cave])if(p)picks.push(p);
+  const out=[];
+  for(const [cx,cz,tag] of picks){
+   buildChunk(cx,cz);
+   const real=CHUNKS.get(cx+'|'+cz).mesh.geometry.attributes.position.array.length;
+   const x0=cx*CHS,z0=cz*CHS;
+   const truth=buildGeomFromCells(
+    (x,y,z)=>y<0?4:(y>=WH?0:getBlock(x,y,z)),
+    x0,0,z0,x0+CHS,WH,z0+CHS,chunkTint
+   ).attributes.position.array.length;
+   out.push({tag,real,truth});
+  }
+  return out;
+ })()`);
+ for(const r of res)
+  ok('chunk faces complete: '+r.tag+' ('+(r.real/12|0)+' faces)',r.real===r.truth&&r.real>0);
+}
+
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}
 console.log('\nALL TESTS PASSED');
