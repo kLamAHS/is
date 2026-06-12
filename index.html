@@ -217,6 +217,7 @@ tr.stale td{opacity:.45}
     <div class="chip" id="windChip">Wind <b id="windV">—</b></div>
     <div class="chip hidden" id="ammoChip">● Shot <b id="ammoV">0</b></div>
     <div class="chip" id="ringChip">—</div>
+    <div class="chip hidden" id="depChip">⛏ <b id="depV"></b></div>
     <div class="chip hidden" id="wantChip">☠ <b id="wantV">Clean</b></div>
     <div class="chip hidden" id="objChip" style="cursor:pointer;pointer-events:auto">◎ <span id="objV"></span></div>
   </div>
@@ -359,7 +360,8 @@ const T={grassT:0,grassS:1,dirt:2,sand:3,stone:4,logS:5,logT:6,plank:7,
  stall:16,sailW:17,sailB:18,palm:19,
  cargo:20,reinf:21,lightp:22,sailF:23,sailH:24,hid:25,keg:26,bunk:27,
  chart:28,bench:29,lant:30,flagB:31,fig:32,rud:33,
- bwS:34,bwT:35,star:36,steelP:37,sailR:38,hcS:39,hcF:40,oys:41,crys:42,kelp:43,coral:44};
+ bwS:34,bwT:35,star:36,steelP:37,sailR:38,hcS:39,hcF:40,oys:41,crys:42,kelp:43,coral:44,
+ dstone:45,brock:46,glow:47};
 /* faces order: +x,-x,+y(top),-y,+z,-z */
 const BLK={
  1:{n:'Grass', f:[T.grassS,T.grassS,T.grassT,T.dirt,T.grassS,T.grassS], hard:.35, drop:'dirt'},
@@ -407,11 +409,15 @@ const BLK={
  45:{n:'Gold-veined crystal',f:[T.crys,T.crys,T.crys,T.crys,T.crys,T.crys], hard:1.0, drop:'gold'},
  46:{n:'Kelp',f:[T.kelp,T.kelp,T.kelp,T.kelp,T.kelp,T.kelp], hard:.1, drop:null, nc:1},
  47:{n:'Coral',f:[T.coral,T.coral,T.coral,T.coral,T.coral,T.coral], hard:.5, drop:null},
+ 48:{n:'Deep stone',f:[T.dstone,T.dstone,T.dstone,T.dstone,T.dstone,T.dstone], hard:1.3, drop:'stone'},
+ 49:{n:'Black rock',f:[T.brock,T.brock,T.brock,T.brock,T.brock,T.brock], hard:2.4, drop:'stone'},
+ 50:{n:'Glowcap',f:[T.glow,T.glow,T.glow,T.glow,T.glow,T.glow], hard:.15, drop:'glowcap', nc:1},
+ 51:{n:'Torch',f:[T.lant,T.lant,T.lant,T.lant,T.lant,T.lant], hard:.1, drop:'torch', nc:1},
 };
 const ITEM2BLK={planks:7,log:5,stone:4,dirt:2,sand:3,sail:16,cannon:11,helm:12,
  blacksail:17,cargohold:22,reinf:23,lightp:24,fastsail:25,heavysail:26,hiddenc:27,keg:28,
  bunk:29,charttable:30,bench:31,lantern:32,flag:33,figurehead:34,rudder:35,
- blackwood:36,steelplate:38,royalsail:39,hcannon:40};
+ blackwood:36,steelplate:38,royalsail:39,hcannon:40,glowcap:50,torch:51};
 /* oriented cannons: dir k fires along DIRV[k]; ids per orientation */
 const CANNON_IDS=[11,19,20,21];
 const HCAN_IDS=[40,41,42,43];
@@ -421,8 +427,8 @@ const DIRV=[[1,0],[0,-1],[-1,0],[0,1]];
 const HOTPAGES=[
  ['planks','log','stone','dirt','sand','sail','cannon','helm'],
  ['cargohold','reinf','lightp','fastsail','heavysail','bunk','rudder','keg'],
- ['hiddenc','charttable','bench','lantern','flag','figurehead','blacksail','cannon'],
- ['steelplate','royalsail','hcannon','blackwood','reinf','cannon','sail','planks'],
+ ['hiddenc','charttable','bench','lantern','flag','figurehead','blacksail','torch'],
+ ['steelplate','royalsail','hcannon','blackwood','glowcap','torch','sail','planks'],
 ];
 let HOTKEYS=HOTPAGES[0];
 const ITEMNAME={planks:'Planks',log:'Log',stone:'Stone',dirt:'Dirt',sand:'Sand',sail:'Sail',cannon:'Cannon',helm:'Helm',
@@ -435,7 +441,8 @@ const ITEMNAME={planks:'Planks',log:'Log',stone:'Stone',dirt:'Dirt',sand:'Sand',
  salv:'Salvaged cargo',
  shot:'Round shot',steel:'Steel',blackwood:'Blackwood log',starmetal:'Starmetal',
  steelplate:'Steel plating',royalsail:'Royal sail',hcannon:'Heavy cannon',
- pearl:'Pearls',cutlass:'Cutlass',pistol:'Flintlock pistol',divehelm:'Diving helm'};
+ pearl:'Pearls',cutlass:'Cutlass',pistol:'Flintlock pistol',divehelm:'Diving helm',
+ glowcap:'Glowcap',torch:'Torch',ration:'Miner’s ration',ironpick:'Iron pick',steelpick:'Steel pick'};
 
 /* ---------------- goods / economy ---------------- */
 const GOODS={grain:{b:3},sugar:{b:5},rum:{b:9},spices:{b:14},silk:{b:22},iron:{b:8},gold:{b:18},log:{b:2},pearl:{b:26}};
@@ -547,6 +554,9 @@ function buildAtlas(){
  at(T.crys,'#8a8d92',.14,(c,ox,oy,r)=>{for(let i=0;i<3;i++){const x=ox+2+(r()*10|0),y=oy+2+(r()*10|0);c.fillStyle='#ffe9a8';c.fillRect(x,y,2,3);c.fillStyle='#fff8dc';c.fillRect(x,y,1,1);c.fillStyle='#caa53c';c.fillRect(x+1,y+2,1,1);}});
  at(T.kelp,'#1e5e3a',.2,(c,ox,oy,r)=>{for(let x=2;x<16;x+=5){for(let y=0;y<16;y++)if(r()<.8)px(c,ox+x+((y>>2)%2),oy+y,'#2e8a52');}for(let i=0;i<6;i++)c.clearRect(ox+(r()*16|0),oy+(r()*16|0),2,1);});
  at(T.coral,'#c4564a',.18,(c,ox,oy,r)=>{for(let i=0;i<5;i++){const x=ox+1+(r()*13|0),y=oy+1+(r()*13|0);c.fillStyle='#e8847a';c.fillRect(x,y,2,2);c.fillStyle='#f4c4be';c.fillRect(x,y,1,1);}});
+ at(T.dstone,'#5a5d63',.16,(c,ox,oy,r)=>{for(let i=0;i<5;i++)px(c,ox+(r()*16|0),oy+(r()*16|0),'#44474d');for(let k=0;k<2;k++){let x=2+(r()*10|0),y=2+(r()*10|0);for(let j=0;j<4;j++){px(c,ox+x,oy+y,'#393c42');x+=r()<.5?1:0;y+=1;}}});
+ at(T.brock,'#26282e',.14,(c,ox,oy,r)=>{for(let i=0;i<4;i++)px(c,ox+(r()*16|0),oy+(r()*16|0),'#15161a');for(let i=0;i<3;i++)px(c,ox+(r()*16|0),oy+(r()*16|0),'#3c4048');});
+ at(T.glow,'#1c3a34',.2,(c,ox,oy,r)=>{for(let i=0;i<4;i++){const x=ox+2+(r()*11|0),y=oy+2+(r()*11|0);c.fillStyle='#46e8c8';c.fillRect(x,y,3,2);c.fillStyle='#b8fff0';c.fillRect(x+1,y,1,1);c.fillStyle='#2a8a74';c.fillRect(x+1,y+2,1,2);}});
  ATLAS.cnv=cnv;
  const tex=new THREE.CanvasTexture(cnv);
  tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestFilter;
@@ -569,6 +579,8 @@ function iconFor(item){
  if(item==='cutlass'){c.strokeStyle='#c8cdd4';c.lineWidth=2;c.beginPath();c.moveTo(4,12);c.quadraticCurveTo(8,8,12,3);c.stroke();c.fillStyle='#8a5a2a';c.fillRect(3,11,3,3);c.fillStyle='#caa53c';c.fillRect(5,10,2,2);return cn;}
  if(item==='pistol'){c.fillStyle='#3a3026';c.fillRect(3,7,9,2);c.fillRect(3,9,3,4);c.fillStyle='#8a8d92';c.fillRect(10,6,3,2);c.fillStyle='#caa53c';c.fillRect(6,9,1,1);return cn;}
  if(item==='divehelm'){c.fillStyle='#aebac8';c.beginPath();c.arc(8,8,6,0,7);c.fill();c.fillStyle='#1c3a4a';c.beginPath();c.arc(8,8,3,0,7);c.fill();c.fillStyle='#caa53c';c.fillRect(2,7,2,2);c.fillRect(12,7,2,2);return cn;}
+ if(item==='ration'){c.fillStyle='#b98a4a';c.fillRect(3,6,10,6);c.fillStyle='#e0c890';c.fillRect(4,7,8,2);c.fillStyle='#46e8c8';c.fillRect(6,9,2,2);return cn;}
+ if(item==='ironpick'||item==='steelpick'){c.strokeStyle=item==='ironpick'?'#c8cdd4':'#9fe8ff';c.lineWidth=2;c.beginPath();c.moveTo(3,5);c.quadraticCurveTo(8,2,13,5);c.stroke();c.strokeStyle='#8a5a2a';c.beginPath();c.moveTo(8,4);c.lineTo(8,14);c.stroke();return cn;}
  c.fillStyle=G2[item]||'#888';c.fillRect(3,5,10,9);c.fillStyle='#00000044';c.fillRect(3,5,10,2);
  c.fillStyle='#ffffff33';c.fillRect(4,8,3,3);
  return cn;
@@ -713,9 +725,9 @@ function colSlope(x,z){
 function surfOpen(x,z){
  const c=col(x,z);
  if(c.h<=SEA+2||W.flat.has(x+'|'+z))return false;
- if(hash2((x>>2)*13+7,(z>>2)*29+3)>=0.3)return false;
- if(c.cavM>0.705&&Math.abs(c.h-c.cavY)<2.4)return true;
- if(c.cav2M>0.725&&Math.abs(c.h-c.cav2Y)<2.4)return true;
+ if(hash2((x>>3)*13+7,(z>>3)*29+3)>=0.22)return false;
+ if(c.cavM>0.705&&Math.abs(c.h-c.cavY)<2.0)return true;
+ if(c.cav2M>0.725&&Math.abs(c.h-c.cav2Y)<2.0)return true;
  return false;
 }
 /* deterministic trees: gated by slope, riverbeds, moisture — and honest ground */
@@ -773,23 +785,32 @@ function genBlock(x,y,z){
   if(y>2&&h>SEA+2&&!W.flat.has(x+'|'+z)){
    const deepOK=h>SEA+6;
    const roomB=c.room>0.6?(c.room-0.6)*9:0;
-   const mouth=hash2((x>>2)*13+7,(z>>2)*29+3)<0.3;
+   /* mouths are rare, deliberate pockets — never chains that tear the surface open */
+   const mouth=hash2((x>>3)*13+7,(z>>3)*29+3)<0.22;
    const dig=(M,Y,th)=>{
     if(M<=th)return 0;
     const r=1.6+(M-th)*11+roomB;
     const dy=y-Y;
     if(Math.abs(dy)<r){
      if(y<SEA&&!deepOK)return 0;
+     /* cavern dressing: dripstone from the roof, spires from the floor, glowcaps in the dark */
+     if(roomB>1.2){
+      const sp=hash2(x*13+101,z*17+57);
+      const lay=y<SEA-40?49:y<SEA-15?48:4;
+      if(sp<0.10&&dy>r-1-sp*30*(roomB/3))return lay;
+      if(sp>0.90&&dy<-(r-1-(1-sp)*30*(roomB/3)))return lay;
+     }
+     if(dy<-(r-1.4)&&y<h-8&&hash2(x*7+y*3,z*11+y*5)<0.05)return 3; /* glowcap */
      if(y<h-3)return 1;
-     /* a mouth only opens if the shaft reaches daylight — no one-block lids */
-     if(mouth&&M>th+0.105&&Math.abs(dy)<2.4&&Math.abs(h-Y)<2.4)return 1;
+     if(mouth&&M>th+0.105&&Math.abs(dy)<2.0&&Math.abs(h-Y)<2.0)return 1;
      return 0;
     }
     if(dy>=r&&dy<r+1&&(y>=SEA||deepOK)&&M>th+0.07&&hash2(x*31+y*7,z*17+y*3)<0.07)return 2;
     return 0;
    };
    const k1=dig(c.cavM,c.cavY,0.6);
-   const k2=k1===1?0:dig(c.cav2M,c.cav2Y,0.62);
+   const k2=(k1===1||k1===3)?0:dig(c.cav2M,c.cav2Y,0.62);
+   if(k1===3||k2===3)return 50; /* glowcaps light the deep floors */
    if(k1===1||k2===1)return 0;
    if(k1===2||k2===2)return 45; /* crystal in the gallery roof */
   }
@@ -808,12 +829,13 @@ function genBlock(x,y,z){
    const mine=isl&&isl.type==='mining';
    const ib=mine?2:1, ilo=mine?0.52:0.60, ihi=mine?0.74:0.70;
    if(Math.abs(y-c.vy)<=ib&&c.va>ilo&&c.va<ihi)return 9;
-   /* starmetal sleeps deep under the Outer Reaches alone */
-   if(isl&&isl.ring===2&&y<SEA-4&&Math.abs(y-c.gy)<=1&&c.va>0.90)return 37;
+   /* starmetal: under the Outer Reaches, or anywhere the black rock begins */
+   if(isl&&(isl.ring===2||y<SEA-44)&&y<SEA-4&&Math.abs(y-c.gy)<=1&&c.va>0.90)return 37;
    if(y<SEA-3&&Math.abs(y-c.gy)<=1&&c.va>(mine?0.80:0.86))return 10;
    if(hash2(x*5+y*131,z*5+y*17)<0.007)return 9; /* stray nuggets through the deep stone */
   }
-  return 4;
+  /* the rock darkens with the fathoms: stone, deep stone, black rock */
+  return y<SEA-40?49:y<SEA-15?48:4;
  }
  /* above ground (and above seabed): kelp, bushes, boulders, trees */
  if(y>colTop(x,z)+1)return 0;
@@ -1324,6 +1346,81 @@ function genWorld(seedStr){
    W.camps.push({isle:isl.id,x:cx2,z:cz2,guards:3,spawned:0,killed:0,cleared:false});
    camps++;break;
   }
+ }
+ /* delves: old workings cut down into the dark — a way in, trials on the
+    way down, and a vault at the bottom that something still guards */
+ W.delves=[];
+ const delveIsles=W.isles.filter(i=>i.r>40&&i.type!=='rock').sort((a,b)=>b.r-a.r);
+ for(const isl of delveIsles){
+  if(W.delves.length>=3)break;
+  if(hash2(isl.id*19,23)<0.25)continue;
+  let site=null;
+  for(let t=0;t<16&&!site;t++){
+   const a=rng()*Math.PI*2,d=isl.r*(0.25+rng()*0.3);
+   const ex=Math.round(isl.cx+Math.cos(a)*d),ez=Math.round(isl.cz+Math.sin(a)*d);
+   const h0=getH(ex,ez);
+   if(h0<=SEA+10||colSlope(ex,ez)>=3)continue;
+   if(isl.stall&&Math.hypot(isl.stall.x-ex,isl.stall.z-ez)<34)continue;
+   site={ex,ez,h0};
+  }
+  if(!site)continue;
+  const {ex,ez,h0}=site;
+  /* the way down: a 2-wide stepped gallery, switchbacking toward the vault */
+  let dirI=(hash2(ex,ez)*4)|0;
+  let px2=ex,pz2=ez,py2=h0;
+  const vaultY=Math.max(SEA-46,10);
+  const rooms=[];
+  let leg=0;
+  while(py2>vaultY){
+   const [dx2,dz2]=DIRV[dirI];
+   const pxn=-dz2,pzn=dx2;
+   const legLen=7+((hash2(px2*3+leg,pz2*5+leg)*6)|0);
+   for(let i=0;i<legLen&&py2>vaultY;i++){
+    px2+=dx2;pz2+=dz2;
+    if(i%2===1)py2--;
+    for(let o=0;o<2;o++)for(let yy=1;yy<=3;yy++)vset(px2+pxn*o,py2+yy,pz2+pzn*o,0);
+    for(let o=0;o<2;o++)vset(px2+pxn*o,py2,pz2+pzn*o,48); /* a cut floor underfoot */
+    if(i===3)vset(px2,py2+2,pz2,51); /* old torches still burning low */
+   }
+   leg++;
+   dirI=(dirI+(hash2(leg*7+ex,leg*11+ez)<0.5?1:3))%4;
+   /* a trial room at each turn of the stair */
+   if(leg<=2){
+    for(let ax=-3;ax<=3;ax++)for(let az=-3;az<=3;az++){
+     for(let yy=1;yy<=4;yy++)vset(px2+ax,py2+yy,pz2+az,0);
+     vset(px2+ax,py2,pz2+az,48);
+    }
+    vset(px2+2,py2+1,pz2+2,leg===1?45:13); /* crystal hoard, then a chest */
+    vset(px2-2,py2+1,pz2-2,50);
+    vset(px2,py2+3,pz2,51);
+    rooms.push({x:px2,y:py2,z:pz2});
+   }
+  }
+  /* the vault: black rock walls, the prize, and its keeper */
+  for(let ax=-4;ax<=4;ax++)for(let az=-4;az<=4;az++){
+   for(let yy=1;yy<=4;yy++)vset(px2+ax,py2+yy,pz2+az,(Math.abs(ax)===4||Math.abs(az)===4)?49:0);
+   vset(px2+ax,py2,pz2+az,49);
+   vset(px2+ax,py2+5,pz2+az,49);
+  }
+  /* a door where the stair meets the wall */
+  {
+   const [dx2,dz2]=DIRV[(dirI+2)%4];
+   for(let yy=1;yy<=3;yy++)vset(px2+dx2*4,py2+yy,pz2+dz2*4,0);
+  }
+  vset(px2,py2+1,pz2,13);
+  vset(px2+2,py2+1,pz2+2,37);vset(px2-2,py2+1,pz2-2,37);
+  vset(px2+2,py2+1,pz2-2,51);vset(px2-2,py2+1,pz2+2,51);
+  /* the arch above ground marks the way in */
+  for(let yy=1;yy<=3;yy++){vset(ex+1,h0+yy,ez+1,48);vset(ex-1,h0+yy,ez-1,48);}
+  vset(ex,h0+4,ez,48);vset(ex+1,h0+4,ez+1,48);vset(ex-1,h0+4,ez-1,48);
+  vset(ex+1,h0+3,ez-1,51);vset(ex-1,h0+3,ez+1,51);
+  for(let ax=-1;ax<=1;ax++)for(let az=-1;az<=1;az++){
+   for(let yy=1;yy<=3;yy++)if(!(Math.abs(ax)===1&&Math.abs(az)===1))vset(ex+ax,h0+yy,ez+az,0);
+  }
+  for(let ax=-2;ax<=2;ax++)for(let az=-2;az<=2;az++)W.noTree.add((ex+ax)+'|'+(ez+az));
+  W.delves.push({isle:isl.id,x:ex,z:ez,h0,vx:px2,vy:py2,vz:pz2,rooms,
+   found:false,cleared:false,boss:false,guards:0});
+  isl.delve=true;
  }
  /* sunken wrecks: ribs in the gloom, chests no honest diver has touched */
  W.sunk=[];
@@ -1961,7 +2058,8 @@ function tickMine(dt,held){
  if(mineTarget!==key){mineTarget=key;mineT=0;}
  const def=BLK[hit.id];
  if(!def||def.hard>50){ring.classList.remove('on');return;}
- mineT+=dt*(G.buffs&&G.buffs.stew?1.25:1);
+ const pick=(G.inv.steelpick|0)>0?2.2:(G.inv.ironpick|0)>0?1.5:1;
+ mineT+=dt*pick*(G.buffs&&G.buffs.stew?1.25:1);
  ring.classList.add('on');
  ring.style.setProperty('--p',Math.round(clamp(mineT/def.hard,0,1)*100));
  if(mineT>=def.hard){
@@ -1997,6 +2095,7 @@ function breakBlock(hit){
   /* the Compact's knack doubles common takes — starmetal yields to no trick */
   if((def.drop==='log'||def.drop==='iron'||def.drop==='gold'||def.drop==='stone'||def.drop==='blackwood')&&FACTIONS[G.fac].gather>1)n=2;
   give(def.drop,n);
+  if(hit.id===49)G.stats.blackrock=(G.stats.blackrock|0)+1;
   if(def.drop==='iron'||def.drop==='gold'){AU.coin();G.stats.ore=(G.stats.ore|0)+n;}
   if(def.drop==='pearl'){AU.coin();G.stats.pearls=(G.stats.pearls|0)+n;}
   if(def.drop==='starmetal'){AU.coin();AU.bell();toast('Starmetal! Cold to the touch and humming faintly.');}
@@ -3863,6 +3962,7 @@ const MOBT={
  crab:{n:'reef crab',hp:12,spd:1.7,dmg:3,aggro:6,col:0xc0563a,headCol:0x8a3a26,w:0.9,h:0.4,gold:[2,6]},
  boar:{n:'wild boar',hp:16,spd:3.4,dmg:5,aggro:10,col:0x6b4a2e,headCol:0x4a3018,w:0.8,h:0.7,gold:[3,8],grain:2},
  skel:{n:'drowned buccaneer',hp:20,spd:2.3,dmg:6,aggro:14,col:0xd8d4c4,headCol:0xe8e4d4,w:0.5,h:1.5,gold:[4,12],shot:0.25,piece:0.06},
+ lord:{n:'bone lord',hp:70,spd:2.5,dmg:11,aggro:18,col:0xb8b4a4,headCol:0xd8d4c4,w:0.7,h:2.1,gold:[60,120],shot:0.6,piece:0.5},
 };
 let MOBS=[];
 let mobSpawnT=0,atkCD=0;
@@ -3878,12 +3978,20 @@ function spawnMob(type,x,z,opts){
  const t=MOBT[type];
  const y=(opts&&opts.y!==undefined)?opts.y:floorYAt(x,z,getH(Math.round(x),Math.round(z))+1);
  if(y===null||y===undefined)return null;
- const mb={type,t,x,y,z,yaw:Math.random()*6.28,hp:t.hp,dead:0,atk:1+Math.random(),
-  wx:x,wz:z,wT:0,camp:(opts&&opts.camp)||null,night:!!(opts&&opts.night),hurtT:0,moving:false};
- if(type==='skel'){
+ const mb={type,t:Object.assign({},t),x,y,z,yaw:Math.random()*6.28,hp:t.hp,dead:0,atk:1+Math.random(),
+  wx:x,wz:z,wT:0,camp:(opts&&opts.camp)||null,night:!!(opts&&opts.night),hurtT:0,moving:false,
+  delve:(opts&&opts.delve)||null};
+ /* the deep breeds harder bones */
+ if(opts&&opts.depth>6){
+  const k=1+Math.min(1.2,opts.depth/40);
+  mb.t.hp=Math.round(mb.t.hp*k);mb.hp=mb.t.hp;
+  mb.t.dmg=Math.round(mb.t.dmg*k);
+ }
+ if(type==='skel'||type==='lord'){
   /* what's left of a sailor: bones, rags, sometimes the bandana stayed on */
-  mb.rig=mkRig({skin:0xd8d4c4,arms:0xd8d4c4,torso:0x4a4034,legs:0xcac6b6,scale:0.95,face:'skull',
-   hat:Math.random()<0.5?0x7a2a26:null,hat2:false});
+  mb.rig=mkRig({skin:type==='lord'?0xb8b4a4:0xd8d4c4,arms:0xd8d4c4,torso:type==='lord'?0x2a2420:0x4a4034,
+   legs:0xcac6b6,scale:type==='lord'?1.45:0.95,face:'skull',
+   hat:type==='lord'?0x23252a:(Math.random()<0.5?0x7a2a26:null),hat2:type==='lord'?undefined:false});
   mb.body=mb.rig.body;mb.head=mb.rig.head;
  }else{
   const body=new THREE.Mesh(new THREE.BoxGeometry(t.w,t.h,t.w*1.1),new THREE.MeshLambertMaterial({color:t.col}));
@@ -3913,6 +4021,14 @@ function killMob(mb,i){
  burst(mb.x,mb.y+0.5,mb.z,12,mb.type==='skel'?[0.85,0.83,0.75]:[0.6,0.35,0.25],4);
  AU.coin();
  if(mb.camp)campKill(mb.camp);
+ if(mb.type==='lord'&&mb.delve&&!mb.delve.cleared){
+  mb.delve.cleared=true;
+  G.stats.delves=(G.stats.delves|0)+1;
+  give('starmetal',2);
+  addRenown(40);
+  toast('The keeper falls. The delve is yours — take what the dark was hoarding.');
+  AU.bell();
+ }
  mobRemove(mb);
  MOBS.splice(i,1);
  questPing();titleTick();
@@ -3982,7 +4098,7 @@ function mobTick(dt){
    const h=getH(Math.round(x),Math.round(z));
    if(underground){
     const y=floorYAt(x,z,P.y);
-    if(y!==null&&y<h-2)spawnMob('skel',x,z,{y});
+    if(y!==null&&y<h-2)spawnMob('skel',x,z,{y,depth:h-y});
    }else if(h>SEA&&!W.flat.has(Math.round(x)+'|'+Math.round(z))){
     const night=SKY.day<0.35;
     let type=null;
@@ -3996,6 +4112,7 @@ function mobTick(dt){
    }
   }
   campTick();
+  delveTick();
  }
  for(let i=MOBS.length-1;i>=0;i--){
   const mb=MOBS[i];
@@ -4050,6 +4167,41 @@ function mobTick(dt){
    mb.body.rotation.y=mb.yaw;mb.head.rotation.y=mb.yaw;
   }
   if(mb.hp<=0)mb.dead=0.01;
+ }
+}
+/* delves: trials on the stair, a keeper at the bottom */
+function delveTick(){
+ if(!W.delves)return;
+ for(const dv of W.delves){
+  const d=Math.hypot(dv.x-P.x,dv.z-P.z);
+  if(!dv.found&&d<22){
+   dv.found=true;
+   addRenown(10);
+   toast('An old delve — worked stone going down into the dark. Bring light, food and steel.');
+   AU.bell();
+  }
+  if(dv.cleared)continue;
+  const dvv=Math.hypot(dv.vx-P.x,dv.vz-P.z);
+  const inside=P.y<dv.h0-2&&(d<70||dvv<45);
+  /* keepers stir on the stair */
+  if(inside&&dv.guards<4&&MOBS.filter(m=>m.delve===dv).length<2&&Math.random()<0.5){
+   const a=Math.random()*6.28;
+   const gx=P.x+Math.cos(a)*9,gz=P.z+Math.sin(a)*9;
+   const gy=floorYAt(gx,gz,P.y);
+   if(gy!==null){
+    const mb=spawnMob('skel',gx,gz,{y:gy,depth:dv.h0-P.y,delve:dv});
+    if(mb)dv.guards++;
+   }
+  }
+  /* the keeper of the vault */
+  if(!dv.boss&&dvv<9&&Math.abs(P.y-dv.vy)<6){
+   const mb=spawnMob('lord',dv.vx+2,dv.vz,{y:dv.vy+1,delve:dv});
+   if(mb){
+    dv.boss=true;
+    toast('The vault’s keeper rises — old bones in officer’s cloth!',true);
+    AU.bad();
+   }
+  }
  }
 }
 /* pirate camps: someone got to the wild isles first */
@@ -4343,6 +4495,7 @@ const TITLES=[
  ['Rival’s Bane','Send a rival captain to the deep',()=>(G.stats.rivalKills|0)>=1],
  ['Pearl Diver','Bring up 20 pearls',()=>(G.stats.pearls|0)>=20],
  ['Bonebreaker','Put down 25 beasts ashore',()=>(G.stats.mobKills|0)>=25],
+ ['Delver','Clear a delve’s vault of its keeper',()=>(G.stats.delves|0)>=1],
 ];
 function titleTick(){
  for(const [t,d,c] of TITLES){void d;if(!G.titles.includes(t)&&c())addTitle(t);}
@@ -5049,6 +5202,7 @@ function saveBlob(){
   treasures:W.treasures,
   legends:W.legends.map(l=>({found:l.found})),
   coves:W.coves.map(c=>({found:c.found,rumor:c.rumor})),
+  delves:(W.delves||[]).map(d2=>({found:d2.found,cleared:d2.cleared})),
   isles:W.isles.map(i=>({id:i.id,disc:i.disc,stock:i.stock,state:i.state,jobs:i.jobs,jobsDay:i.jobsDay,up:i.up,store:i.store})),
   npcs:G.pirates.filter(p=>!p.dying&&!p.fade&&p.kind!=='ghost'&&p.kind!=='trader'&&p.kind!=='rival').map(p=>({
    kind:p.kind,cls:p.clsName,x:p.x,z:p.z,yaw:p.yaw,hp:p.hp,neutral:p.neutral,name:p.name,
@@ -5124,6 +5278,7 @@ function applySave(d){
  if(d.treasures)W.treasures=d.treasures;
  (d.legends||[]).forEach((l,i)=>{if(W.legends[i])W.legends[i].found=l.found;});
  (d.coves||[]).forEach((c,i)=>{if(W.coves[i]){W.coves[i].found=c.found;W.coves[i].rumor=c.rumor;}});
+ (d.delves||[]).forEach((dd,i)=>{if(W.delves&&W.delves[i]){W.delves[i].found=!!dd.found;W.delves[i].cleared=!!dd.cleared;}});
  for(const si of d.isles||[]){
   const isl=W.isles.find(o=>o.id===si.id);
   if(!isl)continue;
@@ -5215,7 +5370,7 @@ function initStats(){
   pirateKills:0,merchKills:0,navyKills:0,ghosts:0,serpents:0,plundered:0,
   portsVisited:0,chests:0,legends:0,rescues:0,coves:0,crimes:0,contra:0,
   bribes:0,slips:0,jobsDone:0,jobs:{},rivalKills:0,outerGalleons:0,dayKills:{},
-  mobKills:0,pearls:0,camps:0};
+  mobKills:0,pearls:0,camps:0,delves:0,blackrock:0};
 }
 function initQuests(){return {tut:0,league:0,crown:0,brotherhood:0,compact:0,maps:{pieces:0,site:null}};}
 const ENDGOALS=[
@@ -5228,6 +5383,7 @@ const ENDGOALS=[
  ['Steel Leviathan','6+ steel plating and 4+ heavy cannons aboard',()=>G.ship.steel>=6&&G.ship.cannons.filter(c=>c[4]).length>=4],
  ['Master of the Outer Reaches','Sink 10 galleons in the far waters',()=>(G.stats.outerGalleons|0)>=10],
  ['A Name in Every Port','Reach renown 10',()=>renownLvl()>=10],
+ ['Bottom of the World','Break 10 black rock and clear 2 delve vaults',()=>(G.stats.blackrock|0)>=10&&(G.stats.delves|0)>=2],
 ];
 function openProfile(){
  titleTick();
@@ -5287,6 +5443,7 @@ function openProfile(){
   '<div>Beasts slain <b>'+(st.mobKills|0)+'</b></div>'+
   '<div>Pearls dived <b>'+(st.pearls|0)+'</b></div>'+
   '<div>Camps cleared <b>'+(st.camps|0)+'</b></div>'+
+  '<div>Delves cleared <b>'+(st.delves|0)+'</b></div>'+
   '<div>Relics <b>'+G.relics.length+'</b></div>'+
   '</div></div>';
  if(G.relics.length)html+='<div class="card"><h3>Relics</h3>'+G.relics.map(r=>'<div class="muted">· '+esc(r)+'</div>').join('')+'</div>';
@@ -5385,6 +5542,15 @@ function updateHUD(){
  const rg=RINGS[ringOf(G.mode==='sail'?G.ship.x:P.x,G.mode==='sail'?G.ship.z:P.z)];
  $('ringChip').textContent=rg.n;
  $('ringChip').style.color=rg.c;
+ /* how deep you delve */
+ const ugDepth=G.mode==='walk'?getH(Math.round(P.x),Math.round(P.z))-P.y:0;
+ const ug=ugDepth>3;
+ $('depChip').classList.toggle('hidden',!ug);
+ if(ug){
+  const lay=P.y<SEA-40?'black rock':P.y<SEA-15?'deep stone':'stone';
+  $('depV').textContent=Math.round(ugDepth)+' · '+lay;
+  $('depChip').style.color=P.y<SEA-40?'#9fe8ff':P.y<SEA-15?'#aeb4bc':'';
+ }
  const s=G.ship;
  const chip=$('shipChip');
  chip.classList.toggle('on',true);
@@ -5997,6 +6163,10 @@ const CRAFTS=[
  {out:'figurehead',n:1,need:{gold:2,planks:2},lbl:'2 gold ore + 2 planks → figurehead'},
  {out:'rudder',n:1,need:{planks:3,iron:1},lbl:'3 planks + 1 iron → rudder'},
  {out:'shot',n:2,need:{iron:1},lbl:'1 iron → 2 round shot'},
+ {out:'torch',n:4,need:{planks:1},lbl:'1 plank → 4 torches'},
+ {out:'ration',n:2,need:{glowcap:1,grain:1},lbl:'1 glowcap + 1 grain → 2 miner’s rations'},
+ {out:'ironpick',n:1,need:{iron:3,planks:2},lbl:'3 iron + 2 planks → iron pick (mines 1.5× faster)'},
+ {out:'steelpick',n:1,need:{steel:2,blackwood:2},lbl:'2 steel + 2 blackwood → steel pick (2.2× faster)'},
  {out:'cutlass',n:1,need:{iron:2,planks:1},lbl:'2 iron + 1 plank → cutlass'},
  {out:'pistol',n:1,need:{iron:2,planks:2},lbl:'2 iron + 2 planks → flintlock pistol'},
  {out:'divehelm',n:1,need:{iron:2,gold:1},lbl:'2 iron + 1 gold ore → diving helm'},
@@ -6023,6 +6193,16 @@ function openInv(){
   const cn=document.createElement('canvas');cn.width=16;cn.height=16;
   cn.getContext('2d').drawImage(iconFor(it),0,0);
   sl.insertBefore(cn,sl.firstChild);
+  if(it==='ration')sl.addEventListener('pointerdown',e=>{
+   e.preventDefault();
+   if((G.inv.ration|0)<1)return;
+   if(G.hp>=20)return toast('You’re hale already — save it for the dark.');
+   G.inv.ration--;
+   G.hp=Math.min(20,G.hp+6);
+   AU.put();
+   toast('You eat a miner’s ration. ♥ +6');
+   updateHUD();openInv();
+  });
  });
  const cb=$('craftBox');
  CRAFTS.forEach(cr=>{
@@ -6081,6 +6261,7 @@ function miniTick(dt,force){
  for(const l of G.loots)dot(l.x,l.z,'#e7b94a',3);
  for(const f of G.flot)dot(f.x,f.z,'#7fd0d0',3);
  for(const cv of W.coves)if(cv.found)dot(cv.x,cv.z,'#9a7fd0',4);
+ if(W.delves)for(const dv of W.delves)if(dv.found)dot(dv.x,dv.z,dv.cleared?'#7fd07f':'#d8a23c',4);
  for(const j of G.jobs)if(j.tx!==undefined&&!j.got)dot(j.tx,j.tz,'#e7b94a',5);
  if(G.tmap&&!G.tmap.found)dot(G.tmap.x,G.tmap.z,'#ff3b2e',5);
  if(G.serp)dot(G.serp.x,G.serp.z,'#3fae9c',5);
@@ -6399,6 +6580,17 @@ function openMap(){
    if(isl){c.fillStyle='#e7d8ab';c.fillText('?',isl.cx*S,isl.cz*S);}
   }
  }
+ /* delves: worked stone going down */
+ if(W.delves){
+  c.font='14px VT323';
+  for(const dv of W.delves){
+   if(!dv.found)continue;
+   c.fillStyle=dv.cleared?'#7fd07f':'#d8a23c';
+   c.fillRect(dv.x*S-3,dv.z*S-3,6,6);
+   c.fillStyle='#0c0e12';c.fillText('▾',dv.x*S-3,dv.z*S+4);
+  }
+  c.font='15px VT323';
+ }
  /* active contracts */
  for(const j of G.jobs){
   let jx=null,jz=null;
@@ -6524,6 +6716,7 @@ function buildHelp(){
   '<div class="card"><h3>Powder & shot</h3>Every gun fired eats one round shot. Buy it at yards (4g), craft 2 from an iron, or fish it from sunken warships. Run dry mid-fight and you board, flee, or pray. Guns also want hands: two fire free, each crew member mans another.</div>'+
   '<div class="card"><h3>Ashore & below</h3>You bleed now, captain: falls hurt, beasts bite, and lungs hold only so long (the ♥ and ◍ chips). Crabs hold the beaches, boars the woods, and drowned buccaneers walk at night, in caves and around their old camps — hold the mine button to fight: cutlass up close, flintlock at range (it fires your round shot). If you fall, you wake among friends, lighter of purse.</div>'+
   '<div class="card"><h3>Diving</h3>To go under: <b>look down and swim forward</b> — you dive the way you face (works the same on the stick). Shift sinks you straight down; Space strokes for the surface. The deeper you go, the darker it gets: kelp forests, coral, oyster pearls, sunken wrecks — and the trenches, where the light gives out entirely. Mind the ◍ breath chip; a diving helm doubles it. The caves under the isles run <b>dry</b>, however deep — only the open sea drowns you.</div>'+
+  '<div class="card"><h3>The dark below</h3>The rock has layers: stone, then <b>deep stone</b>, then <b>black rock</b> where starmetal sleeps (a steel pick makes it bearable; an iron pick helps everywhere). The deep is genuinely dark — carry torches or a lantern. Glowcaps light the cavern floors and cook into healing rations. And on the great isles stand <b>delves</b>: worked stone stairs going down past trial rooms to a black-rock vault — its keeper does not share. Clear one for starmetal, renown and a name.</div>'+
   '<div class="card"><h3>Getting iron</h3>Three honest ways and they all work: <b>buy it</b> — mining isles (the grey crags) sell iron cheap at market; <b>dig for it</b> — break into stone and follow the speckled seams, easiest where caves have already opened the rock (gold-veined crystal marks rich ground); or <b>loot it</b> — crags wear stray nuggets right on the surface, and wrecks give it up. Iron makes shot, cutlasses, pistols, cannons and steel.</div>'+
   '<div class="card"><h3>Wind & weather</h3>The wind chip (and the chart’s wind rose) show direction and strength — run with the wind and you fly; beat against it and you crawl. Storms tear fast sails, hurl lightning and breed wreck fields. Fog hides everything. Doldrums becalm you. Royal sails (sewn with starmetal thread) never tear.</div>'+
   '<div class="card"><h3>Work & standing</h3>Every port posts contracts: deliveries, couriers, bounties, salvage, construction, escorts and smuggling. Each faction remembers what you do — standing buys discounts or slammed doors. Crimes raise your wanted level: patrols, bounty hunters, then real trouble. Pardons are sold at lawful taverns; pirates respect a black name.</div>'+
@@ -6994,7 +7187,14 @@ function frame(now){
   const uw=camera.position.y<SEA+0.42&&waterCol(camera.position.x,camera.position.z);
   const lantB=G.ship&&G.ship.lant>0&&SKY.day<0.3?0.85:1;
   const dk=uw?clamp((SEA-camera.position.y)/42,0,1):0;
-  scene.fog.density=uw?0.05+dk*0.16:WX.fog*lantB;
+  /* underground, the dark is real: torches and lanterns push it back */
+  const ugD=!uw&&G.mode==='walk'?getH(Math.round(P.x),Math.round(P.z))-P.y:0;
+  let fogD=WX.fog*lantB;
+  if(ugD>3){
+   const held=((G.inv.torch|0)>0||(G.inv.lantern|0)>0)?0.5:1;
+   fogD=Math.max(fogD,(0.02+Math.min(0.11,ugD*0.0022))*held);
+  }
+  scene.fog.density=uw?0.05+dk*0.16:fogD;
   if(waterUni)waterUni.fogDensity.value=scene.fog.density;
   if(uw){
    const bg=new THREE.Color(0x16475e);
