@@ -476,7 +476,7 @@ const RINGS=[
 function ringOf(x,z){
  if(!W||!W.home)return 0;
  const d=Math.hypot(x-W.home.cx,z-W.home.cz);
- return d<80?0:d<160?1:2;
+ return d<150?0:d<300?1:2;
 }
 function computeRings(home){
  W.home=home;
@@ -574,7 +574,7 @@ function iconFor(item){
  return cn;
 }
 /* ---------------- world ---------------- */
-const WORLD=320, SEA=12, WH=48, CHS=16;
+const WORLD=640, SEA=104, WH=176, CHS=16;
 let W=null;     /* world meta */
 let ED=new Map();   /* player edits key->id (0=forced air) */
 let VB=new Map();   /* village/static blocks key->id */
@@ -632,9 +632,9 @@ function col(x,z){
  }
  /* shelf seabed rises toward land; reefs climb almost to the light */
  let seabed=SEA-7.2+(vnoise(x*0.045+11.3,z*0.045+71.9)-0.5)*4+mask*4.8;
- /* abyssal trenches wander the open sea: black water, bad feelings */
+ /* abyssal trenches wander the open sea: a hundred blocks of black water */
  const tr=vnoise(x*0.012+71.7,z*0.012+377.3);
- if(tr>0.58&&mask<0.05)seabed-=(tr-0.58)*26*(1-mask/0.05);
+ if(tr>0.56&&mask<0.05)seabed-=Math.pow(clamp((tr-0.56)/0.44,0,1),1.5)*(SEA-8)*(1-mask/0.05);
  if(reef>0)seabed=Math.max(seabed,lerp(seabed,reef>0.85?SEA+0.4:SEA-1.1,reef));
  let e=lerp(seabed,SEA+0.9,clamp(mask*3.3,0,1));
  /* lone sea stacks haunt the rocky coasts */
@@ -691,10 +691,11 @@ function col(x,z){
   gy:4+vnoise(x*0.03+311.9,z*0.03+419.3)*(SEA-9),
   mo:vnoise(x*0.03+777.7,z*0.03+99.1),
   cavM:vnoise(x*0.028+517.1,z*0.028+733.9),
-  cavY:5+vnoise(x*0.045+913.7,z*0.045+157.3)*14,
+  cavY:SEA-34+vnoise(x*0.045+913.7,z*0.045+157.3)*68,
   cav2M:vnoise(x*0.021+217.9,z*0.021+941.1),
-  cav2Y:4+vnoise(x*0.05+613.3,z*0.05+357.9)*9,
-  room:vnoise(x*0.06+157.1,z*0.06+89.9)};
+  cav2Y:SEA-62+vnoise(x*0.05+613.3,z*0.05+357.9)*50,
+  room:vnoise(x*0.06+157.1,z*0.06+89.9),
+  rav:Math.abs(vnoise(x*0.016+431.7,z*0.016+277.9)-0.5)};
  if(COLS.size>140000)COLS.clear();
  COLS.set(key,c);
  return c;
@@ -709,13 +710,23 @@ function colSlope(x,z){
   Math.abs(h-col(x,z+1).h),Math.abs(h-col(x,z-1).h));
  return c.sl;
 }
-/* deterministic trees: gated by slope, riverbeds and moisture */
+/* is this column's surface block carved away (cave mouth or ravine)? */
+function surfOpen(x,z){
+ const c=col(x,z);
+ if(W.flat.has(x+'|'+z))return false;
+ if(c.rav<0.03&&c.h>SEA+4)return true;
+ if(hash2((x>>2)*13+7,(z>>2)*29+3)>=0.3)return false;
+ if(c.cavM>0.705&&Math.abs(c.h-c.cavY)<2.4)return true;
+ if(c.cav2M>0.725&&Math.abs(c.h-c.cav2Y)<2.4)return true;
+ return false;
+}
+/* deterministic trees: gated by slope, riverbeds, moisture — and honest ground */
 function treeAt(ax,az){
  const c=col(ax,az);
  if(c.tree>=0)return c.tree;
  let t=0;
  const isl=c.isl,h=c.h;
- if(isl&&h>SEA&&!W.flat.has(ax+'|'+az)&&c.cv<0.45&&colSlope(ax,az)<3){
+ if(isl&&h>SEA&&!W.flat.has(ax+'|'+az)&&!(W.noTree&&W.noTree.has(ax+'|'+az))&&c.cv<0.45&&colSlope(ax,az)<3&&!surfOpen(ax,az)){
   const r=hash2(ax*3+11,az*3+29);
   const mf=clamp(0.35+c.mo*1.3,0.25,1.5);
   if(isl.type==='forest'){if(h>SEA+1&&r<0.075*mf)t=1;}
@@ -729,7 +740,7 @@ function treeAt(ax,az){
 /* kelp forests in the deeper water; seagrass tufts in the shallows */
 function kelpAt(x,z){
  const c=col(x,z);
- if(c.h>SEA-3||c.reef>0.3)return 0;
+ if(c.h>SEA-3||c.reef>0.3||surfOpen(x,z))return 0;
  const room=SEA-2-c.h;
  if(room<1)return 0;
  const r=hash2(x*9+31,z*9+77);
@@ -757,15 +768,24 @@ function genBlock(x,y,z){
   /* oyster beds and coral crust the reef tops */
   if(y===h&&h<=SEA-2&&c.reef>0.3&&hash2(x*13+5,z*7+9)<0.16)return 44;
   if(y===h&&h<=SEA-2&&c.reef>0.25&&hash2(x*11+3,z*17+1)>0.8)return 47;
-  /* two cave systems worm through the rock, swelling into caverns where they cross
-     the room field; the strong veins yawn open at the surface as cave mouths */
+  /* two cave systems worm through the rock, swelling into caverns where they
+     cross the room field. The body of a cave never thins the surface below a
+     3-block crust (no more floating skins); mouths are deliberate walk-in
+     pockets, and ravines knife straight down from the open air. */
   if(y>2&&!W.flat.has(x+'|'+z)){
+   if(c.rav<0.03&&h>SEA+4&&y<=h&&y>h-(12+(0.03-c.rav)*1100))return 0; /* ravine */
    const roomB=c.room>0.6?(c.room-0.6)*9:0;
+   const mouth=hash2((x>>2)*13+7,(z>>2)*29+3)<0.3;
    const dig=(M,Y,th)=>{
     if(M<=th)return 0;
     const r=1.6+(M-th)*11+roomB;
     const dy=y-Y;
-    if(Math.abs(dy)<r&&(y<h-1||M>th+0.06))return 1;
+    if(Math.abs(dy)<r){
+     if(y<h-3)return 1;
+     /* a mouth only opens if the shaft reaches daylight — no one-block lids */
+     if(mouth&&M>th+0.105&&Math.abs(dy)<2.4&&Math.abs(h-Y)<2.4)return 1;
+     return 0;
+    }
     if(dy>=r&&dy<r+1&&M>th+0.07&&hash2(x*31+y*7,z*17+y*3)<0.07)return 2;
     return 0;
    };
@@ -792,7 +812,7 @@ function genBlock(x,y,z){
    /* starmetal sleeps deep under the Outer Reaches alone */
    if(isl&&isl.ring===2&&y<SEA-4&&Math.abs(y-c.gy)<=1&&c.va>0.90)return 37;
    if(y<SEA-3&&Math.abs(y-c.gy)<=1&&c.va>(mine?0.80:0.86))return 10;
-   if(hash2(x*5+y*131,z*5+y*17)<0.004)return 9; /* stray nuggets */
+   if(hash2(x*5+y*131,z*5+y*17)<0.007)return 9; /* stray nuggets through the deep stone */
   }
   return 4;
  }
@@ -800,7 +820,7 @@ function genBlock(x,y,z){
  if(y>colTop(x,z)+1)return 0;
  const kh=kelpAt(x,z);
  if(kh&&y>c.h&&y<=c.h+kh)return 46; /* kelp sways in the green dark */
- if(y===c.h+1&&c.h>SEA+1&&c.isl&&!W.flat.has(x+'|'+z)){
+ if(y===c.h+1&&c.h>SEA+1&&c.isl&&!W.flat.has(x+'|'+z)&&!surfOpen(x,z)){
   const r2=hash2(x*7+3,z*7+9);
   /* the crags wear their iron on their sleeves — steep ground included */
   if((c.isl.type==='mining'||c.isl.type==='rock')&&r2<0.008)return 9;
@@ -846,8 +866,21 @@ function getBlockAll(x,y,z){
 }
 function solid(id){return id!==0&&id!==46;} /* kelp parts before you like weed should */
 
+/* meshing bounds: chunks only iterate the y-band where air can exist.
+   Player edits and village blocks widen the band for their chunk + neighbours. */
+const EDB=new Map(),VBB=new Map();
+function bumpB(map,x,y,z){
+ const cx=Math.floor(x/CHS),cz=Math.floor(z/CHS);
+ for(const [ox,oz] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]){
+  const k=(cx+ox)+'|'+(cz+oz);
+  const b=map.get(k);
+  if(!b)map.set(k,{lo:y,hi:y});
+  else{if(y<b.lo)b.lo=y;if(y>b.hi)b.hi=y;}
+ }
+}
 function setBlock(x,y,z,id){
  ED.set(K(x,y,z),id);
+ bumpB(EDB,x,y,z);
  markDirty(x,y,z);
 }
 function markDirty(x,y,z){
@@ -860,13 +893,16 @@ function markDirty(x,y,z){
 }
 
 /* ---------------- villages & ports ---------------- */
-function vset(x,y,z,id){VB.set(K(x,y,z),id);}
-/* level ground with a feathered skirt so plazas melt into the hillside
-   instead of cutting sheer walls out of it */
+function vset(x,y,z,id){VB.set(K(x,y,z),id);bumpB(VBB,x,y,z);}
+/* level ground with a round, feathered skirt so plazas melt into the
+   hillside — and re-skin every touched column so no raw dirt shelf shows */
 function flatten(cx,cz,r,h){
- const F=4; /* feather width */
- for(let x=cx-r-F;x<=cx+r+F;x++)for(let z=cz-r-F;z<=cz+r+F;z++){
-  const d=Math.max(Math.abs(x-cx),Math.abs(z-cz));
+ const F=6; /* feather width */
+ const R=r+F;
+ for(let x=cx-R-3;x<=cx+R+3;x++)for(let z=cz-R-3;z<=cz+R+3;z++){
+  const d=Math.hypot(x-cx,z-cz);
+  if(d<=R+3)W.noTree.add(x+'|'+z); /* no half-sheared canopies at the edge */
+  if(d>R)continue;
   const gh=getH(x,z);
   let th;
   if(d<=r){th=h;W.flat.add(x+'|'+z);}
@@ -878,7 +914,10 @@ function flatten(cx,cz,r,h){
   }
   for(let y=th+1;y<th+8;y++)vset(x,y,z,0);
   if(gh<th)for(let y=gh+1;y<=th;y++)vset(x,y,z,y===th?(th<=SEA+1?3:1):2);
-  if(gh>th)for(let y=th+1;y<=gh;y++)vset(x,y,z,0);
+  if(gh>th){
+   for(let y=th+1;y<=gh;y++)vset(x,y,z,0);
+   vset(x,th,z,th<=SEA+1?3:1); /* cut ground gets grass or sand, not bare dirt */
+  }
  }
 }
 /* top solid block including village blocks (terrain getH ignores VB) */
@@ -965,11 +1004,11 @@ function buildTower(tx,tz,h){
 function scanDock(isl,rng){
  const base=Math.atan2(W.cz0-isl.cz,W.cx0-isl.cx);
  let fallback=null;
- for(let k=0;k<24;k++){
-  const ang=base+(k%2?1:-1)*Math.ceil(k/2)*0.28+(rng()-0.5)*0.06;
+ for(let k=0;k<32;k++){
+  const ang=base+(k%2?1:-1)*Math.ceil(k/2)*0.22+(rng()-0.5)*0.06;
   const dx=Math.cos(ang),dz=Math.sin(ang);
   let i0=-1;
-  for(let i=Math.floor(isl.r*0.5);i<isl.r*1.7;i++){
+  for(let i=Math.floor(isl.r*0.4);i<isl.r*2.1;i++){
    if(getH(Math.round(isl.cx+dx*i),Math.round(isl.cz+dz*i))<=SEA){i0=i;break;}
   }
   if(i0<0)continue;
@@ -985,7 +1024,16 @@ function scanDock(isl,rng){
   }
   if(ok)return{dx,dz,i0};
  }
- return fallback;
+ if(fallback)return fallback;
+ /* last resort: any shoreline at all — a faction seat must have its harbour */
+ for(let a=0;a<32;a++){
+  const ang=base+a*Math.PI/16;
+  const dx=Math.cos(ang),dz=Math.sin(ang);
+  for(let i=4;i<isl.r*2.4;i++){
+   if(getH(Math.round(isl.cx+dx*i),Math.round(isl.cz+dz*i))<=SEA)return {dx,dz,i0:i};
+  }
+ }
+ return null;
 }
 function buildVillage(isl,rng){
  const sc=scanDock(isl,rng);
@@ -1008,15 +1056,15 @@ function buildVillage(isl,rng){
  vset(wlx-1,h+3,wlz,7);vset(wlx,h+3,wlz,7);vset(wlx+1,h+3,wlz,7);
  /* cottages ringed about the plaza, doors facing in, footpaths worn between */
  const dockA=Math.atan2(dz,dx);
- const n=3+((rng()*2)|0);
+ const n=4+((rng()*2)|0);
  const base=rng()*Math.PI*2;
  let built=0;
- for(let i=0;i<8&&built<n;i++){
-  const a=base+i*(Math.PI*2/8);
+ for(let i=0;i<10&&built<n;i++){
+  const a=base+i*(Math.PI*2/10);
   let da=a-dockA;
   while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
-  if(Math.abs(da)<0.6)continue; /* keep the way to the dock clear */
-  const hxp=Math.round(sx+Math.cos(a)*(9+rng()*2)),hzp=Math.round(sz+Math.sin(a)*(9+rng()*2));
+  if(Math.abs(da)<0.55)continue; /* keep the way to the dock clear */
+  const hxp=Math.round(sx+Math.cos(a)*(9+rng()*5)),hzp=Math.round(sz+Math.sin(a)*(9+rng()*5));
   const hh=getH(hxp,hzp);
   if(hh<=SEA)continue;
   const fh=Math.max(SEA+1,hh);
@@ -1142,34 +1190,35 @@ const TYPES=['capital','farm','tropical','mining','forest','tropical','farm','mi
 function genWorld(seedStr){
  WSEED=hashStr(seedStr||'tortuga');
  const rng=mulberry32(WSEED);
- W={seed:seedStr,isles:[],flat:new Set(),cx0:WORLD/2,cz0:WORLD/2,treasures:[]};
+ W={seed:seedStr,isles:[],flat:new Set(),noTree:new Set(),cx0:WORLD/2,cz0:WORLD/2,treasures:[]};
  ED=new Map();VB=new Map();DIRTY=new Set();COLS=new Map();
- /* place islands on a loose ring + center */
- const n=10+((rng()*3)|0);
+ EDB.clear();VBB.clear();
+ /* place islands on a loose ring + center: big, sprawling landmasses now */
+ const n=11+((rng()*3)|0);
  let id=0;
  const tries=[];
- for(let i=0;i<34&&tries.length<n;i++){
+ for(let i=0;i<60&&tries.length<n;i++){
   const a=(i%n/n)*Math.PI*2+rng()*0.9;
-  const rad=58+rng()*88;
+  const rad=95+rng()*195;
   const cx=Math.round(W.cx0+Math.cos(a)*rad),cz=Math.round(W.cz0+Math.sin(a)*rad);
-  const r=17+rng()*16;
-  if(cx-r<8||cz-r<8||cx+r>WORLD-8||cz+r>WORLD-8)continue;
-  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<r+o.r+12)ok=false;
+  const r=36+rng()*34;
+  if(cx-r<10||cz-r<10||cx+r>WORLD-10||cz+r>WORLD-10)continue;
+  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<(r+o.r)*1.15+16)ok=false;
   if(!ok)continue;
   const type=TYPES[id%TYPES.length];
-  const isl={id:id++,cx,cz,r,peak:type==='mining'?16+rng()*8:7+rng()*6,type,
+  const isl={id:id++,cx,cz,r,peak:type==='mining'?24+rng()*18:10+rng()*12,type,
    name:isleName(rng,type),fac:null,disc:false};
   tries.push(isl);W.isles.push(isl);
  }
  /* scattered rock islets: navigation texture, ore and buried gold */
- for(let i=0;i<6;i++){
-  const a=rng()*Math.PI*2,rad=36+rng()*108;
+ for(let i=0;i<10;i++){
+  const a=rng()*Math.PI*2,rad=70+rng()*220;
   const cx=Math.round(W.cx0+Math.cos(a)*rad),cz=Math.round(W.cz0+Math.sin(a)*rad);
-  const r=5+rng()*6;
-  if(cx-r<8||cz-r<8||cx+r>WORLD-8||cz+r>WORLD-8)continue;
-  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<r+o.r+10)ok=false;
+  const r=8+rng()*10;
+  if(cx-r<10||cz-r<10||cx+r>WORLD-10||cz+r>WORLD-10)continue;
+  let ok=true;for(const o of tries)if(Math.hypot(cx-o.cx,cz-o.cz)<r+o.r+12)ok=false;
   if(!ok)continue;
-  const isl={id:id++,cx,cz,r,peak:6+rng()*7,type:'rock',name:isleName(rng,'rock'),fac:null,disc:false};
+  const isl={id:id++,cx,cz,r,peak:7+rng()*9,type:'rock',name:isleName(rng,'rock'),fac:null,disc:false};
   tries.push(isl);W.isles.push(isl);
  }
  for(const isl of W.isles)if(isl.type==='tropical')isl.atoll=hash2(isl.id*77,3)<0.5;
@@ -1275,11 +1324,11 @@ function genWorld(seedStr){
  }
  /* sunken wrecks: ribs in the gloom, chests no honest diver has touched */
  W.sunk=[];
- for(let i=0;i<24&&W.sunk.length<5;i++){
-  const a=rng()*Math.PI*2,rad=40+rng()*120;
+ for(let i=0;i<40&&W.sunk.length<8;i++){
+  const a=rng()*Math.PI*2,rad=60+rng()*240;
   const sx2=Math.round(W.cx0+Math.cos(a)*rad),sz2=Math.round(W.cz0+Math.sin(a)*rad);
   const sb=getH(sx2,sz2);
-  if(sb>SEA-5||sb<4)continue;
+  if(sb>SEA-6||sb<SEA-60)continue; /* divable with a helm, not lost to the abyss */
   const along2=rng()<0.5;
   for(let k=-2;k<=2;k++){
    const kx=sx2+(along2?k:0),kz=sz2+(along2?0:k);
@@ -1351,7 +1400,7 @@ function bakeDepth(cx,cz){
  let i=0;
  for(let ty=0;ty<DTEX.size;ty++)for(let tx=0;tx<DTEX.size;tx++){
   const h=getH(Math.round(DTEX.ox+tx*st),Math.round(DTEX.oz+ty*st));
-  DTEX.data[i++]=clamp(((SEA+0.42)-(h+1))/14,0,1)*255;
+  DTEX.data[i++]=clamp(((SEA+0.42)-(h+1))/110,0,1)*255;
  }
  DTEX.tex.needsUpdate=true;
  if(waterUni){
@@ -1491,8 +1540,8 @@ function initThree(){
    'varying vec3 vP;varying vec3 vN;varying float vCrest;',
    'void main(){',
    ' vec2 duv=(vP.xz-dOrg)*dInv;',
-   ' float depth=texture2D(tDepth,duv).r*14.0;',
-   ' if(duv.x<0.0||duv.x>1.0||duv.y<0.0||duv.y>1.0)depth=14.0;',
+   ' float depth=texture2D(tDepth,duv).r*110.0;',
+   ' if(duv.x<0.0||duv.x>1.0||duv.y<0.0||duv.y>1.0)depth=110.0;',
    ' vec3 n=normalize(vN);',
    ' /* fine scrolling ripples */',
    ' float r1=sin(vP.x*1.9+t*2.4)+sin(vP.z*2.3-t*2.0);',
@@ -1500,9 +1549,9 @@ function initThree(){
    ' n=normalize(n+vec3(r1*0.035,0.0,r2*0.035));',
    ' vec3 v=normalize(camPos-vP);',
    ' float fres=pow(1.0-abs(dot(n,v)),2.4);',
-   ' float dmix=clamp(depth/6.0,0.0,1.0);',
+   ' float dmix=clamp(depth/8.0,0.0,1.0);',
    ' vec3 col=mix(cShal,mix(cMid,cDeep,clamp(dmix*1.4-0.4,0.0,1.0)),clamp(dmix*1.6,0.0,1.0));',
-   ' col=mix(col,cDeep*0.25,smoothstep(8.0,14.0,depth));', /* the trenches read black from the deck */
+   ' col=mix(col,cDeep*0.18,smoothstep(12.0,70.0,depth));', /* the trenches read black from the deck */
    ' col=mix(col,fogColor*0.9,fres*0.45);',
    ' /* surf foam at the shore + whitecaps on crests */',
    ' float band=0.55+0.45*sin(depth*7.0-t*2.4+r1*0.8);',
@@ -1578,9 +1627,12 @@ function pushFace(arr,x,y,z,fi,tile,sh,get,tint){
  else
   arr.idx.push(base,base+1,base+2,base,base+2,base+3);
 }
-function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn){
+function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn,colRange){
  const arr={pos:[],nrm:[],col:[],uv:[],idx:[]};
- for(let x=x0;x<x1;x++)for(let z=z0;z<z1;z++)for(let y=y0;y<y1;y++){
+ for(let x=x0;x<x1;x++)for(let z=z0;z<z1;z++){
+ let ya=y0,yb=y1;
+ if(colRange){const cr=colRange(x,z);ya=Math.max(ya,cr[0]);yb=Math.min(yb,cr[1]+1);}
+ for(let y=ya;y<yb;y++){
   const id=getter(x,y,z);if(!id)continue;
   const def=BLK[id];if(!def)continue;
   for(let fi=0;fi<6;fi++){
@@ -1591,6 +1643,7 @@ function buildGeomFromCells(getter,x0,y0,z0,x1,y1,z1,tintFn){
    const tint=tintFn?tintFn(x,y,z,id,fi):null;
    pushFace(arr,x,y,z,fi,def.f[fi],f.s,getter,tint);
   }
+ }
  }
  const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.Float32BufferAttribute(arr.pos,3));
@@ -1626,7 +1679,20 @@ function buildChunk(cx,cz){
   if(v<0){v=getBlock(x,y,z);buf[i]=v;}
   return v;
  };
- const g=buildGeomFromCells(get,x0,0,z0,x0+CHS,WH,z0+CHS,chunkTint);
+ const eb=EDB.get(key),vb=VBB.get(key);
+ const colRange=(x,z)=>{
+  const c=col(x,z);
+  let lo=c.h-2;
+  const roomB=c.room>0.6?(c.room-0.6)*9:0;
+  if(c.cavM>0.6)lo=Math.min(lo,c.cavY-(1.6+(c.cavM-0.6)*11+roomB)-1);
+  if(c.cav2M>0.62)lo=Math.min(lo,c.cav2Y-(1.6+(c.cav2M-0.62)*11+roomB)-1);
+  if(c.rav<0.03&&c.h>SEA+4)lo=Math.min(lo,c.h-46);
+  let hi=colTop(x,z)+1;
+  if(eb){lo=Math.min(lo,eb.lo-1);hi=Math.max(hi,eb.hi+1);}
+  if(vb){lo=Math.min(lo,vb.lo-1);hi=Math.max(hi,vb.hi+1);}
+  return [Math.max(0,Math.floor(lo)),Math.min(WH-1,hi)];
+ };
+ const g=buildGeomFromCells(get,x0,0,z0,x0+CHS,WH,z0+CHS,chunkTint,colRange);
  const m=new THREE.Mesh(g,MAT);
  m.castShadow=true;m.receiveShadow=true;
  scene.add(m);
@@ -1653,7 +1719,7 @@ function updateChunks(px,pz){
 }
 
 /* ---------------- day / sky / atmosphere ---------------- */
-const DAY=110;
+const DAY=140;
 const C_TOP_D=new THREE.Color(0x3a7cb8),C_TOP_N=new THREE.Color(0x070d1d);
 const C_HOR_D=new THREE.Color(0x9cc8de),C_HOR_N=new THREE.Color(0x101a30);
 const C_DAWN=new THREE.Color(0xe08a4e);
@@ -1792,8 +1858,8 @@ function movePlayer(dt,mx,mz,jump){
   P.vy*=Math.pow(0.92,dt*60);
   /* swim where you look: nose down and kick to dive; Shift tucks and sinks */
   const diveIn=(mz>0.2&&P.pitch<-0.25)||KEYS.has('ShiftLeft')||KEYS.has('ShiftRight');
-  if(mz>0.2)P.vy+=Math.sin(P.pitch)*sp*dt*3.2;
-  if(KEYS.has('ShiftLeft')||KEYS.has('ShiftRight'))P.vy-=10*dt;
+  if(mz>0.2)P.vy+=Math.sin(P.pitch)*sp*dt*3.8;
+  if(KEYS.has('ShiftLeft')||KEYS.has('ShiftRight'))P.vy-=13*dt;
   if(jump)P.vy=Math.min(P.vy+16*dt,3.4);
   else if(P.y<SEA-1.4&&!diveIn)P.vy+=5*dt; /* gentle buoyancy, unless you're swimming down */
  }else{
@@ -3521,8 +3587,9 @@ function spawnGhost(){
 }
 function spawnFleet(){
  const a=Math.random()*Math.PI*2;
- const sx=clamp(WORLD/2+Math.cos(a)*150,12,WORLD-12),sz=clamp(WORLD/2+Math.sin(a)*150,12,WORLD-12);
- const ex=clamp(WORLD/2-Math.cos(a)*150,12,WORLD-12),ez=clamp(WORLD/2-Math.sin(a)*150,12,WORLD-12);
+ const R=WORLD*0.47;
+ const sx=clamp(WORLD/2+Math.cos(a)*R,12,WORLD-12),sz=clamp(WORLD/2+Math.sin(a)*R,12,WORLD-12);
+ const ex=clamp(WORLD/2-Math.cos(a)*R,12,WORLD-12),ez=clamp(WORLD/2-Math.sin(a)*R,12,WORLD-12);
  for(let i=0;i<3;i++){
   const x=sx+Math.cos(a+Math.PI/2)*i*8,z=sz+Math.sin(a+Math.PI/2)*i*8;
   if(getH(Math.round(x),Math.round(z))>SEA-2)continue;
@@ -4325,14 +4392,14 @@ function makeJob(t,isl,ports,rng){
   const cls=tier>=3?'galleon':tier===2?(rng()<0.5?'brigantine':'galleon'):(rng()<0.6?'sloop':'brigantine');
   const kinds=['pirate','navy deserter','smuggler','rogue merchant'];
   const kind=kinds[(rng()*kinds.length)|0];
-  const a=rng()*6.28,d=40+rng()*50+tier*15;
+  const a=rng()*6.28,d=70+rng()*90+tier*25;
   const tx=clamp(isl.cx+Math.cos(a)*d,12,WORLD-12),tz=clamp(isl.cz+Math.sin(a)*d,12,WORLD-12);
   const pay=Math.round((tier>=3?600+rng()*300:tier===2?220+rng()*200:120+rng()*120)*ringPay);
   return {id,t,isl:isl.id,to:isl.id,name:nm,cls,kindTxt:kind,tx,tz,pay,dl,rep:6,tier,got:false,
    txt:'Sink the '+kind+' “'+nm+'” and return to '+isl.name};
  }
  if(t==='salvage'){
-  const a=rng()*6.28,d=35+rng()*55;
+  const a=rng()*6.28,d=55+rng()*100;
   const tx=clamp(isl.cx+Math.cos(a)*d,12,WORLD-12),tz=clamp(isl.cz+Math.sin(a)*d,12,WORLD-12);
   const pay=Math.round((110+((rng()*120)|0))*ringPay);
   return {id,t,isl:isl.id,to:isl.id,tx,tz,pay,dl,rep:4,got:false,
@@ -5038,6 +5105,7 @@ function applySave(d){
  JOBSEQ=Math.max(JOBSEQ,d.jobseq||1);
  if(d.wx){WX.wdir=d.wx.wdir;WX.wstr=d.wx.wstr;WX.kind=d.wx.kind;WX.until=d.wx.until;}
  ED=new Map(d.ed||[]);
+ for(const k of ED.keys()){const p=k.split('|');bumpB(EDB,+p[0],+p[1],+p[2]);}
  if(d.treasures)W.treasures=d.treasures;
  (d.legends||[]).forEach((l,i)=>{if(W.legends[i])W.legends[i].found=l.found;});
  (d.coves||[]).forEach((c,i)=>{if(W.coves[i]){W.coves[i].found=c.found;W.coves[i].rumor=c.rumor;}});
@@ -5980,8 +6048,9 @@ function miniTick(dt,force){
  for(let mx=-R;mx<R;mx+=2)for(let mz=-R;mz<R;mz+=2){
   const wx=Math.round(cx+mx),wz=Math.round(cz+mz);
   const hh=getH(wx,wz);
-  if(hh<=SEA-4)continue;
-  if(hh<=SEA-1){c.fillStyle='#2f7c9c';}
+  if(hh<=SEA-30)continue;
+  if(hh<=SEA-4){c.fillStyle='#1c5070';}
+  else if(hh<=SEA-1){c.fillStyle='#2f7c9c';}
   else c.fillStyle=hh<=SEA+1?'#d8c47e':(colSlope(wx,wz)>=3||hh>SEA+10)?'#8a8d92':'#5d9c3f';
   c.fillRect((mx+R)*S,(mz+R)*S,2*S+0.5,2*S+0.5);
  }
@@ -6074,7 +6143,7 @@ function routeCourse(x0,z0,x1,z1){
  gsc[id0]=0;hpush(heur(s0[0],s0[1]),id0);
  const DIRS=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
  let found=false,guard=0;
- while(heap.length&&guard++<26000){
+ while(heap.length&&guard++<70000){
   const cur=hpop()[1];
   if(closed[cur])continue;
   closed[cur]=1;
@@ -6233,7 +6302,8 @@ function openMap(){
  for(let x=0;x<WORLD;x+=2)for(let z=0;z<WORLD;z+=2){
   const h=getH(x,z);
   let col;
-  if(h<=SEA-8)continue;                 /* the abyss stays background-dark */
+  if(h<=SEA-40)continue;                /* the abyss stays background-dark */
+  else if(h<=SEA-14)col='#102f44';      /* deep water */
   else if(h<=SEA-4)col='#16435c';       /* deeps */
   else if(h<=SEA-1)col='#2a6f8f';       /* sailable shallows */
   else if(h<=SEA)col='#3fae9c';         /* awash: reefs & bars */
@@ -6253,20 +6323,20 @@ function openMap(){
   c.globalAlpha=0.5;
   c.setLineDash([8,6]);
   c.lineWidth=2;
-  for(const [rr,ri] of [[80,1],[160,2]]){
+  for(const [rr,ri] of [[150,1],[300,2]]){
    c.strokeStyle=RINGS[ri].c;
    c.beginPath();c.arc(hx,hz,rr*S,0,7);c.stroke();
   }
   c.setLineDash([]);
   c.font='13px VT323';
-  c.fillStyle=RINGS[0].c;c.fillText(RINGS[0].n,hx-24,hz+30*S+12);
+  c.fillStyle=RINGS[0].c;c.fillText(RINGS[0].n,hx-24,hz+56*S+12);
   c.fillStyle=RINGS[1].c;
-  let lx=hx,lz=hz-110*S;
-  if(lz<14){lz=hz+110*S;}
+  let lx=hx,lz=hz-220*S;
+  if(lz<14){lz=hz+220*S;}
   c.fillText(RINGS[1].n,lx-26,clamp(lz,14,cn.height-6));
   c.fillStyle=RINGS[2].c;
-  let lz2=hz-200*S;
-  if(lz2<14)lz2=hz+200*S;
+  let lz2=hz-340*S;
+  if(lz2<14)lz2=hz+340*S;
   c.fillText(RINGS[2].n,clamp(lx-30,6,cn.width-90),clamp(lz2,14,cn.height-6));
   c.restore();
  }
@@ -6907,8 +6977,8 @@ function frame(now){
   /* underwater: the light dies with the fathoms; lanterns cut the night fog a little */
   const uw=camera.position.y<SEA+0.42;
   const lantB=G.ship&&G.ship.lant>0&&SKY.day<0.3?0.85:1;
-  const dk=uw?clamp((SEA-camera.position.y)/9,0,1):0;
-  scene.fog.density=uw?0.06+dk*0.14:WX.fog*lantB;
+  const dk=uw?clamp((SEA-camera.position.y)/42,0,1):0;
+  scene.fog.density=uw?0.05+dk*0.16:WX.fog*lantB;
   if(waterUni)waterUni.fogDensity.value=scene.fog.density;
   if(uw){
    const bg=new THREE.Color(0x16475e);
