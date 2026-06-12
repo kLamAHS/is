@@ -22,6 +22,8 @@ canvas#sea{position:fixed;inset:0;display:block}
 #hurt{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:0;transition:opacity .35s;
  background:radial-gradient(closest-side, transparent 52%, rgba(190,28,18,.55))}
 #hurt.on{opacity:.6;transition:opacity .05s}
+#flash{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:0;background:#eef4ff;transition:opacity .5s}
+#flash.on{opacity:.75;transition:opacity .03s}
 button{font-family:inherit;color:inherit;background:var(--slot);border:2px solid #000;
  box-shadow:inset 0 2px 0 #ffffff22, inset 0 -3px 0 #00000055;
  padding:.3rem .8rem;font-size:1.15rem;cursor:pointer;letter-spacing:.5px}
@@ -110,8 +112,34 @@ table.mkt button{font-size:1rem;padding:.1rem .5rem;margin:0 1px}
 .islot .nm{position:absolute;left:0;right:0;top:-1.15rem;font-size:.95rem;color:#ffffff88;text-align:center;display:none}
 
 /* map */
-#mapCan{display:block;margin:0 auto;border:3px solid #000;box-shadow:inset 0 0 0 2px var(--edge);image-rendering:pixelated;max-width:100%}
+#mapCan{display:block;margin:0 auto;border:3px solid #000;box-shadow:inset 0 0 0 2px var(--edge);image-rendering:pixelated;max-width:100%;cursor:crosshair}
 #mapInfo{font-size:1.2rem;padding:6px 2px;color:#ffffffcc}
+
+/* save slots */
+.slotRow{display:flex;gap:8px;align-items:center;background:var(--pane2);border:2px solid #000;
+ box-shadow:inset 0 0 0 1px var(--edge);padding:6px 10px;margin:6px 0;font-size:1.15rem;text-align:left;flex-wrap:wrap}
+.slotRow .meta{flex:1;min-width:200px;line-height:1.35}
+.slotRow .meta b{color:var(--gold)}
+.slotRow .meta .muted{font-size:1rem}
+#contBtn{font-size:1.35rem;padding:.45rem 1.4rem;margin-bottom:8px}
+
+/* badges & jobs */
+.badge{display:inline-block;padding:0 7px;border:2px solid #000;font-size:1.02rem;background:#26303c;margin-right:4px}
+.badge.warn{background:#5e2419;color:#ffd9cf}
+.badge.good{background:#1f3a26;color:#bdf0bd}
+.badge.gold{background:#5a4516;color:#ffe9b0}
+.jobCard{border-left:4px solid var(--gold)}
+.jobCard.active{border-left-color:var(--good)}
+table.ledg{width:100%;border-collapse:collapse;font-size:1.08rem}
+table.ledg th{color:#ffffff88;font-weight:400;text-align:left;padding:2px 5px;border-bottom:2px solid var(--edge);white-space:nowrap}
+table.ledg td{padding:2px 5px;border-bottom:1px solid #ffffff14;white-space:nowrap}
+tr.stale td{opacity:.45}
+#hotPage{width:30px;height:52px;background:var(--pane);border:3px solid #000;color:var(--hi);
+ font-family:inherit;font-size:1.15rem;cursor:pointer;padding:0}
+@media (max-width:760px){#hotPage{width:26px;height:40px;font-size:1rem}}
+.statGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;font-size:1.1rem}
+.statGrid div{background:#00000038;border:1px solid var(--edge);padding:3px 8px}
+.statGrid b{color:var(--gold)}
 
 /* ---------- title ---------- */
 #title{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
@@ -174,6 +202,7 @@ table.mkt button{font-size:1rem;padding:.1rem .5rem;margin:0 1px}
 <canvas id="sea"></canvas>
 <div id="vig"></div>
 <div id="hurt"></div>
+<div id="flash"></div>
 
 <div id="hud">
   <div id="topbar">
@@ -183,6 +212,9 @@ table.mkt button{font-size:1rem;padding:.1rem .5rem;margin:0 1px}
     <div class="chip">Cargo <b id="cargoV">0/0</b></div>
     <div class="chip" id="shipChip">Hull <span id="hpV">0</span><span id="hpOuter"><span id="hpBar"></span></span> · <span id="spdV">0</span> kn</div>
     <div class="chip" id="crewChip">Crew <b id="crewV">0</b></div>
+    <div class="chip" id="windChip">Wind <b id="windV">—</b></div>
+    <div class="chip hidden" id="wantChip">☠ <b id="wantV">Clean</b></div>
+    <div class="chip hidden" id="objChip" style="cursor:pointer;pointer-events:auto">◎ <span id="objV"></span></div>
   </div>
   <div id="crossh"></div>
   <div id="mineRing" style="--p:0"></div>
@@ -210,6 +242,7 @@ table.mkt button{font-size:1rem;padding:.1rem .5rem;margin:0 1px}
   <div id="titleIn">
     <h1>SALT &amp; POWDER</h1>
     <div class="sub">Voxel Seas — mine it, build it, sail it, sell it.</div>
+    <div id="saveArea"></div>
     <div id="facGrid"></div>
     <div id="seedRow">
       <span>World seed</span>
@@ -244,6 +277,17 @@ table.mkt button{font-size:1rem;padding:.1rem .5rem;margin:0 1px}
 <div class="panel" id="dlgM">
   <div class="pHead"><h2 id="dlgT">—</h2></div>
   <div class="pBody"><div id="dlgB"></div><div id="dlgBtns" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div></div>
+</div>
+
+<div class="panel" id="ledgM">
+  <div class="pHead"><h2>Captain's Ledger</h2><button class="xB" data-x="ledgM">✕</button></div>
+  <div class="tabs" id="ledgTabs"></div>
+  <div class="pBody" id="ledgBody"></div>
+</div>
+
+<div class="panel" id="profM">
+  <div class="pHead"><h2>Captain's Profile</h2><button class="xB" data-x="profM">✕</button></div>
+  <div class="pBody" id="profBody"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -307,7 +351,9 @@ const AU={c:null,on:true,
 /* tile indices in atlas (8 per row) */
 const T={grassT:0,grassS:1,dirt:2,sand:3,stone:4,logS:5,logT:6,plank:7,
  leaf:8,iron:9,gold:10,canS:11,canF:12,helm:13,chS:14,chF:15,
- stall:16,sailW:17,sailB:18,palm:19};
+ stall:16,sailW:17,sailB:18,palm:19,
+ cargo:20,reinf:21,lightp:22,sailF:23,sailH:24,hid:25,keg:26,bunk:27,
+ chart:28,bench:29,lant:30,flagB:31,fig:32,rud:33};
 /* faces order: +x,-x,+y(top),-y,+z,-z */
 const BLK={
  1:{n:'Grass', f:[T.grassS,T.grassS,T.grassT,T.dirt,T.grassS,T.grassS], hard:.35, drop:'dirt'},
@@ -327,21 +373,52 @@ const BLK={
  13:{n:'Chest',f:[T.chS,T.chS,T.plank,T.plank,T.chF,T.chS], hard:.4, drop:null},
  14:{n:'Market stall',f:[T.stall,T.stall,T.stall,T.plank,T.stall,T.stall], hard:99, drop:null},
  16:{n:'Sail', f:[T.sailW,T.sailW,T.sailW,T.sailW,T.sailW,T.sailW], hard:.3, drop:'sail'},
- 17:{n:'Black sail',f:[T.sailB,T.sailB,T.sailB,T.sailB,T.sailB,T.sailB], hard:.3, drop:'sail'},
+ 17:{n:'Black sail',f:[T.sailB,T.sailB,T.sailB,T.sailB,T.sailB,T.sailB], hard:.3, drop:'blacksail'},
  18:{n:'Palm leaves',f:[T.palm,T.palm,T.palm,T.palm,T.palm,T.palm], hard:.12, drop:null},
+ 22:{n:'Cargo hold',f:[T.cargo,T.cargo,T.cargo,T.cargo,T.cargo,T.cargo], hard:.5, drop:'cargohold'},
+ 23:{n:'Reinforced planks',f:[T.reinf,T.reinf,T.reinf,T.reinf,T.reinf,T.reinf], hard:.75, drop:'reinf'},
+ 24:{n:'Light planks',f:[T.lightp,T.lightp,T.lightp,T.lightp,T.lightp,T.lightp], hard:.3, drop:'lightp'},
+ 25:{n:'Fast sail',f:[T.sailF,T.sailF,T.sailF,T.sailF,T.sailF,T.sailF], hard:.3, drop:'fastsail'},
+ 26:{n:'Heavy sail',f:[T.sailH,T.sailH,T.sailH,T.sailH,T.sailH,T.sailH], hard:.35, drop:'heavysail'},
+ 27:{n:'Hidden compartment',f:[T.hid,T.hid,T.hid,T.hid,T.hid,T.hid], hard:.5, drop:'hiddenc'},
+ 28:{n:'Powder magazine',f:[T.keg,T.keg,T.keg,T.keg,T.keg,T.keg], hard:.45, drop:'keg'},
+ 29:{n:'Crew bunk',f:[T.bunk,T.bunk,T.plank,T.plank,T.bunk,T.bunk], hard:.4, drop:'bunk'},
+ 30:{n:'Chart table',f:[T.bench,T.bench,T.chart,T.plank,T.bench,T.bench], hard:.45, drop:'charttable'},
+ 31:{n:'Repair bench',f:[T.bench,T.bench,T.bench,T.plank,T.bench,T.bench], hard:.45, drop:'bench'},
+ 32:{n:'Lantern',f:[T.lant,T.lant,T.lant,T.lant,T.lant,T.lant], hard:.25, drop:'lantern'},
+ 33:{n:'Flag',f:[T.flagB,T.flagB,T.flagB,T.flagB,T.flagB,T.flagB], hard:.2, drop:'flag'},
+ 34:{n:'Figurehead',f:[T.fig,T.fig,T.fig,T.fig,T.fig,T.fig], hard:.5, drop:'figurehead'},
+ 35:{n:'Rudder',f:[T.rud,T.rud,T.rud,T.rud,T.rud,T.rud], hard:.45, drop:'rudder'},
 };
-const ITEM2BLK={planks:7,log:5,stone:4,dirt:2,sand:3,sail:16,cannon:11,helm:12};
+const ITEM2BLK={planks:7,log:5,stone:4,dirt:2,sand:3,sail:16,cannon:11,helm:12,
+ blacksail:17,cargohold:22,reinf:23,lightp:24,fastsail:25,heavysail:26,hiddenc:27,keg:28,
+ bunk:29,charttable:30,bench:31,lantern:32,flag:33,figurehead:34,rudder:35};
 /* oriented cannons: dir k fires along DIRV[k]; ids per orientation */
 const CANNON_IDS=[11,19,20,21];
 const CANNON_DIR={11:0,19:1,20:2,21:3};
 const DIRV=[[1,0],[0,-1],[-1,0],[0,1]];
-const HOTKEYS=['planks','log','stone','dirt','sand','sail','cannon','helm'];
+const HOTPAGES=[
+ ['planks','log','stone','dirt','sand','sail','cannon','helm'],
+ ['cargohold','reinf','lightp','fastsail','heavysail','bunk','rudder','keg'],
+ ['hiddenc','charttable','bench','lantern','flag','figurehead','blacksail','cannon'],
+];
+let HOTKEYS=HOTPAGES[0];
 const ITEMNAME={planks:'Planks',log:'Log',stone:'Stone',dirt:'Dirt',sand:'Sand',sail:'Sail',cannon:'Cannon',helm:'Helm',
- grain:'Grain',sugar:'Sugar',rum:'Rum',spices:'Spices',silk:'Silk',iron:'Iron',gold:'Gold ore'};
+ grain:'Grain',sugar:'Sugar',rum:'Rum',spices:'Spices',silk:'Silk',iron:'Iron',gold:'Gold ore',
+ blacksail:'Black sail',cargohold:'Cargo hold',reinf:'Reinforced planks',lightp:'Light planks',
+ fastsail:'Fast sail',heavysail:'Heavy sail',hiddenc:'Hidden compartment',keg:'Powder magazine',
+ bunk:'Crew bunk',charttable:'Chart table',bench:'Repair bench',lantern:'Lantern',flag:'Flag',
+ figurehead:'Figurehead',rudder:'Rudder',
+ ckeg:'Powder kegs',csilk:'Stolen silk',crelic:'Relic crate',carms:'Outlaw arms',cletters:'Sealed letters',
+ salv:'Salvaged cargo'};
 
 /* ---------------- goods / economy ---------------- */
 const GOODS={grain:{b:3},sugar:{b:5},rum:{b:9},spices:{b:14},silk:{b:22},iron:{b:8},gold:{b:18},log:{b:2}};
 const GKEYS=Object.keys(GOODS);
+/* contraband: never on open markets; moved through black-market buyers */
+const CONTRA={ckeg:{b:34},csilk:{b:30},crelic:{b:46},carms:{b:38},cletters:{b:26}};
+const CKEYS=Object.keys(CONTRA);
+const CARGOKEYS=[...GKEYS,...CKEYS,'salv'];
 /* island econ profiles: production>40 means cheap producer, <40 expensive consumer */
 const ECON={
  farm:    {grain:130,sugar:95, rum:30, spices:34,silk:14,iron:40,gold:40,log:40},
@@ -365,7 +442,7 @@ const FACTIONS={
 const FKEYS=Object.keys(FACTIONS);
 
 /* ---------------- texture atlas (procedural, pixelated) ---------------- */
-const ATLAS={cnv:null,cols:8,rows:3,tex:null};
+const ATLAS={cnv:null,cols:8,rows:6,tex:null};
 function px(c,x,y,col){c.fillStyle=col;c.fillRect(x,y,1,1);}
 function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
  r=clamp(Math.round(r*f),0,255);g=clamp(Math.round(g*f),0,255);b=clamp(Math.round(b*f),0,255);
@@ -377,7 +454,7 @@ function tileFill(c,ox,oy,base,rng,vary,fn){
  if(fn)fn(c,ox,oy,rng);
 }
 function buildAtlas(){
- const cnv=document.createElement('canvas');cnv.width=128;cnv.height=48;
+ const cnv=document.createElement('canvas');cnv.width=128;cnv.height=96;
  const c=cnv.getContext('2d');const rng=mulberry32(1337);
  const at=(i,base,vary,fn)=>{const ox=(i%8)*16,oy=Math.floor(i/8)*16;tileFill(c,ox,oy,base,rng,vary,fn);};
  at(T.grassT,'#6cae4a',.22,(c,ox,oy,r)=>{for(let i=0;i<6;i++)px(c,ox+(r()*16|0),oy+(r()*16|0),'#4a8232');for(let i=0;i<4;i++)px(c,ox+(r()*16|0),oy+(r()*16|0),'#8cc463');});
@@ -400,6 +477,23 @@ function buildAtlas(){
  at(T.sailW,'#e8e2d2',.07,(c,ox,oy)=>{c.fillStyle='#c9c2ae';for(let y=4;y<16;y+=5)c.fillRect(ox,oy+y,16,1);});
  at(T.sailB,'#26262c',.15,(c,ox,oy)=>{c.fillStyle='#e8e2d2';c.fillRect(ox+5,oy+4,6,2);c.fillRect(ox+7,oy+3,2,6);c.fillRect(ox+4,oy+11,8,1);});
  at(T.palm,'#5fae3c',.3,(c,ox,oy,r)=>{for(let i=0;i<6;i++)px(c,ox+(r()*16|0),oy+(r()*16|0),'#3e7a25');for(let i=0;i<5;i++)c.clearRect(ox+(r()*16|0),oy+(r()*16|0),1,1);});
+ at(T.cargo,'#8a6336',.12,(c,ox,oy)=>{c.strokeStyle='#4a3215';c.strokeRect(ox+1.5,oy+1.5,13,13);
+  c.beginPath();c.moveTo(ox+2,oy+2);c.lineTo(ox+14,oy+14);c.moveTo(ox+14,oy+2);c.lineTo(ox+2,oy+14);c.stroke();});
+ at(T.reinf,'#7d5a30',.12,(c,ox,oy)=>{c.fillStyle='#5a5e66';c.fillRect(ox,oy+2,16,2);c.fillRect(ox,oy+12,16,2);
+  c.fillStyle='#9aa0a8';px(c,ox+2,oy+2,'#9aa0a8');px(c,ox+13,oy+2,'#9aa0a8');px(c,ox+2,oy+13,'#9aa0a8');px(c,ox+13,oy+13,'#9aa0a8');});
+ at(T.lightp,'#c8a86a',.1,(c,ox,oy)=>{c.fillStyle='#a8854a';for(let y=4;y<16;y+=5)c.fillRect(ox,oy+y,16,1);});
+ at(T.sailF,'#f0ece0',.06,(c,ox,oy)=>{c.fillStyle='#b8413a';c.fillRect(ox,oy+6,16,3);c.fillStyle='#d9d2be';for(let y=2;y<16;y+=6)c.fillRect(ox,oy+y,16,1);});
+ at(T.sailH,'#c9b88a',.1,(c,ox,oy)=>{c.fillStyle='#a8945e';for(let y=3;y<16;y+=4)c.fillRect(ox,oy+y,16,1);for(let x=3;x<16;x+=5)c.fillRect(ox+x,oy,1,16);});
+ at(T.hid,'#a87b44',.15,(c,ox,oy)=>{for(let y=3;y<16;y+=4)c.fillStyle='#7d5a30',c.fillRect(ox,oy+y,16,1);c.strokeStyle='#5d4422';c.strokeRect(ox+4.5,oy+4.5,7,7);});
+ at(T.keg,'#3a3026',.16,(c,ox,oy)=>{c.fillStyle='#c0392b';c.fillRect(ox,oy+3,16,2);c.fillRect(ox,oy+11,16,2);c.fillStyle='#0c0d10';c.fillRect(ox+6,oy+6,4,4);});
+ at(T.bunk,'#a87b44',.13,(c,ox,oy)=>{c.fillStyle='#e8e2d2';c.fillRect(ox+1,oy+4,14,4);c.fillStyle='#8a3a2e';c.fillRect(ox+1,oy+8,14,3);});
+ at(T.chart,'#d8c8a0',.07,(c,ox,oy)=>{c.strokeStyle='#7d5a30';c.beginPath();c.moveTo(ox+2,oy+12);c.lineTo(ox+6,oy+5);c.lineTo(ox+11,oy+9);c.lineTo(ox+14,oy+3);c.stroke();
+  c.fillStyle='#c0392b';c.fillRect(ox+10,oy+10,2,2);});
+ at(T.bench,'#8a6336',.14,(c,ox,oy)=>{c.fillStyle='#5a5e66';c.fillRect(ox+3,oy+4,3,8);c.fillRect(ox+9,oy+6,5,2);c.fillStyle='#9aa0a8';c.fillRect(ox+4,oy+3,1,2);});
+ at(T.lant,'#3a3d44',.12,(c,ox,oy)=>{c.fillStyle='#ffd76a';c.fillRect(ox+5,oy+5,6,7);c.fillStyle='#fff3c0';c.fillRect(ox+7,oy+7,2,3);c.fillStyle='#23252a';c.fillRect(ox+7,oy+2,2,3);});
+ at(T.flagB,'#b8413a',.1,(c,ox,oy)=>{c.fillStyle='#e8e0cc';c.fillRect(ox,oy+2,16,3);c.fillRect(ox,oy+9,16,3);});
+ at(T.fig,'#caa54a',.12,(c,ox,oy)=>{c.fillStyle='#e7d28a';for(let y=1;y<15;y+=3)for(let x=(y%2)?2:0;x<16;x+=4)c.fillRect(ox+x,oy+y,2,2);});
+ at(T.rud,'#553a1e',.14,(c,ox,oy)=>{c.fillStyle='#3a2810';for(let x=2;x<16;x+=4)c.fillRect(ox+x,oy,2,16);c.fillStyle='#5a5e66';c.fillRect(ox,oy+7,16,2);});
  ATLAS.cnv=cnv;
  const tex=new THREE.CanvasTexture(cnv);
  tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestFilter;
@@ -414,7 +508,8 @@ function iconFor(item){
   if(item==='helm'){const t2=T.helm,s2x=(t2%8)*16,s2y=Math.floor(t2/8)*16;c.drawImage(ATLAS.cnv,s2x,s2y,16,16,0,0,16,16);}
   return cn;}
  /* goods icons */
- const G2={grain:'#d8b54a',sugar:'#efe7d8',rum:'#8a3a22',spices:'#c46a1e',silk:'#b07fd0',iron:'#c8cdd4',gold:'#e7b94a'};
+ const G2={grain:'#d8b54a',sugar:'#efe7d8',rum:'#8a3a22',spices:'#c46a1e',silk:'#b07fd0',iron:'#c8cdd4',gold:'#e7b94a',
+  ckeg:'#2b2620',csilk:'#7a4fa0',crelic:'#3fae9c',carms:'#5a6470',cletters:'#d8cba0',salv:'#6b7a8a'};
  c.fillStyle=G2[item]||'#888';c.fillRect(3,5,10,9);c.fillStyle='#00000044';c.fillRect(3,5,10,2);
  c.fillStyle='#ffffff33';c.fillRect(4,8,3,3);
  return cn;
@@ -662,6 +757,7 @@ function buildVillage(isl,rng){
  flatten(sx,sz,8,h);
  /* stall */
  vset(sx,h+1,sz,14);vset(sx,h+2,sz,14);
+ if(isl.fac)vset(sx,h+3,sz,33); /* faction colours over the stall */
  isl.stall={x:sx,y:h+1,z:sz};
  /* huts on the flattened plaza corners */
  const corners=[[-4,-4],[4,-4],[-4,4],[4,4]];
@@ -711,13 +807,51 @@ function initEcon(isl){
  isl.stock={};isl.ideal={};
  const prof=ECON[isl.type]||ECON.farm;
  for(const g of GKEYS){const v=prof[g]||40;isl.ideal[g]=v;isl.stock[g]=v;}
+ isl.state=null;isl.jobs=null;isl.jobsDay=-99;
+ isl.up={dock:0,mkt:0,def:0,wh:0};isl.store={};
 }
 function priceOf(isl,g){
  const p=GOODS[g].b*Math.pow(46/Math.max(6,isl.stock[g]),0.62);
  return clamp(p,GOODS[g].b*0.35,GOODS[g].b*3);
 }
-function buyP(isl,g){return Math.max(1,Math.ceil(priceOf(isl,g)*1.16*(FACTIONS[G.fac].buy||1)));}
-function sellP(isl,g){return Math.max(1,Math.floor(priceOf(isl,g)*0.88*(FACTIONS[G.fac].sell||1)));}
+/* dynamic port states bend prices; see STATES */
+function stateMul(isl,g,side){
+ const st=isl.state;if(!st)return 1;
+ const t=st.type;
+ if(side==='sell'){
+  if(t==='starving'&&(g==='grain'||g==='rum'||g==='sugar'))return 2.2;
+  if(t==='flooded'&&g==='log')return 1.8;
+  if(t==='raided'&&(g==='grain'||g==='iron'||g==='log'))return 1.6;
+  if(t==='quarantined'&&(g==='rum'||g==='spices'))return 2.0;
+  if(t==='festival'&&(g==='rum'||g==='silk'||g==='spices'||g==='sugar'))return 1.8;
+  if(t==='blockaded')return 1.5;
+  if(t==='prosperous')return 1.1;
+ }else{
+  if(t==='blockaded')return 1.6;
+  if(t==='prosperous')return 0.92;
+  if(t==='raided')return 1.3;
+  if(t==='lawless')return 1.1;
+ }
+ return 1;
+}
+function repOf(isl){return isl&&isl.fac&&G?(G.rep[isl.fac]||0):0;}
+function repLvlName(v){return v>=60?'Trusted':v>=25?'Friendly':v>-25?'Neutral':v>-60?'Suspicious':v>-100?'Hostile':'Hunted';}
+function repPriceMul(isl,side){
+ const v=repOf(isl);
+ if(side==='buy')return v>=60?0.93:v>=25?0.97:v>-25?1:v>-60?1.08:1.18;
+ return v>=60?1.06:v>=25?1.03:v>-25?1:v>-60?0.94:0.85;
+}
+function buyP(isl,g){
+ let m=(FACTIONS[G.fac].buy||1)*stateMul(isl,g,'buy')*repPriceMul(isl,'buy');
+ if(G.spec&&G.spec.qm)m*=0.97;
+ if(G.perks&&G.perks.leagueDisc)m*=0.95;
+ return Math.max(1,Math.ceil(priceOf(isl,g)*1.16*m));
+}
+function sellP(isl,g){
+ let m=(FACTIONS[G.fac].sell||1)*stateMul(isl,g,'sell')*repPriceMul(isl,'sell');
+ if(G.spec&&G.spec.qm)m*=1.03;
+ return Math.max(1,Math.floor(priceOf(isl,g)*0.88*m));
+}
 function econDay(){
  for(const isl of W.isles){
   if(!isl.stall)continue;
@@ -780,6 +914,54 @@ function genWorld(seedStr){
    const tx=Math.round(isl.cx+Math.cos(a)*d),tz=Math.round(isl.cz+Math.sin(a)*d);
    const h=getH(tx,tz);
    if(h>SEA&&!W.flat.has(tx+'|'+tz)){W.treasures.push({isle:isl.id,x:tx,z:tz});break;}
+  }
+ }
+ /* hidden coves: secret harbours on wild isles, off the chart until found */
+ const COVEK=['smuggler','wrecker','refuge','den'];
+ W.coves=[];
+ const wild=W.isles.filter(i=>!i.stall);
+ for(let i=0;i<wild.length*2&&W.coves.length<4;i++){
+  const isl=wild[(i*3+1)%wild.length];
+  if(!isl||W.coves.some(c=>c.isle===isl.id))continue;
+  const a=rng()*Math.PI*2;
+  let fx=null,fz=null;
+  for(let d=2;d<isl.r*1.5;d++){
+   const x=Math.round(isl.cx+Math.cos(a)*d),z=Math.round(isl.cz+Math.sin(a)*d);
+   if(getH(x,z)<=SEA){fx=Math.round(isl.cx+Math.cos(a)*(d-1));fz=Math.round(isl.cz+Math.sin(a)*(d-1));break;}
+  }
+  if(fx===null)continue;
+  W.coves.push({id:W.coves.length,kind:COVEK[W.coves.length%4],isle:isl.id,x:fx,z:fz,found:false,rumor:false});
+ }
+ /* legendary one-time sites, unlocked by the torn-map quest */
+ W.legends=[];
+ const LEGN=["Blackbeard's Cache",'The Drowned Mint','The Bone Chapel'];
+ for(let i=0;i<2&&wild.length;i++){
+  const isl=wild[(rng()*wild.length)|0];
+  for(let t=0;t<14;t++){
+   const a=rng()*Math.PI*2,d=rng()*isl.r*0.6;
+   const tx=Math.round(isl.cx+Math.cos(a)*d),tz=Math.round(isl.cz+Math.sin(a)*d);
+   if(getH(tx,tz)>SEA){W.legends.push({name:LEGN[(i+((rng()*3)|0))%3],isle:isl.id,x:tx,z:tz,found:false});break;}
+  }
+ }
+ /* landmarks: ruined watchtowers on a couple of wild isles */
+ let towers=0;
+ for(const isl of wild){
+  if(towers>=2)break;
+  if(hash2(isl.id*13,5)<0.4)continue;
+  for(let t=0;t<10;t++){
+   const a=rng()*Math.PI*2,d=rng()*isl.r*0.45;
+   const tx=Math.round(isl.cx+Math.cos(a)*d),tz=Math.round(isl.cz+Math.sin(a)*d);
+   const h=getH(tx,tz);
+   if(h>SEA+1){
+    for(let y=1;y<=5;y++)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+     if(dx===0&&dz===0)continue;
+     if(Math.abs(dx)+Math.abs(dz)===2&&y>3)continue;
+     if(y===5&&hash2(tx+dx+y,tz+dz)<0.45)continue;
+     vset(tx+dx,h+y,tz+dz,4);
+    }
+    vset(tx+1,h+1,tz,0);vset(tx+1,h+2,tz,0); /* doorway */
+    isl.tower={x:tx,z:tz};towers++;break;
+   }
   }
  }
 }
@@ -1056,7 +1238,7 @@ function pushFace(arr,x,y,z,fi,tile,sh,get,tint){
   const l=sh*(1-ao[i]*0.16);
   arr.col.push(l*tr,l*tg,l*tb);
  }
- const u0=(tile%8)/8,u1=u0+1/8,row=Math.floor(tile/8),v1=1-row/3,v0=1-(row+1)/3;
+ const u0=(tile%8)/8,u1=u0+1/8,row=Math.floor(tile/8),v1=1-row/6,v0=1-(row+1)/6;
  arr.uv.push(u0,v0,u0,v1,u1,v1,u1,v0);
  /* flip the quad diagonal to keep AO interpolation symmetric */
  if(ao[0]+ao[2]>ao[1]+ao[3])
@@ -1154,9 +1336,10 @@ function skyTick(dt){
  const px=G.mode==='sail'?G.ship.x:P.x, pz=G.mode==='sail'?G.ship.z:P.z, py=G.mode==='sail'?SEA+2:P.y;
  sun.position.set(px+SKY.dx*150,py+Math.max(0.12,SKY.dy)*150,pz+SKY.dz*150);
  sun.target.position.set(px,py,pz);
- sun.intensity=0.15+SKY.sunI*0.95;
+ const wxDk=WX.kind==='storm'?0.5:WX.kind==='fog'?0.75:1;
+ sun.intensity=(0.15+SKY.sunI*0.95)*wxDk;
  sun.color.setHSL(0.1-dawn*0.04,0.5+dawn*0.4,0.78-dawn*0.13);
- hemi.intensity=0.22+day*0.5;
+ hemi.intensity=(0.22+day*0.5)*(wxDk*0.5+0.5);
  const top=C_TOP_N.clone().lerp(C_TOP_D,day);
  const hor=C_HOR_N.clone().lerp(C_HOR_D,day);
  if(dawn>0){hor.lerp(C_DAWN,dawn*0.65);top.lerp(C_DAWN,dawn*0.2);}
@@ -1177,8 +1360,8 @@ function skyTick(dt){
  cloudTex.offset.y=(G.time*0.0007)%1;
  clouds.material.opacity=0.3+day*0.55;
  waterMesh.position.set(Math.round(cx2/8)*8,SEA+0.30,Math.round(cz2/8)*8);
- /* slowly evolving sea state */
- SEAST.sea=0.55+0.75*vnoise(G.time*0.013+5.1,7.7);
+ /* sea state follows the weather */
+ SEAST.sea=lerp(SEAST.sea,WX.seaT,clamp(dt*0.2,0,1));
  waterUni.sea.value=SEAST.sea;
  waterUni.t.value=G.time;
  waterUni.sunDir.value.set(SKY.dx,Math.max(SKY.dy,0.05),SKY.dz);
@@ -1357,7 +1540,7 @@ function tickMine(dt,held){
  if(mineTarget!==key){mineTarget=key;mineT=0;}
  const def=BLK[hit.id];
  if(!def||def.hard>50){ring.classList.remove('on');return;}
- mineT+=dt;
+ mineT+=dt*(G.buffs&&G.buffs.stew?1.25:1);
  ring.classList.add('on');
  ring.style.setProperty('--p',Math.round(clamp(mineT/def.hard,0,1)*100));
  if(mineT>=def.hard){
@@ -1378,15 +1561,21 @@ function breakBlock(hit){
   if(G.ship.blocks.size===0)G.ship.blocks.set('0|0|0',7);
   rebuildShip();
  }else{
+  /* tearing up someone's dock is noticed */
+  if(VB.get(K(hit.x,hit.y,hit.z))===7){
+   for(const isl of W.isles)
+    if(isl.stall&&Math.hypot(isl.stall.x-hit.x,isl.stall.z-hit.z)<25){crime('Raided dock structures at '+isl.name,4);if(isl.fac)repAdd(isl.fac,-5);break;}
+  }
   setBlock(hit.x,hit.y,hit.z,0);
  }
  AU.dig();
  burst(hit.x+0.5,hit.y+0.5,hit.z+0.5,8,[0.6,0.5,0.35],3);
+ G.stats.mined++;
  if(def&&def.drop){
   let n=1;
   if((def.drop==='log'||def.drop==='iron'||def.drop==='gold'||def.drop==='stone')&&FACTIONS[G.fac].gather>1)n=2;
   give(def.drop,n);
-  if(def.drop==='iron'||def.drop==='gold')AU.coin();
+  if(def.drop==='iron'||def.drop==='gold'){AU.coin();G.stats.ore=(G.stats.ore|0)+n;}
  }
  /* treasure dig check */
  if(G.tmap&&!G.tmap.found&&hit.x===G.tmap.x&&hit.z===G.tmap.z){
@@ -1395,13 +1584,21 @@ function breakBlock(hit){
   toast('You strike wood! A buried chest!');
   AU.bell();
  }
+ if(legendDig(hit))return;
+ questPing();
+ autosave();
 }
 function openChest(hit){
  const g=150+Math.floor(Math.random()*250);
  G.gold+=g;G.tmap=null;
+ G.stats.chests++;
+ moraleAdd(10);
+ if(Math.random()<0.25)mapPiece();
  toast('Treasure! +'+g+' gold');
  burst(hit.x+0.5,hit.y+0.7,hit.z+0.5,20,[0.95,0.78,0.3],4);
  AU.coin();AU.bell();
+ questPing();titleTick();
+ autosave();
  updateHUD();
 }
 
@@ -1434,6 +1631,9 @@ function tryPlace(){
   if(item==='cannon')sbid=CANNON_IDS[((canW-G.ship.yawSnap)%4+4)%4]; /* store ship-relative facing */
   G.ship.blocks.set(K(nl[0],nl[1],nl[2]),sbid);
   G.inv[item]--;rebuildShip();AU.put();
+  G.stats.built++;
+  questPing();
+  autosave();
   if(item==='cannon'&&!G.canTip){G.canTip=1;toast('Cannon set facing your look. Guns fire the way they point.');}
  }else{
   setBlock(tx,ty,tz,bid);
@@ -1452,8 +1652,12 @@ function give(item,n){
  G.inv[item]=(G.inv[item]|0)+(n||1);
  updateHotbar();
 }
-function cargoUsed(){let s=0;for(const g of GKEYS)s+=G.inv[g]|0;return s;}
-function cargoCap(){return 14+Math.floor((G.ship?G.ship.blocks.size:0)*0.5);}
+function cargoUsed(){let s=0;for(const g of CARGOKEYS)s+=G.inv[g]|0;return s;}
+function cargoCap(){
+ const s=G.ship;
+ return 14+Math.floor((s?s.blocks.size:0)*0.35)+(s?(s.holds|0)*6:0)+(G.spec&&G.spec.qm?6:0);
+}
+function contraUsed(){let s=0;for(const g of CKEYS)s+=G.inv[g]|0;return s;}
 /* ---------------- player ship ---------------- */
 function starterBlocks(fac){
  const m=new Map();
@@ -1467,21 +1671,44 @@ function starterBlocks(fac){
 }
 function makeShip(fac,ax,az,yawSnap){
  return {blocks:starterBlocks(fac),ax,az,yawSnap:yawSnap|0,x:ax,z:az,yaw:(yawSnap|0)*Math.PI/2,
-  sailing:false,cells:new Map(),mesh:null,hp:1,maxHp:1,spd:0,thr:0,reload:0,cannons:[],helm:null,sails:0,bob:0};
+  sailing:false,cells:new Map(),mesh:null,hp:1,maxHp:1,spd:0,thr:0,reload:0,cannons:[],helm:null,sails:0,bob:0,
+  holds:0,bunks:0,hidden:0,kegs:0,chart:0,bench:0,lant:0,fig:0,rud:0,fast:0,heavy:0,
+  sailDmg:0,leak:0,fire:0,gunsOut:0};
 }
 function shipStats(s){
- s.cannons=[];s.helm=null;s.sails=0;
+ s.cannons=[];s.helm=null;s.sails=0;s.fast=0;s.heavy=0;
+ s.holds=0;s.bunks=0;s.hidden=0;s.kegs=0;s.chart=0;s.bench=0;s.lant=0;s.fig=0;s.rud=0;
+ let rein=0,light=0;
  for(const [k,id] of s.blocks){
   const [lx,ly,lz]=k.split('|').map(Number);
   if(CANNON_DIR[id]!==undefined)s.cannons.push([lx,ly,lz,CANNON_DIR[id]]);
   if(id===12)s.helm=[lx,ly,lz];
   if(id===16||id===17)s.sails++;
+  else if(id===25){s.sails++;s.fast++;}
+  else if(id===26){s.sails++;s.heavy++;}
+  else if(id===22)s.holds++;
+  else if(id===23)rein++;
+  else if(id===24)light++;
+  else if(id===27)s.hidden++;
+  else if(id===28)s.kegs++;
+  else if(id===29)s.bunks++;
+  else if(id===30)s.chart++;
+  else if(id===31)s.bench++;
+  else if(id===32)s.lant++;
+  else if(id===34)s.fig++;
+  else if(id===35)s.rud++;
  }
  const n=s.blocks.size;
  const ratio=s.maxHp>0?s.hp/s.maxHp:1;
- s.maxHp=20+n*4;
+ s.maxHp=20+n*4+rein*5-light*2;
  s.hp=clamp(Math.round(s.maxHp*ratio),10,s.maxHp);
- s.spdMax=clamp(3.5+s.sails*1.7-n*0.05,2.2,13)*(1+0.08*(G?G.crew:0));
+ const weight=n+rein*0.8-light*0.5;
+ const sailPow=s.sails*1.7+s.fast*0.9-s.heavy*0.4-Math.min(s.sails,s.sailDmg||0)*1.1;
+ const crewB=1+0.06*(G?G.crew:0)+(G&&G.spec&&G.spec.nav?0.05:0);
+ s.spdMax=clamp(3.5+sailPow-weight*0.05,2.2,14)*crewB*(s.fig?1.04:1);
+ s.turn=1.1*(1+0.15*Math.min(3,s.rud));
+ s.crewMax=4+2*Math.min(4,s.bunks);
+ s.smugCap=s.hidden*3;
 }
 function rebuildShip(){
  const s=G.ship;
@@ -1511,7 +1738,7 @@ function syncShipMesh(){
   const damp=shoalDamp(s.x,s.z);
   const pf=waveSlope(s.x,s.z,c,-sn)*damp;   /* slope along the keel */
   const pl=waveSlope(s.x,s.z,sn,c)*damp;    /* slope abeam */
-  s.mesh.rotation.x=clamp(pl*0.7,-0.09,0.09);
+  s.mesh.rotation.x=clamp(pl*0.7,-0.09,0.09)+(s.list||0);
   s.mesh.rotation.z=clamp(pf*0.8,-0.11,0.11)+Math.sin(G.time*1.7)*0.012*Math.min(1,Math.abs(s.spd)/4);
  }else{
   s.mesh.position.set(s.ax,SEA,s.az);
@@ -1548,6 +1775,7 @@ function setSail(){
  markDirtyAround(s.ax,s.az);
  toast(TOUCH?'Anchor up. Stick: up = sail, sides = turn. FIRE for broadsides.':'Anchor up. W/S throttle, A/D turn, fire with Space.');
  AU.bell();
+ onSetSail();
  updateHUD();
 }
 function dropAnchor(){
@@ -1567,6 +1795,7 @@ function dropAnchor(){
  markDirtyAround(s.ax,s.az);
  toast('Anchor down. You can walk the deck and build on her.');
  AU.splash();
+ onDock();
  updateHUD();
 }
 function markDirtyAround(x,z){void x;void z;}
@@ -1584,14 +1813,37 @@ function shipGrounded(s,nx,nz){
  for(let lz=az0;lz<=az1;lz+=1)if(hit(ax0,lz)||hit(ax1,lz))return true;
  return false;
 }
+function windMul(yaw){
+ const hx=Math.cos(yaw),hz=-Math.sin(yaw);
+ const al=hx*Math.cos(WX.wdir)+hz*Math.sin(WX.wdir);
+ return clamp((0.62+0.55*WX.wstr)*(1+0.3*al*WX.wstr),0.45,1.5);
+}
 function sailTick(dt,turn,thr){
  const s=G.ship;
  s.thr=clamp(s.thr+thr*dt*1.6,-0.35,1);
  if(thr===0)s.thr*=Math.pow(0.6,dt);
- s.yaw+=turn*dt*1.1*(0.4+0.6*Math.min(1,Math.abs(s.spd)/3));
+ s.yaw+=turn*dt*(s.turn||1.1)*(0.4+0.6*Math.min(1,Math.abs(s.spd)/3));
  const heavy=1-clamp(cargoUsed()/(cargoCap()*2),0,0.45);
- const target=s.thr*s.spdMax*heavy;
+ const target=s.thr*s.spdMax*heavy*windMul(s.yaw);
  s.spd=lerp(s.spd,target,clamp(dt*0.8,0,1));
+ /* damage states: leaks, fire, listing, the carpenter's quiet work */
+ if(s.leak>0){
+  s.hp-=dt*(s.bench?0.5:0.85);
+  if(Math.random()<dt*3)spawnPart(s.x+(Math.random()-0.5)*3,SEA+0.5,s.z+(Math.random()-0.5)*3,0,1.2,0,0.6,[0.7,0.85,1]);
+ }
+ if(s.fire>0){
+  s.fire+=dt;s.hp-=dt*1.4;
+  if(Math.random()<dt*8)spawnPart(s.x+(Math.random()-0.5)*3,SEA+2.5,s.z+(Math.random()-0.5)*3,(Math.random()-0.5),2.2,(Math.random()-0.5),1.1,[0.95,0.5,0.15],-1);
+  if(s.fire>14){burnRandomBlock();s.fire=1;}
+ }
+ if(G.spec.carp&&s.hp<s.maxHp&&!s.fire)s.hp=Math.min(s.maxHp,s.hp+dt*0.35);
+ const ratio=s.hp/Math.max(1,s.maxHp);
+ if(ratio<0.4&&!s.leak&&SEAST.sea>0.7&&Math.random()<dt*0.25){s.leak=1;toast('She’s taking water below! Press '+(TOUCH?'PLACE':'X')+' to patch (2 planks).',true);}
+ s.list=lerp(s.list||0,ratio<0.25?0.12:0,dt*(ratio<0.25?0.5:1));
+ if(ratio<0.18&&Math.random()<dt*0.05){
+  for(const g of GKEYS)if((G.inv[g]|0)>0){G.inv[g]--;spawnLoot(s.x-Math.cos(s.yaw)*4,s.z+Math.sin(s.yaw)*4,{g:[0,0],n:[1,1]});toast('Cargo washes overboard!',true);break;}
+ }
+ sailFlavor(dt);
  const c=Math.cos(s.yaw),sn=Math.sin(s.yaw);
  const nx=s.x+c*s.spd*dt, nz=s.z-sn*s.spd*dt;
  s.scrapeT=Math.max(0,(s.scrapeT||0)-dt);
@@ -1629,22 +1881,30 @@ function fireBroadside(){
  if(s.reload>0)return;
  if(!s.cannons.length){toast('No cannons aboard',true);return;}
  const c=Math.cos(s.yaw),sn=Math.sin(s.yaw);
+ let shots=0;
  for(const [lx,ly,lz,d] of s.cannons){
+  if(s.gunsOut>0&&shots>=s.cannons.length-s.gunsOut)break; /* disabled guns stay silent */
   const lv=DIRV[d||0];
   const dx=lv[0]*c+lv[1]*sn, dz=-lv[0]*sn+lv[1]*c; /* facing rotated into the world */
   const w=shipLocalToWorld(lx,ly,lz);
   fireBall(w[0]+dx*0.9,w[1]+0.3,w[2]+dz*0.9,dx*26,4.5,dz*26,'player');
+  shots++;
  }
- s.reload=2.5*Math.max(0.5,1-0.1*G.crew);
+ const moraleP=G.morale<25?1.25:1;
+ s.reload=2.5*Math.max(0.4,1-0.07*G.crew-0.08*Math.min(2,s.kegs)-(G.spec.gun?0.15:0))*moraleP;
 }
 function sinkPlayer(){
  AU.boom();AU.splash();
  burst(G.ship.x,SEA+1,G.ship.z,40,[0.4,0.3,0.2],6);
- for(const g of GKEYS)G.inv[g]=0;
+ addWreck(G.ship.x,G.ship.z);
+ for(const g of CARGOKEYS)G.inv[g]=0;
  G.gold=Math.floor(G.gold*0.85);
+ moraleAdd(-20);
+ for(const j of [...G.jobs])if(j.t==='smuggle'||j.t==='salvage'||j.t==='delivery')failJob(j,'the cargo went down with her');
  toast('She goes down! Cargo lost. You wash ashore at home port…',true);
  const home=W.isles.find(i=>i.fac===G.fac)||W.isles[0];
  respawnShip(home);
+ autosave();
  updateHUD();
 }
 function respawnShip(isl){
@@ -1763,20 +2023,24 @@ function pickPirateCls(){
  if(d<6)return r<0.7?'sloop':'brigantine';
  return r<0.45?'sloop':r<0.8?'brigantine':'galleon';
 }
-function spawnShipNPC(kind,clsName,x,z){
+function spawnShipNPC(kind,clsName,x,z,opts){
  const cls=ensureCls(clsName);
  const mesh=new THREE.Mesh(CLSGEO[clsName],MAT);
  mesh.castShadow=true;mesh.receiveShadow=true;
  scene.add(mesh);
- const hpMul=kind==='pirate'?1+Math.min(10,G.day)*0.12:1;
- const hp=Math.round(cls.hp*hpMul);
- const label=(kind==='pirate'?'Pirate ':'')+cls.nm;
+ let hpMul=kind==='pirate'?1+Math.min(10,G.day)*0.12:1;
+ if(kind==='hunter')hpMul=1.5;
+ if(kind==='ghost')hpMul=1.25;
+ const hp=Math.round(cls.hp*hpMul*((opts&&opts.hpMul)||1));
+ const label=(opts&&opts.label)||((kind==='pirate'?'Pirate ':'')+cls.nm);
  const pr={kind,cls,clsName,x,z,yaw:Math.random()*6.28,spd:0,hp,maxHp:hp,mesh,
   reload:2+Math.random()*2,neutral:false,attacker:null,dying:0,
   wx:x,wz:z,dest:null,bar:mkBar(label)};
+ if(opts)for(const k in opts)if(k!=='label'&&k!=='hpMul')pr[k]=opts[k];
  G.pirates.push(pr);
  return pr;
 }
+function renameBar(pr,label){if(pr.bar){pr.bar.label=label;pr.bar.last=-1;}}
 function openSeaNear(x0,z0){
  const a=Math.random()*Math.PI*2;
  for(let t=0;t<12;t++){
@@ -1792,7 +2056,8 @@ function spawnPirate(){
  if(!p)return;
  const cn=pickPirateCls();
  const pr=spawnShipNPC('pirate',cn,p[0],p[1]);
- pr.neutral=(G.fac==='brotherhood'&&!G.aggro);
+ pr.neutral=(G.fac==='brotherhood'||apparentFac()==='brotherhood')&&!G.aggro;
+ if(cn!=='sloop'){pr.name=capName();renameBar(pr,'☠ Capt. '+pr.name);}
  pr.wx=clamp(pr.x+(Math.random()-0.5)*120,10,WORLD-10);
  pr.wz=clamp(pr.z+(Math.random()-0.5)*120,10,WORLD-10);
  if(!pr.neutral)toast(cn==='galleon'?'A pirate galleon looms on the horizon!':'Black sails on the horizon!',true);
@@ -1839,12 +2104,32 @@ function startSink(pr){
  burst(pr.x,SEA+1.2,pr.z,30,[0.25,0.22,0.2],6);
  const s=G.ship;
  const near=Math.hypot(pr.x-(s.sailing?s.x:P.x),pr.z-(s.sailing?s.z:P.z))<85;
- if(pr.attacker==='player')G.kills++;
+ if(pr.attacker==='player'){G.kills++;onPlayerSink(pr);}
  if(near){
   if(pr.kind==='merchant')toast('The merchantman goes down by the head!');
-  else if(pr.kind==='navy')toast('The frigate strikes her colours\u2026 and sinks.');
+  else if(pr.kind==='navy'||pr.kind==='hunter')toast('The frigate strikes her colours\u2026 and sinks.');
+  else if(pr.kind==='ghost')toast('The ghost ship dissolves into cold mist\u2026');
   else toast('She founders! Loot in the water.');
  }
+}
+function isHostileToPlayer(pr){
+ if(pr.kind==='hunter')return true;
+ if(pr.kind==='pirate')return !pr.neutral;
+ if(pr.kind==='ghost')return true;
+ if(pr.kind==='navy'){
+  if(pr.attacker==='player')return true;
+  if(G.fac==='brotherhood'&&G.aggro)return true;
+  if(G.perks.warrant&&G.wanted<80)return false;
+  return G.wanted>=50&&apparentFac()!=='crown';
+ }
+ if(pr.kind==='blockade'){
+  if(pr.attacker==='player')return true;
+  if(pr.pass)return false;
+  const s=G.ship;
+  return Math.hypot((s.sailing?s.x:s.ax)-pr.post.x,(s.sailing?s.z:s.az)-pr.post.z)<32;
+ }
+ if(pr.kind==='fleet')return pr.attacker==='player';
+ return false;
 }
 function pirateTick(pr,dt,i){
  if(pr.dying>0){
@@ -1855,24 +2140,49 @@ function pirateTick(pr,dt,i){
    scene.remove(pr.mesh);
    if(pr.bar)scene.remove(pr.bar.spr);
    G.pirates.splice(i,1);
-   spawnLoot(pr.x,pr.z,pr.cls.loot);
+   if(pr.kind==='ghost')spawnLoot(pr.x,pr.z,{g:[180,360],n:[2,4],relic:true});
+   else if(!pr.noLoot)spawnLoot(pr.x,pr.z,pr.cls.loot);
+   addWreck(pr.x,pr.z);
   }
   return;
  }
+ /* fade-outs: ghosts at dawn, traders moving on, spared prizes limping off */
+ if(pr.fade!==undefined&&pr.fade>0){
+  pr.fade-=dt;
+  pr.mesh.position.y=SEA+0.05-(2-pr.fade)*0.6;
+  if(pr.bar)pr.bar.spr.visible=false;
+  if(pr.fade<=0){scene.remove(pr.mesh);if(pr.bar)scene.remove(pr.bar.spr);G.pirates.splice(i,1);}
+  return;
+ }
+ if(pr.kind==='ghost'&&SKY.day>0.55){pr.fade=2;toast('The ghost ship fades with the dawn…');return;}
+ if(pr.untilDay!==undefined&&G.day>pr.untilDay){pr.fade=2;return;}
  const s=G.ship;
  const px=s.sailing?s.x:s.ax, pz=s.sailing?s.z:s.az;
  const dP=Math.hypot(px-pr.x,pz-pr.z);
- const hostileP=(pr.kind==='pirate'&&!pr.neutral)||pr.kind==='navy';
+ if(pr.surrendered||pr.kind==='trader'||pr.kind==='plague'){
+  /* hold station, ride the swell */
+  pr.spd=0;
+  pr.mesh.position.set(pr.x,SEA+0.05+waveH(pr.x,pr.z)*shoalDamp(pr.x,pr.z)*0.85,pr.z);
+  pr.mesh.rotation.order='YXZ';pr.mesh.rotation.y=pr.yaw;
+  pr.mesh.rotation.z=clamp(waveSlope(pr.x,pr.z,Math.cos(pr.yaw),-Math.sin(pr.yaw))*0.7,-0.1,0.1);
+  barTick(pr);
+  return;
+ }
  let gx,gz,tgt=null;
- if(pr.kind==='merchant'){
+ if(pr.kind==='merchant'||pr.kind==='escort'){
   let threat=null;
   if(pr.attacker==='player'&&dP<60)threat={x:px,z:pz};
   else if(pr.attacker&&pr.attacker.hp>0&&!pr.attacker.dying)threat=pr.attacker;
   else for(const o of G.pirates){
-   if(o.kind!=='pirate'||o.dying)continue;
+   if(o.kind!=='pirate'||o.dying||o.surrendered)continue;
    if(Math.hypot(o.x-pr.x,o.z-pr.z)<42){threat=o;break;}
   }
-  if(threat){
+  if(pr.kind==='escort'){
+   /* keep station astern of the player's ship; shoot back at raiders */
+   gx=px-Math.cos(s.yaw||0)*9;gz=pz+Math.sin(s.yaw||0)*9;
+   if(threat&&pr.reload<=0&&Math.hypot(threat.x-pr.x,threat.z-pr.z)<38)npcFire(pr,threat.x,threat.z);
+   if(Math.hypot(gx-pr.x,gz-pr.z)<5){gx=pr.x;gz=pr.z;pr.spd*=0.7;}
+  }else if(threat){
    gx=pr.x+(pr.x-threat.x);gz=pr.z+(pr.z-threat.z);
    if(pr.reload<=0&&Math.hypot(threat.x-pr.x,threat.z-pr.z)<40)npcFire(pr,threat.x,threat.z);
   }else{
@@ -1887,24 +2197,54 @@ function pirateTick(pr,dt,i){
    }else{gx=pr.wx;gz=pr.wz;}
   }
  }else{
-  /* pirate / navy */
-  const fleeing=pr.kind==='pirate'&&pr.hp<pr.maxHp*0.25;
-  if(hostileP&&dP<120)tgt={x:px,z:pz,d:dP};
-  if(pr.kind==='pirate'&&(!tgt||pr.neutral)){
-   let best=null,bd=90;
+  /* pirate / navy / hunter / blockade / fleet / ghost / war ships */
+  const fleeing=pr.kind==='pirate'&&pr.hp<pr.maxHp*0.25&&!pr.bounty;
+  const hostileP=isHostileToPlayer(pr);
+  if(hostileP&&dP<(pr.kind==='hunter'?200:120))tgt={x:px,z:pz,d:dP};
+  if(pr.side){ /* war fleets fight the other colour first */
+   let best=null,bd=130;
    for(const o of G.pirates){
-    if(o.kind!=='merchant'||o.dying)continue;
+    if(o===pr||o.dying||o.surrendered||!o.side||o.side===pr.side)continue;
     const d=Math.hypot(o.x-pr.x,o.z-pr.z);
     if(d<bd){bd=d;best=o;}
    }
    if(best)tgt={x:best.x,z:best.z,d:bd,ent:best};
   }
+  if(pr.kind==='pirate'&&(!tgt||pr.neutral)){
+   let best=null,bd=90;
+   for(const o of G.pirates){
+    if((o.kind!=='merchant'&&o.kind!=='escort')||o.dying||o.surrendered)continue;
+    const d=Math.hypot(o.x-pr.x,o.z-pr.z);
+    if(d<bd){bd=d;best=o;}
+   }
+   if(best)tgt={x:best.x,z:best.z,d:bd,ent:best};
+  }
+  if(pr.kind==='navy'&&!tgt){ /* patrols run down pirates */
+   let best=null,bd=70;
+   for(const o of G.pirates){
+    if(o.kind!=='pirate'||o.dying||o.surrendered||o.neutral)continue;
+    const d=Math.hypot(o.x-pr.x,o.z-pr.z);
+    if(d<bd){bd=d;best=o;}
+   }
+   if(best)tgt={x:best.x,z:best.z,d:bd,ent:best};
+  }
+  if(pr.kind==='blockade'&&!tgt){
+   /* circle the watched port */
+   const a=G.time*0.18+pr.postA;
+   gx=pr.post.x+Math.cos(a)*22;gz=pr.post.z+Math.sin(a)*22;
+  }
+  if(pr.kind==='fleet'&&!tgt){
+   gx=pr.wx;gz=pr.wz;
+   if(Math.hypot(gx-pr.x,gz-pr.z)<14){pr.fade=2;return;} /* sailed off the chart */
+  }
   if(fleeing&&tgt){gx=pr.x+(pr.x-tgt.x);gz=pr.z+(pr.z-tgt.z);}
   else if(!tgt){
-   gx=pr.wx;gz=pr.wz;
-   if(Math.hypot(gx-pr.x,gz-pr.z)<8){
-    pr.wx=clamp(pr.x+(Math.random()-0.5)*120,10,WORLD-10);
-    pr.wz=clamp(pr.z+(Math.random()-0.5)*120,10,WORLD-10);
+   if(gx===undefined){
+    gx=pr.wx;gz=pr.wz;
+    if(Math.hypot(gx-pr.x,gz-pr.z)<8){
+     pr.wx=clamp(pr.x+(Math.random()-0.5)*120,10,WORLD-10);
+     pr.wz=clamp(pr.z+(Math.random()-0.5)*120,10,WORLD-10);
+    }
    }
   }else if(tgt.d>30){gx=tgt.x;gz=tgt.z;}
   else if(tgt.d<13){gx=pr.x+(pr.x-tgt.x);gz=pr.z+(pr.z-tgt.z);}
@@ -1945,7 +2285,7 @@ function pirateTick(pr,dt,i){
 /* ---------------- loot crates ---------------- */
 function spawnLoot(x,z,opts){
  opts=opts||{g:[60,150],n:[2,4]};
- const m=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8),new THREE.MeshLambertMaterial({color:0x8a5a2a}));
+ const m=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8),new THREE.MeshLambertMaterial({color:opts.relic?0x3fae9c:0x8a5a2a}));
  m.position.set(x,SEA+0.5,z);
  m.castShadow=true;
  scene.add(m);
@@ -1953,9 +2293,10 @@ function spawnLoot(x,z,opts){
  const pool=opts.rich?['rum','spices','silk','sugar','iron']:GKEYS.slice(0,5);
  G.loots.push({x,z,mesh:m,
   gold:Math.round((opts.g[0]+Math.random()*(opts.g[1]-opts.g[0]))*lootMul),
-  good:pool[(Math.random()*pool.length)|0],
+  good:opts.good||pool[(Math.random()*pool.length)|0],
   n:opts.n[0]+((Math.random()*(opts.n[1]-opts.n[0]+1))|0),
-  cannon:!!(opts.cannon&&Math.random()<opts.cannon)});
+  cannon:!!(opts.cannon&&Math.random()<opts.cannon),
+  relic:!!opts.relic,salv:!!opts.salv,part:opts.part||null});
 }
 function lootTick(l,i){
  l.mesh.position.y=SEA+0.45+waveH(l.x,l.z)*0.8;
@@ -1964,10 +2305,14 @@ function lootTick(l,i){
  const px=s.sailing?s.x:P.x, pz=s.sailing?s.z:P.z;
  if(Math.hypot(l.x-px,l.z-pz)<3.2){
   G.gold+=l.gold;
-  if(cargoUsed()+l.n<=cargoCap())give(l.good,l.n);
+  if(l.n>0&&cargoUsed()+l.n<=cargoCap())give(l.good,l.n);
   if(l.cannon)give('cannon',1);
-  toast('+'+l.gold+' gold, '+l.n+' '+ITEMNAME[l.good].toLowerCase()+(l.cannon?' and a salvaged cannon':'')+' fished out');
+  if(l.part){give(l.part,1);toast('A '+ITEMNAME[l.part].toLowerCase()+' bobs among the flotsam!');}
+  if(l.relic){gainRelic();}
+  if(l.salv){give('salv',1);toast('Salvaged cargo recovered — return it to the port.');questPing();}
+  if(l.gold>0||l.n>0)toast('+'+l.gold+' gold'+(l.n>0?', '+l.n+' '+ITEMNAME[l.good].toLowerCase():'')+(l.cannon?' and a salvaged cannon':'')+' fished out');
   AU.coin();
+  G.stats.lootGold+=l.gold;
   scene.remove(l.mesh);G.loots.splice(i,1);
   updateHUD();
  }
@@ -1986,20 +2331,25 @@ function ballsTick(dt){
   if(solid(getBlock(Math.floor(b.x),Math.floor(b.y),Math.floor(b.z)))){burst(b.x,b.y,b.z,8,[0.5,0.45,0.4],4);killBall(b,i);continue;}
   if(b.from==='player'){
    let hit=false;
+   if(G.serp&&!G.serp.dead&&Math.hypot(b.x-G.serp.x,b.z-G.serp.z)<3.5&&b.y<SEA+7){
+    serpentHit();killBall(b,i);continue;
+   }
    for(let j=G.pirates.length-1;j>=0;j--){
     const pr=G.pirates[j];
     if(pr.dying)continue;
     if(Math.hypot(b.x-pr.x,b.z-pr.z)<pr.cls.r&&b.y<SEA+6){
-     pr.hp-=9+G.crew;hit=true;
+     pr.hp-=9+G.crew+(G.spec.gun?3:0);hit=true;
+     if(pr.attacker!=='player')onPlayerAttack(pr);
      pr.attacker='player';
      if(pr.kind==='pirate'&&pr.neutral){
       G.aggro=1;
       for(const o of G.pirates)if(o.kind==='pirate')o.neutral=false;
       toast('The Brotherhood will remember that.',true);
      }
-     if(pr.kind==='merchant'&&!pr.angry){pr.angry=1;toast('The merchantman returns fire!');}
+     if(pr.kind==='merchant'&&!pr.angry&&!pr.surrendered){pr.angry=1;toast('The merchantman returns fire!');}
      burst(b.x,b.y,b.z,10,[0.9,0.5,0.2],5);AU.hit();
      if(pr.hp<=0)startSink(pr);
+     else maybeSurrender(pr);
      break;
     }
    }
@@ -2009,6 +2359,7 @@ function ballsTick(dt){
    const tx=s.sailing?s.x:s.ax+2, tz=s.sailing?s.z:s.az;
    if(Math.hypot(b.x-tx,b.z-tz)<3.4&&b.y<SEA+5){
     s.hp-=(b.src?b.src.cls.dmg:8);AU.hit();flashHurt();
+    shipLocalDamage(b);
     burst(b.x,b.y,b.z,10,[0.9,0.4,0.2],5);
     killBall(b,i);
     if(s.hp<=0&&s.sailing)sinkPlayer();
@@ -2034,18 +2385,35 @@ function ballsTick(dt){
 }
 let pirateTimer=8;
 function maintainSea(dt){
+ seaEventTick(dt);
  pirateTimer-=dt;
  if(pirateTimer>0)return;
  pirateTimer=12+Math.random()*12;
  const merch=G.pirates.filter(p=>p.kind==='merchant'&&!p.dying).length;
  if(merch<2&&Math.random()<0.8)spawnMerchant();
+ /* blockaded ports keep their picket ships on station */
+ for(const isl of W.isles){
+  if(!isl.state||isl.state.type!=='blockaded')continue;
+  const have=G.pirates.filter(p=>p.kind==='blockade'&&p.isl===isl.id&&!p.dying).length;
+  if(have<2)spawnBlockade(isl);
+ }
+ /* nearby upgraded defenses thin pirates out */
+ let defNear=0;
+ const sx=G.ship.sailing?G.ship.x:G.ship.ax, sz=G.ship.sailing?G.ship.z:G.ship.az;
+ for(const isl of W.isles)if(isl.up&&isl.up.def>0&&Math.hypot(isl.cx-sx,isl.cz-sz)<60)defNear=Math.max(defNear,isl.up.def);
  const cap=Math.min(4,1+Math.floor(G.day/3));
- const hostiles=G.pirates.filter(p=>p.kind!=='merchant'&&!p.dying).length;
- const rate=(G.fac==='brotherhood'&&!G.aggro)?0.35:(FACTIONS[G.fac].pirate||0.6);
- if(hostiles<cap&&Math.random()<0.6*rate+0.04){
+ const hostiles=G.pirates.filter(p=>(p.kind==='pirate'||p.kind==='navy'||p.kind==='hunter')&&!p.dying).length;
+ const rate=((G.fac==='brotherhood'||apparentFac()==='brotherhood')&&!G.aggro)?0.35:(FACTIONS[G.fac].pirate||0.6);
+ if(hostiles<cap&&Math.random()<(0.6*rate+0.04)*(1-defNear*0.3)){
   if(G.fac==='brotherhood'&&G.aggro&&Math.random()<0.45)spawnNavy();
   else if(G.mode==='sail'||Math.random()<0.3)spawnPirate();
  }
+ /* the law answers a black name */
+ if(G.wanted>=25&&Math.random()<0.18+G.wanted*0.002){
+  const navies=G.pirates.filter(p=>(p.kind==='navy'||p.kind==='hunter')&&!p.dying).length;
+  if(navies<2)spawnNavy();
+ }
+ if(G.wanted>=50&&!G.pirates.some(p=>p.kind==='hunter'&&!p.dying)&&Math.random()<0.3)spawnHunter();
 }
 /* ---------------- people: voxel figures ---------------- */
 function makePerson(col){
@@ -2154,7 +2522,7 @@ function deckSlots(){
 }
 function updateCrewFigs(){
  if(!G)return;
- const want=Math.min(G.crew||0,4);
+ const want=Math.min(G.crew||0,6);
  while(CREWF.length<want)CREWF.push(makePerson(0x2e4a6b));
  while(CREWF.length>want)rmPerson(CREWF.pop());
  if(!want)return;
@@ -2166,8 +2534,1617 @@ function updateCrewFigs(){
   setPerson(CREWF[i],w[0],w[1]-0.5,w[2],G.ship.yaw+(i%2?Math.PI/2:0));
  }
 }
+/* ================= WEATHER / WIND ================= */
+const WX={wdir:0.7,wstr:0.55,kind:'clear',until:90,lt:0,seaT:0.85,fogT:0.012,fog:0.012,season:false};
+function wxRoll(quiet){
+ WX.season=(G.day%20)>=12&&(G.day%20)<=16; /* hurricane season */
+ const r=Math.random();
+ const stormW=WX.season?0.4:0.16;
+ const old=WX.kind;
+ WX.kind=r<stormW?'storm':r<stormW+0.14?'fog':r<stormW+0.26?'doldrums':'clear';
+ WX.until=G.time+50+Math.random()*90;
+ if(quiet||WX.kind===old)return;
+ if(WX.kind==='storm')toast('The sky blackens — a storm front rolls in!',true);
+ else if(WX.kind==='fog')toast('A fog bank swallows the horizon.');
+ else if(WX.kind==='doldrums')toast('The wind dies to nothing. Doldrums.');
+ else if(old!=='clear')toast('The weather clears. Fair sailing.');
+}
+function wxTick(dt){
+ if(G.time>WX.until)wxRoll();
+ WX.wdir+=(vnoise(G.time*0.008+3.3,7.1)-0.5)*dt*0.5;
+ const targ=WX.kind==='storm'?1:WX.kind==='doldrums'?0.06:0.3+vnoise(G.time*0.01+9.9,2.2)*0.55;
+ WX.wstr=lerp(WX.wstr,targ,clamp(dt*0.1,0,1));
+ WX.seaT=WX.kind==='storm'?1.35:WX.kind==='doldrums'?0.45:0.55+0.5*vnoise(G.time*0.013+5.1,7.7);
+ WX.fogT=WX.kind==='fog'?0.05:WX.kind==='storm'?0.022:0.012;
+ WX.fog=lerp(WX.fog,WX.fogT,clamp(dt*0.3,0,1));
+ if(WX.kind==='storm'){
+  WX.lt-=dt;
+  if(WX.lt<=0){WX.lt=6+Math.random()*16;lightningStrike();}
+  const s=G.ship;
+  if(s.sailing&&s.fast>0&&s.sailDmg<s.sails&&Math.random()<dt*0.01){
+   s.sailDmg++;shipStats(s);toast('A fast sail rips in the gale!',true);
+  }
+ }
+ /* wind streaks you can read at a glance */
+ if(G.mode==='sail'&&WX.wstr>0.2&&Math.random()<dt*6*WX.wstr){
+  const s=G.ship;
+  const ox=(Math.random()-0.5)*26,oz=(Math.random()-0.5)*26;
+  spawnPart(s.x+ox,SEA+1.4+Math.random()*2,s.z+oz,
+   Math.cos(WX.wdir)*7*WX.wstr,0,Math.sin(WX.wdir)*7*WX.wstr,0.6,[0.92,0.96,1],0);
+ }
+}
+function lightningStrike(){
+ const f=$('flash');
+ if(f){f.classList.add('on');setTimeout(()=>f.classList.remove('on'),90);}
+ AU.boom();
+ const s=G.ship;
+ if(s.sailing&&Math.random()<0.18){
+  if(s.kegs>0&&Math.random()<0.3){toast('Lightning finds the powder magazine!',true);kegExplode();}
+  else{s.sailDmg=Math.min(s.sails,s.sailDmg+1);s.hp-=6;shipStats(s);toast('Lightning splinters the rigging!',true);flashHurt();}
+  updateHUD();
+ }
+}
+const SHANTY=['♪ Heave away, me jollies, heave away…','♪ …and we’ll all drink rum when the hold is full!',
+ '♪ The capstan turns and the gulls do cry…','♪ Way haul away, we’ll haul for better weather…'];
+let flavT=24;
+function sailFlavor(dt){
+ flavT-=dt;
+ if(flavT>0)return;
+ flavT=55+Math.random()*70;
+ if(G.crew<1)return;
+ const s=G.ship;
+ if(s.leak)return toast('Crew: “Water in the hold! Patch her, cap’n!”');
+ if(s.fire>0)return toast('Crew: “Fire! Douse it before she catches!”');
+ if(WX.kind==='storm')return toast('Crew: “She’s straining! Mind the rig!”');
+ if(G.morale<30)return toast('Crew (muttering): “…wages late, biscuit weevily, and for what…”');
+ if(Math.random()<0.5)return toast(SHANTY[(Math.random()*SHANTY.length)|0]);
+ const ar=['east','south-east','south','south-west','west','north-west','north','north-east'];
+ toast('Crew: “Fair wind from the '+ar[((Math.round(((WX.wdir+Math.PI)%(Math.PI*2))/(Math.PI/4)))%8+8)%8]+'.”');
+}
+
+/* ================= CRIME / WANTED / STANDING ================= */
+function wantedName(){const w=G.wanted;return w>=80?'Infamous':w>=50?'Hunted':w>=25?'Wanted':w>=10?'Suspected':'Clean';}
+function crime(text,pts){
+ G.wanted=clamp(G.wanted+pts,0,120);
+ G.crimes.push({d:G.day,t:text,w:pts});
+ if(G.crimes.length>14)G.crimes.shift();
+ G.stats.crimes++;
+ toast('☠ '+text,true);
+ updateHUD();
+}
+function apparentFac(){
+ if(!G)return null;
+ const f=G.flyFlag;
+ if(!f||f==='none')return G.fac;
+ return f.indexOf('false:')===0?f.slice(6):f;
+}
+function repAdd(fac,n){
+ if(!fac||!G.rep||!(fac in G.rep))return;
+ G.rep[fac]=clamp((G.rep[fac]||0)+n,-120,100);
+}
+function onPlayerAttack(pr){
+ if(pr.kind==='merchant'&&!pr.bounty){crime('Fired on a merchantman',6);repAdd('league',-6);}
+ else if(pr.kind==='escort'){crime('Fired on your own convoy',10);repAdd('league',-10);}
+ else if(pr.kind==='navy'){crime('Fired on a Crown ship',10);repAdd('crown',-10);}
+ else if(pr.kind==='fleet'){crime('Attacked the treasure fleet',12);repAdd('crown',-12);}
+ else if(pr.kind==='blockade')crime('Fired on the blockade line',6);
+}
+function onPlayerSink(pr){
+ const st=G.stats;
+ if(pr.kind==='pirate'){st.pirateKills++;repAdd('crown',5);repAdd('league',3);if(G.fac!=='brotherhood')repAdd('brotherhood',-4);moraleAdd(5);}
+ else if(pr.kind==='merchant'||pr.kind==='escort'){st.merchKills++;crime('Sank a merchant ship',12);repAdd('league',-12);repAdd('brotherhood',6);}
+ else if(pr.kind==='navy'||pr.kind==='hunter'){st.navyKills++;crime('Sank a Crown frigate',16);repAdd('crown',-16);repAdd('brotherhood',8);}
+ else if(pr.kind==='fleet'){st.navyKills++;crime('Plundered the treasure fleet',20);repAdd('crown',-25);repAdd('brotherhood',12);moraleAdd(8);}
+ else if(pr.kind==='ghost'){st.ghosts++;moraleAdd(8);}
+ else if(pr.kind==='blockade')crime('Sank a blockade picket',8);
+ else if(pr.kind==='war')repAdd(pr.side==='A'?'brotherhood':'crown',6);
+ if(pr.bounty)bountyKilled(pr);
+ questPing();
+}
+
+/* ================= SHIP DAMAGE: LOCAL, FIRE, LEAKS ================= */
+function shipLocalDamage(b){
+ const s=G.ship;
+ if(b.y<SEA+0.9&&!s.leak&&Math.random()<0.4){s.leak=1;toast('Shot below the waterline — she’s taking water! ('+(TOUCH?'PLACE':'X')+' patches)',true);}
+ if(Math.random()>0.35)return;
+ const keys=[...s.blocks.keys()];
+ if(keys.length<6)return;
+ const k=keys[(Math.random()*keys.length)|0];
+ const id=s.blocks.get(k);
+ if(id===12)return; /* the helm holds */
+ if(id===16||id===17||id===25||id===26){s.sailDmg=Math.min(s.sails,s.sailDmg+1);shipStats(s);toast('A sail is shot through!',true);return;}
+ if(CANNON_DIR[id]!==undefined){s.gunsOut=Math.min(s.cannons.length,s.gunsOut+1);toast('A gun is dismounted!',true);return;}
+ if(id===28){kegExplode(k);return;}
+ if(Math.random()<0.25&&s.fire<=0){s.fire=0.01;toast('Fire on deck! '+(TOUCH?'JUMP':'C')+' to douse it!',true);}
+ s.blocks.delete(k);
+ if(s.blocks.size===0)s.blocks.set('0|0|0',7);
+ rebuildShip();
+}
+function kegExplode(key){
+ const s=G.ship;
+ AU.boom();flashHurt();
+ let k=key;
+ if(!k)for(const [kk,id] of s.blocks)if(id===28){k=kk;break;}
+ if(k){
+  const [lx,ly,lz]=k.split('|').map(Number);
+  s.blocks.delete(k);
+  for(const d of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]){
+   const nk=K(lx+d[0],ly+d[1],lz+d[2]);
+   const id=s.blocks.get(nk);
+   if(id&&id!==12&&Math.random()<0.6)s.blocks.delete(nk);
+  }
+  const w=shipLocalToWorld(lx,ly,lz);
+  burst(w[0],w[1],w[2],26,[0.95,0.55,0.18],7);
+ }
+ s.hp-=22;
+ if(s.fire<=0)s.fire=0.01;
+ if(s.blocks.size===0)s.blocks.set('0|0|0',7);
+ rebuildShip();
+ if(s.hp<=0&&s.sailing)sinkPlayer();
+}
+function burnRandomBlock(){
+ const s=G.ship;
+ const keys=[...s.blocks.keys()].filter(k=>s.blocks.get(k)!==12);
+ if(keys.length<4){s.fire=0;return;}
+ const k=keys[(Math.random()*keys.length)|0];
+ if(s.blocks.get(k)===28){kegExplode(k);return;}
+ const def=BLK[s.blocks.get(k)];
+ s.blocks.delete(k);
+ toast('The fire consumes a '+((def&&def.n)||'block').toLowerCase()+'!',true);
+ rebuildShip();
+}
+function patchLeak(){
+ const s=G.ship;
+ if(!s.leak)return;
+ if((G.inv.planks|0)<2){toast('Need 2 planks to patch the leak',true);return;}
+ G.inv.planks-=2;s.leak=0;AU.put();
+ toast('Leak patched. Dry as a bone.');
+ updateHotbar();
+}
+function douseFire(){
+ const s=G.ship;
+ if(s.fire<=0)return;
+ s.fire=0;AU.splash();
+ toast('Fire’s out. Scorched but floating.');
+}
+
+/* ================= SURRENDER & BOARDING ================= */
+function maybeSurrender(pr){
+ if(pr.surrendered||pr.dying)return;
+ if(pr.kind!=='merchant'&&pr.kind!=='pirate'&&pr.kind!=='escort')return;
+ if(pr.hp>pr.maxHp*0.3)return;
+ if(Math.random()>0.4)return;
+ pr.surrendered=true;pr.spd=0;
+ renameBar(pr,'⚐ Struck colours — '+pr.cls.nm);
+ toast('She strikes her colours! Come alongside and press '+(TOUCH?'USE':'F')+' to board.');
+}
+function boardShip(pr){
+ const isM=pr.kind==='merchant'||pr.kind==='escort';
+ showDlg('Boarding the '+(pr.name?pr.name+'’s ':'')+pr.cls.nm,
+  '<div class="card">Her crew stands down. The '+(isM?'merchant captain':'pirate quartermaster')+' awaits your pleasure.</div>',
+  [
+   {t:'Loot her hold',f:()=>{
+     const g=80+(Math.random()*120|0);G.gold+=g;
+     const good=isM?['rum','spices','silk'][(Math.random()*3)|0]:GKEYS[(Math.random()*5)|0];
+     const n=2+(Math.random()*4|0);
+     if(cargoUsed()+n<=cargoCap())give(good,n);
+     if(isM&&!pr.bounty){crime('Plundered a prize',8);repAdd('league',-8);repAdd('brotherhood',5);}
+     G.stats.plundered++;
+     toast('+'+g+' gold, '+n+' '+ITEMNAME[good].toLowerCase()+' seized');
+     AU.coin();pr.fade=2;pr.noLoot=true;
+     if(pr.bounty)bountyKilled(pr);
+     updateHUD();autosave();
+    }},
+   {t:'Press her crew',f:()=>{
+     if(G.crew<G.ship.crewMax){G.crew++;shipStats(G.ship);moraleAdd(-3);toast('A hand signs your articles. Crew +1');}
+     else toast('No bunks free — she keeps her crew',true);
+     if(pr.bounty)bountyKilled(pr);
+     pr.fade=2;pr.noLoot=true;updateHUD();
+    }},
+   {t:'Spare her',f:()=>{
+     repAdd(isM?'league':'brotherhood',6);moraleAdd(4);
+     toast('Word of your mercy spreads.');
+     if(pr.bounty)bountyKilled(pr);
+     pr.fade=2;pr.noLoot=true;
+    }},
+   {t:'Burn her',cls:'wax',f:()=>{
+     crime('Burned a prize to the waterline',10);repAdd('brotherhood',8);repAdd('league',-10);
+     burst(pr.x,SEA+2,pr.z,30,[0.95,0.5,0.15],6);
+     pr.attacker='player';
+     startSink(pr);
+    }},
+  ]);
+}
+
+/* ================= NAMED CAPTAINS & SPECIAL SPAWNS ================= */
+const CAPN1=['Red','Black','Mad','Old','Iron','Silver','Half-Hand','Gallows','Salt-Wife','Long'];
+const CAPN2=['Garrick','Mora','Tibbs','Vane','Okonkwo','Reyes','Holt','Quist','Barrow','Ash'];
+function capName(){return CAPN1[(Math.random()*CAPN1.length)|0]+' '+CAPN2[(Math.random()*CAPN2.length)|0];}
+function dirTo(x,z){
+ const s=G.ship;
+ const dx=x-(s.sailing?s.x:s.ax),dz=z-(s.sailing?s.z:s.az);
+ const ar=['east','south-east','south','south-west','west','north-west','north','north-east'];
+ return ar[((Math.round(Math.atan2(dz,dx)/(Math.PI/4)))%8+8)%8];
+}
+function spawnHunter(){
+ const s=G.ship;
+ const p=openSeaNear(s.sailing?s.x:s.ax,s.sailing?s.z:s.az);
+ if(!p)return;
+ const nm=capName();
+ const pr=spawnShipNPC('hunter','navy',p[0],p[1],{label:'⚔ '+nm+', bounty hunter',name:nm});
+ pr.cls=Object.assign({},pr.cls,{dmg:pr.cls.dmg+2,spd:pr.cls.spd+0.6,loot:{g:[260,420],n:[3,6],cannon:0.5}});
+ toast('“'+nm+'” flies your name from the masthead — a bounty hunter is on your wake!',true);
+}
+function spawnBlockade(isl){
+ const d=isl.dock||{x:isl.cx,z:isl.cz};
+ const by=(isl.state&&isl.state.by)||'crown';
+ for(let t=0;t<6;t++){
+  const a=Math.random()*6.28;
+  const x=clamp(d.x+Math.cos(a)*26,8,WORLD-8),z=clamp(d.z+Math.sin(a)*26,8,WORLD-8);
+  if(getH(Math.round(x),Math.round(z))>SEA-2)continue;
+  const pr=spawnShipNPC('blockade',by==='brotherhood'?'brigantine':'navy',x,z,
+   {label:'Blockade — '+(FACTIONS[by]?FACTIONS[by].n:'?'),post:{x:d.x,z:d.z},postA:Math.random()*6.28,isl:isl.id});
+  pr.pass=!!(isl.state&&isl.state.paid);
+  return pr;
+ }
+}
+function liftBlockade(isl){
+ for(const p of G.pirates)if(p.kind==='blockade'&&p.isl===isl.id)p.fade=2;
+}
+function spawnTrader(){
+ const s=G.ship;
+ const p=openSeaNear(s.sailing?s.x:s.ax,s.sailing?s.z:s.az);
+ if(!p)return;
+ const pr=spawnShipNPC('trader','merchant',p[0],p[1],{label:'✦ Floating market',untilDay:G.day+1});
+ pr.yaw=Math.random()*6.28;
+ toast('A floating market rides at anchor to the '+dirTo(p[0],p[1])+' — rare parts for coin.');
+ return pr;
+}
+function spawnPlague(){
+ const s=G.ship;
+ const p=openSeaNear(s.sailing?s.x:s.ax,s.sailing?s.z:s.az);
+ if(!p)return;
+ spawnShipNPC('plague','merchant',p[0],p[1],{label:'☣ Plague ship — keep off',untilDay:G.day+2});
+ toast('A ship drifts to the '+dirTo(p[0],p[1])+', yellow flag at the mast. Board at your peril.',true);
+}
+let ghostMat=null;
+function spawnGhost(){
+ const s=G.ship;
+ const p=openSeaNear(s.sailing?s.x:s.ax,s.sailing?s.z:s.az);
+ if(!p)return;
+ const pr=spawnShipNPC('ghost','galleon',p[0],p[1],{label:'☠ The Ghost Ship'});
+ if(!ghostMat){
+  ghostMat=new THREE.MeshLambertMaterial({map:ATLAS.tex,vertexColors:true,transparent:true,opacity:0.55,color:0x9adfc8});
+ }
+ pr.mesh.material=ghostMat;
+ pr.mesh.castShadow=false;
+ toast('Out of the murk — a ship with no crew and cold lanterns…',true);
+ AU.bad();
+}
+function spawnFleet(){
+ const a=Math.random()*Math.PI*2;
+ const sx=clamp(WORLD/2+Math.cos(a)*150,12,WORLD-12),sz=clamp(WORLD/2+Math.sin(a)*150,12,WORLD-12);
+ const ex=clamp(WORLD/2-Math.cos(a)*150,12,WORLD-12),ez=clamp(WORLD/2-Math.sin(a)*150,12,WORLD-12);
+ for(let i=0;i<3;i++){
+  const x=sx+Math.cos(a+Math.PI/2)*i*8,z=sz+Math.sin(a+Math.PI/2)*i*8;
+  if(getH(Math.round(x),Math.round(z))>SEA-2)continue;
+  const pr=spawnShipNPC('fleet','galleon',x,z,{label:'♛ Royal treasure fleet'});
+  pr.cls=Object.assign({},pr.cls,{loot:{g:[380,680],n:[8,12],rich:true}});
+  pr.wx=ex;pr.wz=ez;
+ }
+ toast('Treasure fleet sighted! Royal galleons in line astern, '+dirTo(sx,sz)+'.');
+}
+function spawnDistress(){
+ const s=G.ship;
+ const p=openSeaNear(s.sailing?s.x:s.ax,s.sailing?s.z:s.az);
+ if(!p)return;
+ const pr=spawnShipNPC('merchant','merchant',p[0],p[1],{label:'⚑ Distress — merchantman',untilDay:G.day+1});
+ pr.hp=Math.round(pr.maxHp*0.3);
+ pr.surrendered=true;pr.distress=true;
+ toast('A distress signal! A merchantman flounders to the '+dirTo(p[0],p[1])+'.');
+}
+function distressDialog(pr){
+ showDlg('A ship in distress','<div class="card">“Sprung our seams in the blow! Spare us planks and hands, cap’n?”</div>',[
+  {t:'Render aid (4 planks)',f:()=>{
+    if((G.inv.planks|0)<4)return toast('You don’t have 4 planks',true);
+    G.inv.planks-=4;updateHotbar();
+    if(Math.random()<0.25){
+     toast('It’s a trap! Pirates pour from the hold!',true);
+     pr.fade=2;pr.noLoot=true;
+     spawnPirate();spawnPirate();
+    }else{
+     const g=90+(Math.random()*90|0);G.gold+=g;
+     repAdd('league',6);moraleAdd(5);G.stats.rescues++;
+     toast('“Bless your sail!” +'+g+' gold and the League takes note.');
+     AU.coin();pr.fade=2;pr.noLoot=true;
+    }
+    questPing();updateHUD();
+   }},
+  {t:'Sail on',f:()=>{pr.distress=false;pr.surrendered=false;}},
+ ]);
+}
+function plagueDialog(pr){
+ showDlg('The plague ship','<div class="card">Silence aboard. Crates stacked on her deck — and a sweet, wrong smell on the wind.</div>',[
+  {t:'Board her',cls:'wax',f:()=>{
+    if(Math.random()<0.5){
+     const g=120+(Math.random()*160|0);G.gold+=g;give('crelic',1);
+     toast('+'+g+' gold and a relic crate — and you don’t look back.');
+     AU.coin();
+    }else{
+     if(G.crew>0){G.crew--;shipStats(G.ship);toast('Fever sweeps your deck. A hand is lost to it.',true);}
+     else{G.ship.hp=Math.max(5,G.ship.hp-15);toast('You take sick — days lost, stores spoiled.',true);}
+     moraleAdd(-12);
+    }
+    pr.fade=2;pr.noLoot=true;updateHUD();
+   }},
+  {t:'Keep your distance',f:()=>{}},
+ ]);
+}
+function floatMarket(pr){
+ const offers=[['figurehead',110],['fastsail',34],['charttable',90],['cannon',Math.round(70*FACTIONS[G.fac].canCost)],['lantern',14]];
+ const btns=offers.slice(0,3+(G.day%2)).map(([it,c])=>({t:ITEMNAME[it]+' — '+c+'g',f:()=>{
+  if(G.gold<c)return toast('Not enough gold',true);
+  G.gold-=c;give(it,1);AU.coin();updateHUD();floatMarket(pr);
+ }}));
+ btns.push({t:'Cast off',f:()=>{}});
+ showDlg('The floating market','<div class="card">A grinning chandler leans over the rail. “No questions asked, none answered.”</div>',btns);
+}
+
+/* ================= FLOATING THINGS & WRECKS ================= */
+function spawnFlot(kind){
+ const s=G.ship;
+ const p=openSeaNear(s.sailing?s.x:s.ax,s.sailing?s.z:s.az);
+ if(!p)return;
+ let mesh;
+ if(kind==='castaway')mesh=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.3,1.2),new THREE.MeshLambertMaterial({color:0x8a6336}));
+ else mesh=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.5,0.35),new THREE.MeshLambertMaterial({color:0x3f7f6b}));
+ mesh.position.set(p[0],SEA+0.4,p[1]);
+ mesh.castShadow=true;
+ scene.add(mesh);
+ G.flot.push({kind,x:p[0],z:p[1],mesh,age:0});
+ toast(kind==='castaway'?'A castaway waves from a raft to the '+dirTo(p[0],p[1])+'!':'A bottle glints on the swell to the '+dirTo(p[0],p[1])+'…');
+}
+function flotTick(dt){
+ for(let i=G.flot.length-1;i>=0;i--){
+  const f=G.flot[i];
+  f.age+=dt;
+  f.mesh.position.y=SEA+0.35+waveH(f.x,f.z)*0.8;
+  if(f.age>420){scene.remove(f.mesh);G.flot.splice(i,1);continue;}
+  const s=G.ship;
+  const px2=s.sailing?s.x:P.x,pz2=s.sailing?s.z:P.z;
+  if(Math.hypot(f.x-px2,f.z-pz2)<3.4){
+   scene.remove(f.mesh);G.flot.splice(i,1);
+   if(f.kind==='castaway')castawayFound();else bottleFound();
+  }
+ }
+}
+function castawayFound(){
+ const r=Math.random();
+ G.stats.rescues++;repAdd('league',3);
+ if(r<0.3&&G.crew<G.ship.crewMax){
+  G.crew++;shipStats(G.ship);moraleAdd(4);
+  showDlg('Castaway rescued','<div class="card">“Bless ye, cap’n. I can hand, reef and steer.” They join your crew.</div>');
+ }else if(r<0.55){
+  const g=40+(Math.random()*60|0);G.gold+=g;AU.coin();
+  showDlg('Castaway rescued','<div class="card">“All I have, for my life.” <b>+'+g+' gold.</b></div>');
+ }else if(r<0.8){
+  const c=W.coves.find(o=>!o.found&&!o.rumor);
+  if(c){c.rumor=true;showDlg('Castaway rescued','<div class="card">“There’s a hidden cove on '+esc(isleNameById(c.isle))+' — I marked your chart, see the “?”.”</div>');}
+  else{const g=30;G.gold+=g;showDlg('Castaway rescued','<div class="card">“Just my thanks, then.” +'+g+' gold.</div>');}
+ }else{
+  mapPiece();
+  showDlg('Castaway rescued','<div class="card">“Take this — tore it off a dead man’s chart.” <b>A torn map fragment.</b></div>');
+ }
+ questPing();updateHUD();
+}
+function bottleFound(){
+ const r=Math.random();
+ if(r<0.25){mapPiece();showDlg('Message in a bottle','<div class="card">Inside: a torn corner of a chart, salt-stained but legible.</div>');}
+ else if(r<0.5){
+  let best=null;
+  for(const a of W.isles){if(!a.stall)continue;for(const g of GKEYS){const p=sellP(a,g);if(!best||p>best.p)best={p,g,a};}}
+  showDlg('Message in a bottle','<div class="card">'+(best?'“'+ITEMNAME[best.g]+' fetches '+best.p+'g at '+esc(best.a.name)+'. Don’t dawdle.”':'The ink has run to nothing.')+'</div>');
+ }
+ else if(r<0.72){showDlg('Message in a bottle','<div class="card">“If you can read this, you are too close. — K.”</div>');}
+ else{
+  const a2=Math.random()*6.28,d2=40+Math.random()*60;
+  const s=G.ship;
+  G.fakeX={x:Math.round((s.sailing?s.x:s.ax)+Math.cos(a2)*d2),z:Math.round((s.sailing?s.z:s.az)+Math.sin(a2)*d2),until:G.day+4};
+  showDlg('Message in a bottle','<div class="card">A crude map, X marked boldly. It looks… almost too good.</div>');
+ }
+}
+function addWreck(x,z){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.7,1.4),new THREE.MeshLambertMaterial({color:0x3a3026}));
+ m.position.set(x,SEA+0.1,z);
+ m.rotation.y=Math.random()*3;
+ scene.add(m);
+ G.wrecks.push({x,z,mesh:m,t:200,taken:false});
+}
+function wreckTick(dt){
+ for(let i=G.wrecks.length-1;i>=0;i--){
+  const wk=G.wrecks[i];
+  wk.t-=dt;
+  wk.mesh.position.y=SEA+0.05+waveH(wk.x,wk.z)*0.5;
+  if(wk.t<=0){scene.remove(wk.mesh);G.wrecks.splice(i,1);continue;}
+  if(wk.taken)continue;
+  const s=G.ship;
+  const px2=s.sailing?s.x:P.x,pz2=s.sailing?s.z:P.z;
+  if(Math.hypot(wk.x-px2,wk.z-pz2)<3.4){
+   wk.taken=true;
+   const n=2+(Math.random()*4|0);
+   give('planks',n);
+   if(Math.random()<0.3)give('iron',1);
+   toast('Salvaged '+n+' planks from the wreck.');
+  }
+ }
+}
+
+/* ================= THE SERPENT (rare, mythic) ================= */
+function spawnSerpent(){
+ const s=G.ship;
+ if(!s.sailing||G.serp)return;
+ const segs=[];
+ for(let i=0;i<4;i++){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(1.5-i*0.22,1.3-i*0.18,2.1),new THREE.MeshLambertMaterial({color:0x2a5a4a}));
+  m.castShadow=true;
+  scene.add(m);segs.push(m);
+ }
+ G.serp={x:s.x+30,z:s.z,a:0,hp:90,segs,bite:6,life:90};
+ toast('The sea boils — something vast circles your hull!',true);
+ AU.bad();
+}
+function serpentTick(dt){
+ const sp=G.serp,s=G.ship;
+ sp.life-=dt;
+ if(sp.life<=0||!s.sailing||sp.hp<=0){
+  for(const m of sp.segs)scene.remove(m);
+  if(sp.hp<=0){
+   spawnLoot(sp.x,sp.z,{g:[280,420],n:[0,0],relic:true});
+   G.stats.serpents++;
+   toast('The serpent rolls and sinks into the dark! Something gleams in its wake.');
+   moraleAdd(10);
+  }else toast('The serpent loses interest and dives.');
+  G.serp=null;questPing();return;
+ }
+ sp.a+=dt*0.55;
+ const R=13;
+ sp.x=s.x+Math.cos(sp.a)*R;
+ sp.z=s.z+Math.sin(sp.a)*R;
+ for(let i=0;i<sp.segs.length;i++){
+  const aa=sp.a-i*0.3;
+  const m=sp.segs[i];
+  m.position.set(s.x+Math.cos(aa)*R,SEA+0.3+Math.sin(G.time*2.2+i*1.4)*0.7,s.z+Math.sin(aa)*R);
+  m.rotation.y=-aa;
+ }
+ sp.bite-=dt;
+ if(sp.bite<=0){
+  sp.bite=6+Math.random()*4;
+  s.hp-=7;AU.hit();flashHurt();
+  toast('The serpent slams the hull!',true);
+  if(Math.random()<0.3&&!s.leak){s.leak=1;toast('Planks sprung below the waterline!',true);}
+  if(s.hp<=0)sinkPlayer();
+  updateHUD();
+ }
+}
+function serpentHit(){
+ const sp=G.serp;
+ sp.hp-=12+G.crew;
+ burst(sp.x,SEA+1,sp.z,10,[0.3,0.7,0.5],5);
+ AU.hit();
+}
+
+/* ================= SEA EVENTS & HIDDEN COVES ================= */
+const EVT={t:50};
+function spawnWreckField(){
+ const s=G.ship;
+ const p=openSeaNear(s.sailing?s.x:s.ax,s.sailing?s.z:s.az);
+ if(!p)return;
+ const n=4+(Math.random()*3|0);
+ for(let i=0;i<n;i++)
+  spawnLoot(p[0]+(Math.random()-0.5)*14,p[1]+(Math.random()-0.5)*14,
+   {g:[10,40],n:[1,3],part:Math.random()<0.2?'planks':null});
+ addWreck(p[0],p[1]);
+ toast('Gulls wheel over drifting wreckage to the '+dirTo(p[0],p[1])+'.');
+ if(Math.random()<0.2)spawnPirate();
+}
+function startWarZone(){
+ const ports=W.isles.filter(i=>i.stall&&!i.state);
+ const isl=ports[(Math.random()*ports.length)|0];
+ if(!isl||G.war)return;
+ G.war={isl:isl.id,until:G.day+2};
+ for(let i=0;i<2;i++){
+  const p1=openSeaNear(isl.cx,isl.cz);
+  if(p1)spawnShipNPC('war','navy',p1[0],p1[1],{side:'A',label:'⚔ Crown ship of the line'});
+  const p2=openSeaNear(isl.cx,isl.cz);
+  if(p2)spawnShipNPC('war','brigantine',p2[0],p2[1],{side:'B',label:'⚔ Black Flag raider'});
+ }
+ toast('War! Crown and Black Flag clash off '+isl.name+'.',true);
+}
+function endWarZone(){
+ if(!G.war)return;
+ let a=0,b=0;
+ for(const p of G.pirates)if(p.kind==='war'&&!p.dying){if(p.side==='A')a++;else b++;p.fade=2;}
+ const isl=W.isles.find(o=>o.id===G.war.isl);
+ if(isl&&!isl.state){
+  const t=a>b?'prosperous':b>a?'lawless':'raided';
+  isl.state={type:t,until:G.day+3};
+  if(isl.disc)toast('The fighting off '+isl.name+' ends — the port is '+t+'.');
+ }
+ G.war=null;
+}
+function seaEventTick(dt){
+ flotTick(dt);
+ wreckTick(dt);
+ if(G.serp)serpentTick(dt);
+ coveTick();
+ blockadeCheck();
+ EVT.t-=dt;
+ if(EVT.t>0)return;
+ EVT.t=45+Math.random()*55;
+ if(G.mode!=='sail'&&Math.random()<0.6)return;
+ const night=SKY.day<0.3;
+ const r=Math.random();
+ if((night||WX.kind==='fog')&&r<0.08&&G.day>5){spawnGhost();return;}
+ if(WX.season&&r<0.3){spawnWreckField();return;}
+ if(r<0.16){spawnWreckField();return;}
+ if(r<0.28){spawnFlot('castaway');return;}
+ if(r<0.42){spawnFlot('bottle');return;}
+ if(r<0.5&&!G.pirates.some(p=>p.kind==='trader'&&!p.dying)){spawnTrader();return;}
+ if(r<0.58){spawnDistress();return;}
+ if(r<0.64&&G.day>4){spawnPlague();return;}
+ if(r<0.72&&G.day>5&&!G.pirates.some(p=>p.kind==='fleet'&&!p.dying)){spawnFleet();return;}
+ if(r<0.78&&!G.war){startWarZone();return;}
+ if(r<0.8&&G.day>8&&!G.serp){spawnSerpent();return;}
+}
+function coveTick(){
+ const s=G.ship;
+ const px2=G.mode==='sail'?s.x:P.x,pz2=G.mode==='sail'?s.z:P.z;
+ const reach=G.spec.nav?40:22;
+ for(const c of W.coves){
+  if(c.found)continue;
+  if(Math.hypot(c.x-px2,c.z-pz2)<reach){
+   c.found=true;
+   toast('You’ve found a hidden '+COVEN[c.kind].n.toLowerCase()+' on '+isleNameById(c.isle)+'!');
+   AU.bell();
+   G.stats.coves++;
+   questPing();
+  }
+ }
+}
+const COVEN={
+ smuggler:{n:'Smuggler’s cove',d:'Contraband moves quietly here.'},
+ wrecker:{n:'Wreckers’ cove',d:'Salvage, cheap repairs, no questions.'},
+ refuge:{n:'Healer’s refuge',d:'Rest for the crew; heat cools faster.'},
+ den:{n:'Pirate den',d:'Raid work, false flags, black sails.'},
+};
+function nearestCove(r){
+ let best=null,bd=r;
+ for(const c of W.coves){
+  if(!c.found)continue;
+  const d=Math.hypot(c.x-P.x,c.z-P.z);
+  if(d<bd){bd=d;best=c;}
+ }
+ return best;
+}
+function coveDialog(c){
+ const btns=[];
+ if(c.kind==='smuggler'||c.kind==='den'){
+  for(const k of CKEYS){
+   const have=G.inv[k]|0;
+   if(have>0){
+    const p=blackPrice(k,true);
+    btns.push({t:'Sell '+have+' '+ITEMNAME[k].toLowerCase()+' ('+p+'g ea)',f:()=>{sellContra(k,have,p);coveDialog(c);}});
+   }
+  }
+  const bk=CKEYS[(G.day+c.id)%CKEYS.length];
+  const bp2=blackPrice(bk,false);
+  btns.push({t:'Buy '+ITEMNAME[bk].toLowerCase()+' ('+bp2+'g)',f:()=>{buyContra(bk,bp2);coveDialog(c);}});
+  btns.push({t:'Forged papers (50g)',f:()=>{
+   if(G.gold<50)return toast('Not enough gold',true);
+   G.gold-=50;G.forged++;toast('Papers, “signed” and sealed. ('+G.forged+' held)');AU.coin();updateHUD();
+  }});
+ }
+ if(c.kind==='den'){
+  btns.push({t:'Black sails (20g for 2)',f:()=>{
+   if(G.gold<20)return toast('Not enough gold',true);
+   G.gold-=20;give('blacksail',2);AU.coin();updateHUD();
+  }});
+  btns.push({t:'Fly false colours…',f:()=>flagDialog(true)});
+ }
+ if(c.kind==='wrecker'){
+  const s=G.ship;
+  const miss=s.maxHp-Math.round(s.hp);
+  const rc=Math.max(1,Math.ceil(miss*0.35));
+  btns.push({t:'Patch her up ('+rc+'g)',f:()=>{
+   if(miss<1)return toast('She’s sound already');
+   if(G.gold<rc)return toast('Not enough gold',true);
+   G.gold-=rc;s.hp=s.maxHp;s.sailDmg=0;s.gunsOut=0;s.leak=0;shipStats(s);
+   toast('Hammers and pitch — good as stolen new.');AU.put();updateHUD();
+  }});
+  btns.push({t:'Salvaged cannon (45g)',f:()=>{
+   if(G.gold<45)return toast('Not enough gold',true);
+   G.gold-=45;give('cannon',1);AU.coin();updateHUD();
+  }});
+  btns.push({t:'Wreck rumours (15g)',f:()=>{
+   if(G.gold<15)return toast('Not enough gold',true);
+   G.gold-=15;spawnWreckField();updateHUD();
+  }});
+ }
+ if(c.kind==='refuge'){
+  btns.push({t:'Rest the crew (15g)',f:()=>{
+   if(G.gold<15)return toast('Not enough gold',true);
+   G.gold-=15;moraleAdd(25);G.wanted=Math.max(0,G.wanted-12);
+   G.ship.hp=Math.min(G.ship.maxHp,G.ship.hp+Math.round(G.ship.maxHp*0.2));
+   toast('Hot food, dry hammocks. The heat cools a little.');
+   updateHUD();
+  }});
+ }
+ btns.push({t:'Leave',f:()=>{}});
+ showDlg(COVEN[c.kind].n,'<div class="card">'+COVEN[c.kind].d+'</div>',btns);
+}
+function blockadeCheck(){
+ if(G.mode!=='sail')return;
+ const s=G.ship;
+ for(const isl of W.isles){
+  if(!isl.state||isl.state.type!=='blockaded'||isl.state.paid||!isl.dock)continue;
+  const d=Math.hypot(isl.dock.x-s.x,isl.dock.z-s.z);
+  const night=SKY.day<0.3;
+  const seen=night?18:30;
+  if(d<seen&&!isl.state.warned){
+   isl.state.warned=true;
+   const by=isl.state.by||'crown';
+   showDlg('Blockade of '+isl.name,
+    '<div class="card">'+(FACTIONS[by]?FACTIONS[by].n:'A fleet')+' has the port ringed. A picket ship signals you to heave to.</div>',
+    [
+     {t:'Bribe through (150g)',f:()=>{
+       if(G.gold<150){toast('They sneer at your purse',true);isl.state.warned=false;return;}
+       G.gold-=150;isl.state.paid=true;
+       for(const p of G.pirates)if(p.kind==='blockade'&&p.isl===isl.id)p.pass=true;
+       toast('The picket looks away. Slip in quietly.');
+       updateHUD();
+      }},
+     {t:'Run the line',cls:'wax',f:()=>{
+       for(const p of G.pirates)if(p.kind==='blockade'&&p.isl===isl.id)p.attacker='player';
+       toast('Guns run out along the line — make for the dock!',true);
+      }},
+     {t:'Turn back',f:()=>{setTimeout(()=>{if(isl.state)isl.state.warned=false;},30000);}},
+    ]);
+  }
+ }
+}
+
 /* ---------------- game state ---------------- */
 let G=null;
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ================= MORALE / RELICS / TITLES ================= */
+function moraleAdd(n){if(G)G.morale=clamp(G.morale+n,0,100);}
+function moraleName(){const m=G.morale;return m>=75?'hearty':m>=50?'steady':m>=30?'grumbling':m>=15?'sour':'mutinous';}
+function gainRelic(){
+ const RELICS=['Drowned idol','Star-iron compass','Kraken-tooth charm','Saint’s knucklebone','Black pearl rosary','Chart of a sea that isn’t'];
+ const r=RELICS[(Math.random()*RELICS.length)|0]+' #'+(G.relics.length+1);
+ G.relics.push(r);
+ toast('Relic recovered: '+r);
+ AU.bell();
+}
+function addTitle(t){
+ if(G.titles.includes(t))return;
+ G.titles.push(t);
+ toast('⚜ Title earned: '+t+'!');
+ AU.bell();
+}
+const TITLES=[
+ ['Merchant','Earn 2,500g of trade profit',()=>G.stats.tradeProfit>=2500],
+ ['Smuggler','Move 8 crates of contraband',()=>G.stats.contra>=8],
+ ['Privateer','Sink 8 pirate ships',()=>G.stats.pirateKills>=8],
+ ['Pirate','Send 6 merchantmen down',()=>G.stats.merchKills>=6],
+ ['Explorer','Chart every isle',()=>W.isles.every(i=>i.disc)],
+ ['Shipwright','Build 40 blocks onto your ship',()=>G.stats.built>=40],
+ ['Miner','Break 400 blocks',()=>G.stats.mined>=400],
+ ['Treasure Hunter','Dig up 3 chests',()=>G.stats.chests>=3],
+];
+function titleTick(){
+ for(const [t,d,c] of TITLES){void d;if(!G.titles.includes(t)&&c())addTitle(t);}
+}
+
+/* ================= JOBS / CONTRACTS ================= */
+let JOBSEQ=1;
+const JOBT={delivery:'Delivery',courier:'Courier',bounty:'Bounty',salvage:'Salvage',construction:'Construction',escort:'Escort',smuggle:'Smuggling'};
+function genJobs(isl){
+ if(isl.jobs&&G.day-isl.jobsDay<3)return isl.jobs;
+ isl.jobsDay=G.day;
+ const rng=mulberry32(hashStr(W.seed+'|'+isl.id+'|'+Math.floor(G.day/3))+1);
+ const ports=W.isles.filter(o=>o.stall&&o!==isl);
+ const jobs=[];
+ const n=3+((rng()*3)|0);
+ const types=['delivery','courier','bounty','salvage','construction','escort','smuggle'];
+ for(let i=0;i<n;i++){
+  let t=types[(rng()*types.length)|0];
+  if(i===0&&isl.state){
+   const st=isl.state.type;
+   if(st==='starving')t='delivery';
+   if(st==='flooded'||st==='raided')t='construction';
+   if(st==='quarantined')t='courier';
+   if(st==='lawless')t='smuggle';
+  }
+  const j=makeJob(t,isl,ports,rng);
+  if(j)jobs.push(j);
+ }
+ isl.jobs=jobs;
+ return jobs;
+}
+function makeJob(t,isl,ports,rng){
+ const id='j'+(JOBSEQ++);
+ const to=ports.length?ports[(rng()*ports.length)|0]:null;
+ const dl=G.day+2+((rng()*3)|0);
+ if(t==='delivery'){
+  let g=GKEYS[(rng()*GKEYS.length)|0];
+  if(isl.state&&isl.state.type==='starving')g=['grain','rum','sugar'][(rng()*3)|0];
+  const n=3+((rng()*6)|0);
+  const pay=Math.round(GOODS[g].b*n*2.2+30);
+  return {id,t,isl:isl.id,to:isl.id,good:g,n,pay,dl,rep:4,txt:'Bring '+n+' '+ITEMNAME[g].toLowerCase()+' to '+isl.name};
+ }
+ if(t==='courier'){
+  if(!to)return null;
+  const pay=45+((rng()*50)|0);
+  return {id,t,isl:isl.id,to:to.id,pay,dl,rep:3,txt:'Carry sealed dispatches to '+to.name};
+ }
+ if(t==='bounty'){
+  const nm=CAPN1[(rng()*CAPN1.length)|0]+' '+CAPN2[(rng()*CAPN2.length)|0];
+  const cls=rng()<0.6?'sloop':'brigantine';
+  const kinds=['pirate','navy deserter','smuggler','rogue merchant'];
+  const kind=kinds[(rng()*kinds.length)|0];
+  const a=rng()*6.28,d=40+rng()*50;
+  const tx=clamp(isl.cx+Math.cos(a)*d,12,WORLD-12),tz=clamp(isl.cz+Math.sin(a)*d,12,WORLD-12);
+  const pay=150+((rng()*160)|0);
+  return {id,t,isl:isl.id,to:isl.id,name:nm,cls,kindTxt:kind,tx,tz,pay,dl,rep:6,got:false,
+   txt:'Sink the '+kind+' “'+nm+'” and return to '+isl.name};
+ }
+ if(t==='salvage'){
+  const a=rng()*6.28,d=35+rng()*55;
+  const tx=clamp(isl.cx+Math.cos(a)*d,12,WORLD-12),tz=clamp(isl.cz+Math.sin(a)*d,12,WORLD-12);
+  const pay=110+((rng()*120)|0);
+  return {id,t,isl:isl.id,to:isl.id,tx,tz,pay,dl,rep:4,got:false,
+   txt:'Recover lost cargo from a wreck site and return it to '+isl.name};
+ }
+ if(t==='construction'){
+  const mats={};
+  const pool=[['planks',8,16],['stone',6,12],['log',4,8],['iron',3,6]];
+  const m1=pool[(rng()*pool.length)|0];
+  mats[m1[0]]=m1[1]+((rng()*(m1[2]-m1[1]))|0);
+  if(rng()<0.4){const m2=pool[(rng()*pool.length)|0];if(m2[0]!==m1[0])mats[m2[0]]=m2[1];}
+  if(rng()<0.15)mats.cannon=1;
+  let pay=40;
+  for(const k in mats)pay+=(GOODS[k]?GOODS[k].b:k==='cannon'?60:5)*mats[k]*1.8;
+  pay=Math.round(pay);
+  const why=isl.state&&isl.state.type==='flooded'?'rebuild the drowned docks':
+   isl.state&&isl.state.type==='raided'?'repair what the raiders burned':
+   ['repair the docks','rebuild the cottages','reinforce the seawall','expand the market'][(rng()*4)|0];
+  const txt='Deliver '+Object.entries(mats).map(([k,v])=>v+' '+ITEMNAME[k].toLowerCase()).join(', ')+' to '+why;
+  return {id,t,isl:isl.id,to:isl.id,mats,pay,dl,rep:5,txt};
+ }
+ if(t==='escort'){
+  if(!to)return null;
+  const pay=170+((rng()*140)|0);
+  return {id,t,isl:isl.id,to:to.id,pay,dl,rep:5,txt:'Escort a merchantman safely to '+to.name};
+ }
+ if(t==='smuggle'){
+  let dest=null;
+  for(const o of W.isles)if(o.stall&&o!==isl&&(!o.fac||(o.state&&o.state.type==='lawless'))){dest=o;break;}
+  if(!dest)dest=to;
+  if(!dest)return null;
+  const g=CKEYS[(rng()*CKEYS.length)|0];
+  const n=2+((rng()*3)|0);
+  const pay=Math.round(CONTRA[g].b*n*2.6+40);
+  return {id,t,isl:isl.id,to:dest.id,good:g,n,pay,dl,rep:0,srep:4,
+   txt:'Run '+n+' '+ITEMNAME[g].toLowerCase()+' past the patrols to '+dest.name};
+ }
+ return null;
+}
+function activeJob(id){return G.jobs.find(j=>j.id===id);}
+function acceptJob(j,isl){
+ if(G.jobs.length>=3)return toast('Three contracts is plenty — finish one first',true);
+ if(j.t==='smuggle'){
+  if(cargoUsed()+j.n>cargoCap())return toast('No room in the hold for the crates',true);
+  give(j.good,j.n);
+  toast('The crates come aboard under cover of a tarp.');
+ }
+ if(j.t==='bounty'&&!j.spawned){
+  j.spawned=true;
+  const pr=spawnShipNPC('pirate',j.cls,j.tx,j.tz,{label:'☠ '+j.name+', '+j.kindTxt});
+  pr.name=j.name;pr.bounty=true;pr.jobId=j.id;pr.neutral=false;
+  pr.wx=j.tx;pr.wz=j.tz;
+ }
+ if(j.t==='escort'){
+  const d=isl.dock||{x:isl.cx,z:isl.cz,dx:1,dz:0};
+  const pr=spawnShipNPC('escort','merchant',d.x+(d.dx||1)*10,d.z+(d.dz||0)*10,{label:'⚑ Your convoy'});
+  pr.escortJob=j.id;
+ }
+ G.jobs.push(j);
+ isl.jobs=isl.jobs.filter(o=>o.id!==j.id);
+ toast('Contract accepted: '+j.txt);
+ AU.bell();
+ updateHUD();
+ autosave();
+}
+function payJob(j,mult){
+ const pay=Math.round(j.pay*(mult===undefined?1:mult)*(j.late?0.5:1));
+ G.gold+=pay;
+ const isl=W.isles.find(o=>o.id===j.isl);
+ if(isl&&isl.fac&&j.rep)repAdd(isl.fac,j.rep);
+ if(j.srep){G.smug+=j.srep;G.stats.contra+=j.n||0;}
+ G.stats.jobs[j.t]=(G.stats.jobs[j.t]||0)+1;
+ G.stats.jobsDone++;
+ G.jobs=G.jobs.filter(o=>o.id!==j.id);
+ toast('Contract complete! +'+pay+'g'+(j.late?' (late — half pay)':''));
+ AU.coin();
+ questPing();titleTick();
+ updateHUD();
+ autosave();
+}
+function failJob(j,why){
+ G.jobs=G.jobs.filter(o=>o.id!==j.id);
+ const isl=W.isles.find(o=>o.id===j.isl);
+ if(isl&&isl.fac)repAdd(isl.fac,-(j.rep||3)-2);
+ if(j.t==='smuggle'){G.smug=Math.max(0,G.smug-3);G.wanted=clamp(G.wanted+4,0,120);}
+ if(j.t==='escort')repAdd('league',-5);
+ toast('Contract failed — '+why,true);
+ for(const p of G.pirates)if(p.jobId===j.id||p.escortJob===j.id)p.fade=2;
+ updateHUD();
+}
+function bountyKilled(pr){
+ const j=pr.jobId?activeJob(pr.jobId):null;
+ if(!j)return;
+ j.got=true;
+ toast('“'+j.name+'” is done for. Return to '+isleNameById(j.isl)+' for payment.');
+}
+function jobSiteTick(){
+ /* salvage sites surface their prize when you arrive */
+ const s=G.ship;
+ const px2=s.sailing?s.x:s.ax,pz2=s.sailing?s.z:s.az;
+ for(const j of G.jobs){
+  if(j.t!=='salvage'||j.got||j.dropped)continue;
+  if(Math.hypot(j.tx-px2,j.tz-pz2)<20){
+   j.dropped=true;
+   spawnLoot(j.tx,j.tz,{g:[0,10],n:[0,0],salv:true});
+   addWreck(j.tx+3,j.tz+2);
+   toast('Wreckage ahead — the lost cargo bobs among it.');
+  }
+ }
+ /* picking up salvage marks it */
+ for(const j of G.jobs)if(j.t==='salvage'&&j.dropped&&!j.got&&(G.inv.salv|0)>0)j.got=true;
+}
+function jobsAtDock(isl){
+ /* auto-resolve courier & escort on docking */
+ for(const j of [...G.jobs]){
+  if(j.to!==isl.id)continue;
+  if(j.t==='courier')payJob(j);
+  else if(j.t==='escort'){
+   const pr=G.pirates.find(p=>p.escortJob===j.id&&!p.dying);
+   if(pr){
+    const ratio=clamp(pr.hp/pr.maxHp,0.2,1);
+    payJob(j,ratio);
+    if(ratio<1)toast('She made it, battered — pay docked for the damage.');
+    pr.fade=2;
+   }else failJob(j,'the convoy was lost at sea');
+  }
+ }
+}
+function jobFulfill(j){
+ const isl=W.isles.find(o=>o.id===j.to);
+ if(!isl)return;
+ if(j.t==='delivery'){
+  if((G.inv[j.good]|0)<j.n)return toast('You need '+j.n+' '+ITEMNAME[j.good].toLowerCase(),true);
+  G.inv[j.good]-=j.n;
+  if(isl.state&&isl.state.type==='starving'&&(j.good==='grain'||j.good==='rum'||j.good==='sugar')){
+   repAdd(isl.fac||G.fac,4);
+   toast('The hungry crowd the dock — you’re a name here now.');
+  }
+  payJob(j);
+ }else if(j.t==='construction'){
+  for(const k in j.mats)if((G.inv[k]|0)<j.mats[k])return toast('Still need '+j.mats[k]+' '+ITEMNAME[k].toLowerCase(),true);
+  for(const k in j.mats)G.inv[k]-=j.mats[k];
+  portProgress(isl);
+  payJob(j);
+ }else if(j.t==='bounty'){
+  if(!j.got)return toast('“'+j.name+'” still sails. Find them near '+dirTo(j.tx,j.tz)+' waters.',true);
+  if(Math.random()<0.25){give(['fastsail','figurehead','cannon'][(Math.random()*3)|0],1);toast('The harbourmaster throws in a captured ship part.');}
+  payJob(j);
+ }else if(j.t==='salvage'){
+  if((G.inv.salv|0)<1)return toast('You haven’t recovered the cargo yet',true);
+  G.inv.salv--;
+  payJob(j);
+ }else if(j.t==='smuggle'){
+  if((G.inv[j.good]|0)<j.n)return toast('The buyer counts crates — you’re short',true);
+  G.inv[j.good]-=j.n;
+  payJob(j);
+ }
+ updateHotbar();
+}
+function failSmuggleJobs(){
+ for(const j of [...G.jobs])if(j.t==='smuggle')failJob(j,'the contraband was seized');
+}
+function objectiveText(){
+ if(!G)return '';
+ if(G.jobs.length){
+  const j=G.jobs[0];
+  let prog='';
+  if(j.t==='delivery'||j.t==='smuggle')prog=' · '+Math.min(j.n,G.inv[j.good]|0)+'/'+j.n;
+  if(j.t==='bounty')prog=j.got?' · collect pay':'';
+  if(j.t==='salvage')prog=j.got?' · return it':'';
+  const left=j.dl-G.day;
+  return j.txt+prog+' · '+(left>=0?left+'d left':'overdue');
+ }
+ const tut=QLINES.tut;
+ const st=G.quests.tut|0;
+ if(st<tut.steps.length)return 'First Tides: '+tut.steps[st].d;
+ if(G.course)return 'Course set — '+Math.round(Math.hypot(G.course.x-(G.ship.sailing?G.ship.x:G.ship.ax),G.course.z-(G.ship.sailing?G.ship.z:G.ship.az)))+' away';
+ return '';
+}
+
+/* ================= QUESTLINES ================= */
+const QLINES={
+ tut:{n:'First Tides',steps:[
+  {d:'Break 5 blocks ashore (hold mine)',c:()=>G.stats.mined>=5},
+  {d:'Place a block onto your anchored ship',c:()=>G.stats.built>=1},
+  {d:'Have a helm and a sail aboard',c:()=>!!G.ship.helm&&G.ship.sails>0},
+  {d:'Buy 3 crates of goods at a market',c:()=>G.stats.bought>=3},
+  {d:'Dock at a second island',c:()=>G.stats.portsVisited>=2},
+  {d:'Sell cargo away from home',c:()=>G.stats.soldAbroad>=1},
+ ],done:'+150g and the title “Deckhand”',rw:()=>{G.gold+=150;addTitle('Deckhand');}},
+ league:{n:'Free Traders’ League',fac:'league',steps:[
+  {d:'Complete 2 delivery contracts',c:()=>(G.stats.jobs.delivery|0)>=2},
+  {d:'Bank 1,500g of trade profit',c:()=>G.stats.tradeProfit>=1500},
+  {d:'Sail with 40+ cargo capacity',c:()=>cargoCap()>=40},
+  {d:'See a merchant escort through',c:()=>(G.stats.jobs.escort|0)>=1},
+ ],done:'League charter: buy prices −5%, +400g, “Master Trader”',
+  rw:()=>{G.perks.leagueDisc=true;G.gold+=400;addTitle('Master Trader');repAdd('league',30);}},
+ crown:{n:'The Royal Crown',fac:'crown',steps:[
+  {d:'Sink 3 pirate ships',c:()=>G.stats.pirateKills>=3},
+  {d:'Collect a bounty contract',c:()=>(G.stats.jobs.bounty|0)>=1},
+  {d:'Deliver military supplies (a construction contract)',c:()=>(G.stats.jobs.construction|0)>=1},
+  {d:'Escort a convoy safely',c:()=>(G.stats.jobs.escort|0)>=1},
+ ],done:'A privateering warrant: the navy stands down, heat fades twice as fast',
+  rw:()=>{G.perks.warrant=true;G.gold+=300;addTitle('Privateer');repAdd('crown',30);}},
+ brotherhood:{n:'Brotherhood of the Black Flag',fac:'brotherhood',steps:[
+  {d:'Move 5 crates of contraband',c:()=>G.stats.contra>=5},
+  {d:'Run a smuggling contract',c:()=>(G.stats.jobs.smuggle|0)>=1},
+  {d:'Send 2 merchantmen to the deep',c:()=>G.stats.merchKills>=2},
+  {d:'Find a pirate den',c:()=>W.coves.some(c=>c.kind==='den'&&c.found)},
+ ],done:'Black-market prices −20%, black sails, “Dread Captain”',
+  rw:()=>{G.perks.blackmkt=true;give('blacksail',4);addTitle('Dread Captain');repAdd('brotherhood',30);}},
+ compact:{n:'Compact of the Deep',fac:'compact',steps:[
+  {d:'Mine 40 iron or gold ore',c:()=>G.stats.ore>=40},
+  {d:'Recover a salvage contract',c:()=>(G.stats.jobs.salvage|0)>=1},
+  {d:'Dig up a buried treasure',c:()=>G.stats.chests>=1},
+  {d:'Chart 8 islands',c:()=>W.isles.filter(i=>i.disc).length>=8},
+ ],done:'Deep charts: every isle revealed, maps half price, “Pathfinder”',
+  rw:()=>{G.perks.charts=true;for(const i of W.isles)i.disc=true;addTitle('Pathfinder');repAdd('compact',30);}},
+};
+function questTick(){
+ if(!G)return;
+ for(const key in QLINES){
+  const ql=QLINES[key];
+  let st=G.quests[key]|0;
+  if(st>=ql.steps.length)continue;
+  if(ql.fac&&ql.fac!==G.fac&&(G.rep[ql.fac]||0)<10)continue;
+  let moved=false;
+  while(st<ql.steps.length&&ql.steps[st].c()){st++;moved=true;}
+  if(moved){
+   G.quests[key]=st;
+   if(st>=ql.steps.length){toast('Questline complete — '+ql.n+'! '+ql.done);AU.bell();ql.rw();}
+   else toast(ql.n+': '+ql.steps[st].d);
+   updateHUD();
+  }
+ }
+}
+function questPing(){questTick();}
+function mapPiece(){
+ const q=G.quests.maps;
+ if(q.pieces>=3){G.gold+=30;return;}
+ q.pieces++;
+ toast('A torn map fragment! ('+q.pieces+'/3)');
+ if(q.pieces>=3){
+  const leg=W.legends.find(l=>!l.found);
+  if(leg){q.site=leg.name;toast('The pieces align — “'+leg.name+'” is marked on your chart!');AU.bell();}
+ }
+}
+function legendDig(hit){
+ if((G.quests.maps.pieces|0)<3)return false;
+ const leg=W.legends.find(l=>!l.found&&l.x===hit.x&&l.z===hit.z);
+ if(!leg)return false;
+ leg.found=true;
+ const g=900+(Math.random()*500|0);
+ G.gold+=g;
+ gainRelic();
+ G.stats.chests++;G.stats.legends++;
+ G.quests.maps.pieces=0;G.quests.maps.site=null;
+ toast('“'+leg.name+'”! +'+g+' gold and a relic beyond price!');
+ burst(hit.x+0.5,hit.y+1,hit.z+0.5,30,[0.95,0.78,0.3],5);
+ AU.coin();AU.bell();
+ addTitle('Treasure Hunter');
+ questPing();updateHUD();autosave();
+ return true;
+}
+
+/* ================= SPECIALISTS / TAVERN ================= */
+const SPECS={
+ nav:{t:'Navigator',w:9,d:'Charts further, finds coves sooner, +5% speed'},
+ carp:{t:'Carpenter',w:9,d:'Mends the hull at sea; yard repairs −30%'},
+ gun:{t:'Master Gunner',w:11,d:'Broadsides reload faster and hit harder'},
+ qm:{t:'Quartermaster',w:10,d:'+6 cargo, better prices, wages −15%'},
+ smug:{t:'Smuggler',w:11,d:'Inspections look away; black-market friends'},
+ cook:{t:'Cook',w:8,d:'Morale simmers up daily; fewer desertions'},
+};
+const SPECN=['Esme','Tarn','Old Pew','Ines','Bosun Mae','Crooked Tom','Sable','Whistling Jack','Marisol','Flinders'];
+function specOffers(isl){
+ const keys=Object.keys(SPECS);
+ const i1=(hash2(isl.id*7+1,Math.floor(G.day/3))*keys.length)|0;
+ const i2=(hash2(isl.id*13+5,Math.floor(G.day/3))*keys.length)|0;
+ const out=[keys[i1]];
+ if(i2!==i1)out.push(keys[i2]);
+ return out.filter(k=>!G.spec[k]);
+}
+function specCount(){let n=0;for(const k in G.spec)if(G.spec[k])n++;return n;}
+function hireSpec(k,isl){
+ if(specCount()>=3)return toast('Three specialists is all the wardroom holds',true);
+ if(G.gold<60)return toast('Not enough gold',true);
+ G.gold-=60;
+ G.spec[k]={name:SPECN[(Math.random()*SPECN.length)|0]};
+ shipStats(G.ship);
+ toast(G.spec[k].name+' the '+SPECS[k].t+' signs on. ('+SPECS[k].w+'g/day)');
+ AU.coin();
+ renderStall(isl);updateHUD();
+ autosave();
+}
+function wagesDue(){
+ let w=G.crew*6;
+ for(const k in G.spec)if(G.spec[k])w+=SPECS[k].w;
+ if(G.spec.qm)w=Math.round(w*0.85);
+ return w;
+}
+const DRINKS=[
+ {n:'Bilge Grog',c:6,d:'+8 crew morale',f:()=>moraleAdd(8)},
+ {n:'Cap’n’s Courage',c:15,d:'Faster reloads until tomorrow',f:()=>{G.buffs.courage=G.day+1;}},
+ {n:'Miner’s Stew',c:12,d:'Swing a faster pick until tomorrow',f:()=>{G.buffs.stew=G.day+1;}},
+];
+
+/* ================= SMUGGLING / INSPECTIONS / BLACK MARKET ================= */
+function blackPrice(k,selling){
+ let m=selling?(1.25+Math.min(0.4,G.smug*0.015)):(0.55);
+ if(G.perks.blackmkt)m=selling?m*1.15:m*0.8;
+ if(G.spec.smug)m=selling?m*1.05:m*0.95;
+ if(G.wanted>=50&&selling)m*=1.1; /* pirates respect a black name */
+ return Math.max(1,Math.round(CONTRA[k].b*m));
+}
+function sellContra(k,n,p){
+ const have=G.inv[k]|0;
+ n=Math.min(n,have);
+ if(n<1)return;
+ G.inv[k]-=n;G.gold+=p*n;
+ G.smug+=n;G.stats.contra+=n;
+ AU.coin();
+ toast('Sold '+n+' '+ITEMNAME[k].toLowerCase()+' for '+(p*n)+'g, no questions asked');
+ questPing();titleTick();
+ updateHotbar();updateHUD();
+}
+function buyContra(k,p){
+ if(G.gold<p)return toast('Not enough gold',true);
+ if(cargoUsed()>=cargoCap())return toast('Hold is full',true);
+ G.gold-=p;give(k,1);
+ AU.coin();updateHUD();
+}
+function inspectionAt(isl){
+ if(!isl||!isl.fac)return;
+ if(isl.state&&isl.state.type==='lawless')return;
+ const contra=contraUsed();
+ if(contra<1)return;
+ let risk=0.5;
+ risk-=G.ship.smugCap>=contra?0.3:G.ship.smugCap*0.06;
+ if(G.spec.smug)risk-=0.15;
+ if(isl.state&&isl.state.type==='quarantined')risk+=0.2;
+ if(Math.random()>risk)return;
+ runInspection(isl);
+}
+function seizeContra(){
+ let seized=0;
+ for(const k of CKEYS){seized+=G.inv[k]|0;G.inv[k]=0;}
+ const fine=40+seized*12;
+ G.gold=Math.max(0,G.gold-fine);
+ crime('Caught smuggling — cargo seized',12);
+ toast(seized+' crate(s) seized and a '+fine+'g fine.',true);
+ failSmuggleJobs();
+ updateHotbar();updateHUD();
+}
+function falseFlagRisk(){
+ if(G.flyFlag&&G.flyFlag.indexOf('false:')===0&&Math.random()<0.35){
+  crime('Exposed flying false colours',14);
+  repAdd(G.flyFlag.slice(6),-15);
+  G.flyFlag='none';
+  toast('Your false colours are seen through!',true);
+ }
+}
+function runInspection(isl){
+ const contra=contraUsed();
+ const bribe=60+contra*10;
+ const btns=[
+  {t:'Submit to search',f:()=>{
+    if(G.ship.smugCap>=contra&&Math.random()<0.75){toast('Tapped bulkheads, nothing found. The compartments hold.');G.stats.slips++;}
+    else seizeContra();
+    falseFlagRisk();
+   }},
+  {t:'Bribe ('+bribe+'g)',f:()=>{
+    if(G.gold<bribe){toast('Too poor to bribe — they tear the hold apart',true);seizeContra();return;}
+    G.gold-=bribe;G.stats.bribes++;
+    toast('Coins change hands. No search today.');
+    updateHUD();
+   }},
+ ];
+ if(G.forged>0)btns.push({t:'Show forged papers ('+G.forged+' left)',f:()=>{
+   G.forged--;
+   if(Math.random()<0.75){toast('The papers pass. Barely.');G.stats.slips++;}
+   else{crime('Forged papers spotted',8);seizeContra();}
+  }});
+ btns.push({t:'Refuse & cast off',cls:'wax',f:()=>{
+   crime('Refused inspection',10);
+   spawnNavy();
+  }});
+ showDlg('Inspection at '+isl.name,
+  '<div class="card">The harbourmaster eyes your hold. '+contra+' crate(s) of contraband aboard'+(G.ship.smugCap?', '+G.ship.smugCap+' concealable':'')+'.</div>',btns);
+}
+
+/* ================= LEDGER / ROUTES ================= */
+function recordLedger(isl){
+ if(!isl.stall)return;
+ const e={day:G.day,buy:{},sell:{}};
+ for(const g of GKEYS){e.buy[g]=buyP(isl,g);e.sell[g]=sellP(isl,g);}
+ G.ledger[isl.id]=e;
+}
+const LCATS={all:null,food:['grain','sugar','rum'],luxury:['spices','silk'],ore:['iron','gold'],materials:['log']};
+let ledgCat='all',ledgView='prices';
+function openLedger(){
+ renderLedger();
+ openPanel('ledgM');
+}
+function routeDanger(isl){
+ const tags=[];
+ if(isl.state&&isl.state.type==='blockaded')tags.push('blockade');
+ if(G.war&&G.war.isl===isl.id)tags.push('war zone');
+ if(WX.kind==='storm')tags.push('storm');
+ if(G.wanted>=50)tags.push('hunted');
+ if(isl.state&&isl.state.type==='lawless')tags.push('pirates');
+ return tags;
+}
+function renderLedger(){
+ const tabs=[['prices','Prices'],['routes','Routes']];
+ const tb=$('ledgTabs');tb.innerHTML='';
+ tabs.forEach(([k,n])=>{
+  const d=document.createElement('div');d.className='tab'+(ledgView===k?' on':'');d.textContent=n;
+  d.onclick=()=>{ledgView=k;renderLedger();AU.sel();};
+  tb.appendChild(d);
+ });
+ const body=$('ledgBody');
+ const known=Object.keys(G.ledger).map(Number);
+ if(!known.length){body.innerHTML='<div class="card">No prices on record. Visit a market stall and the ledger writes itself.</div>';return;}
+ if(ledgView==='prices'){
+  let html='<div style="margin-bottom:6px">';
+  for(const c of Object.keys(LCATS))html+='<button data-c="'+c+'" '+(ledgCat===c?'class="gold"':'')+' style="font-size:1rem;margin-right:4px">'+c+'</button>';
+  html+='</div><table class="ledg"><tr><th>Port</th>';
+  const cats=LCATS[ledgCat]||GKEYS;
+  for(const g of cats)html+='<th>'+ITEMNAME[g]+'<br><span class="muted">buy/sell</span></th>';
+  html+='<th>Age</th></tr>';
+  for(const id of known){
+   const isl=W.isles.find(o=>o.id===id);
+   const e=G.ledger[id];
+   if(!isl||!e)continue;
+   const age=G.day-e.day;
+   html+='<tr'+(age>4?' class="stale"':'')+'><td>'+esc(isl.name)+(isl.state?' <span class="badge warn">'+STATES[isl.state.type].n+'</span>':'')+'</td>';
+   for(const g of cats)html+='<td>'+e.buy[g]+'/'+e.sell[g]+'</td>';
+   html+='<td>'+(age<1?'fresh':age+'d')+'</td></tr>';
+  }
+  html+='</table><div class="muted" style="margin-top:6px">Faded rows are stale — markets move. A chart table aboard records prices on every docking.</div>';
+  body.innerHTML=html;
+  body.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{ledgCat=b.getAttribute('data-c');renderLedger();});
+ }else{
+  if(!G.ship.chart){
+   body.innerHTML='<div class="card">Route planning wants a <b>chart table</b> aboard your ship. The shipwright sells them.</div>';
+   return;
+  }
+  const routes=[];
+  for(const a of known)for(const b of known){
+   if(a===b)continue;
+   const ea=G.ledger[a],eb=G.ledger[b];
+   const ia=W.isles.find(o=>o.id===a),ib=W.isles.find(o=>o.id===b);
+   if(!ia||!ib)continue;
+   for(const g of GKEYS){
+    const margin=eb.sell[g]-ea.buy[g];
+    if(margin<=0)continue;
+    const stale=Math.max(G.day-ea.day,G.day-eb.day);
+    routes.push({g,a:ia,b:ib,margin,profit:margin*cargoCap(),stale});
+   }
+  }
+  routes.sort((x,y)=>y.margin-x.margin);
+  let html='<div class="card"><h3>Best known runs (hold: '+cargoCap()+')</h3>';
+  if(!routes.length)html+='<div class="muted">No profitable pair on record yet.</div>';
+  for(const r of routes.slice(0,6)){
+   const danger=[...routeDanger(r.a),...routeDanger(r.b)];
+   html+='<div class="rowF" style="margin:4px 0"><span>'+ITEMNAME[r.g]+': '+esc(r.a.name)+' → '+esc(r.b.name)+
+    (r.stale>4?' <span class="badge">stale</span>':'')+
+    danger.map(d=>' <span class="badge warn">'+d+'</span>').join('')+
+    '</span><b>~'+r.margin+'g/crate ('+r.profit+'g full)</b></div>';
+  }
+  html+='</div><div class="muted">Click the big chart (M) to plot a course with distance and bearing.</div>';
+  body.innerHTML=html;
+ }
+}
+
+/* ================= PORT UPGRADES / WAREHOUSE ================= */
+const UPGR=[
+ {k:'dock',n:'Rebuilt docks',mats:{planks:40},gold:200,d:'Stock recovers faster'},
+ {k:'mkt',n:'Greater market',mats:{planks:30,stone:20},gold:300,d:'Deeper stocks, better selection'},
+ {k:'def',n:'Cannon towers',mats:{stone:20,cannon:2},gold:250,d:'Pirates shy away from these waters'},
+ {k:'wh',n:'Warehouse',mats:{planks:60},gold:400,d:'Store goods here for later'},
+];
+function portProgress(isl){
+ /* construction contracts chip away at whatever the port lacks */
+ const order=['dock','def','mkt','wh'];
+ for(const k of order){
+  if(!isl.up[k]){
+   isl.up[k]=1;
+   decoratePort(isl);
+   if(k==='mkt')for(const g of GKEYS)isl.ideal[g]=Math.round(isl.ideal[g]*1.2);
+   toast(isl.name+' grows: '+UPGR.find(u=>u.k===k).n+'!');
+   return;
+  }
+ }
+ isl.up.def=Math.min(3,(isl.up.def||0)+1);
+ toast(isl.name+'’s defenses thicken.');
+}
+function decoratePort(isl){
+ if(!isl.stall)return;
+ const st=isl.stall,h=st.y-1;
+ const n=(isl.up.dock|0)+(isl.up.mkt|0)+(isl.up.def|0)+(isl.up.wh|0);
+ const spots=[[3,0],[-3,0],[0,3],[0,-3]];
+ for(let i=0;i<Math.min(n,4);i++){
+  const [dx,dz]=spots[i];
+  vset(st.x+dx,h+2,st.z+dz,i===2?33:32); /* lanterns & a flag as the port grows */
+ }
+ if(isl.up.def)for(const [dx,dz] of [[4,4],[-4,-4]])vset(st.x+dx,h+2,st.z+dz,4);
+ DIRTY.add(Math.floor(st.x/CHS)+'|'+Math.floor(st.z/CHS));
+}
+
+/* ================= DOCKING / DEPARTURE ================= */
+function dockedIsle(){return G.dockIsle!=null?W.isles.find(o=>o.id===G.dockIsle):null;}
+function onDock(){
+ const s=G.ship;
+ let best=null,bd=30;
+ for(const isl of W.isles){
+  if(!isl.dock)continue;
+  const d=Math.hypot(isl.dock.x-s.ax,isl.dock.z-s.az);
+  if(d<bd){bd=d;best=isl;}
+ }
+ G.dockIsle=best?best.id:null;
+ if(best){
+  best.disc=true;
+  G.lastIsle=best.name;
+  if(!G.visitedP[best.id]){
+   G.visitedP[best.id]=1;
+   G.stats.portsVisited++;
+   for(const isl of W.isles)if(Math.hypot(isl.cx-best.cx,isl.cz-best.cz)<70)isl.disc=true;
+  }
+  if(best.stall){
+   if(G.ship.chart)recordLedger(best);
+   genJobs(best);
+  }
+  moraleAdd(3);
+  let note='The '+G.shipName+' lies at '+best.name+'.';
+  if(best.state)note+=' The port is '+STATES[best.state.type].n.toLowerCase()+'.';
+  toast(note);
+  if(best.state&&best.state.type==='quarantined'&&Math.random()<0.35){
+   moraleAdd(-6);
+   toast('Quarantine wardens fumigate your hold — the crew grumbles.',true);
+  }
+  inspectionAt(best);
+  jobsAtDock(best);
+ }
+ questPing();titleTick();
+ autosave();
+}
+function onSetSail(){
+ G.dockIsle=null;
+ for(const isl of W.isles){
+  if(isl.state&&isl.state.type==='blockaded')isl.state.warned=false;
+ }
+ questPing();
+ autosave();
+}
+
+/* ================= FLAGS ================= */
+function flagDialog(fromCove){
+ const btns=[{t:'Strike colours (none)',f:()=>{G.flyFlag='none';toast('No colours at the mast.');}}];
+ for(const k of FKEYS){
+  const f=FACTIONS[k];
+  if(k===G.fac)btns.push({t:'Fly '+f.n,f:()=>{G.flyFlag=k;toast('Your true colours fly.');}});
+  else if(fromCove||G.perks.blackmkt)btns.push({t:'False colours: '+f.n,f:()=>{G.flyFlag='false:'+k;toast('False colours run up. Risky, captain.');}});
+ }
+ btns.push({t:'Never mind',f:()=>{}});
+ showDlg('Colours at the mast','<div class="card">Flags tell the sea who you are — or who you claim to be. False colours may be seen through at inspections.</div>',btns);
+}
+
+/* ================= CREW CHATTER ================= */
+function crewNear(r){
+ let best=null,bd=r;
+ for(const p of CREWF){
+  const d=Math.hypot(p.body.position.x-P.x,p.body.position.z-P.z);
+  if(d<bd){bd=d;best=p;}
+ }
+ return best;
+}
+function greetCrew(){
+ const lines=[];
+ if(WX.kind==='storm')lines.push('“This blow’ll get worse before it gets better.”');
+ if(WX.kind==='fog')lines.push('“Keep a man at the bow — reefs love a fog.”');
+ if(G.morale<30)lines.push('“The lads talk, cap’n. Pay and a hot meal’d quiet ’em.”');
+ if(G.wanted>=25)lines.push('“Navy’s asking after us in every port, I hear.”');
+ if(G.jobs.length)lines.push('“That contract won’t finish itself, beggin’ your pardon.”');
+ const cove=W.coves.find(c=>!c.found);
+ if(cove&&Math.random()<0.3)lines.push('“They say there’s a hidden anchorage out '+isleNameById(cove.isle)+' way…”');
+ lines.push('“Fine ship, cap’n. Finer every day.”','“I knew a man who knew Blackbeard’s cook.”','“Wind’s shifting — feel it?”');
+ toast('Crew: '+lines[(Math.random()*lines.length)|0]);
+}
+
+/* ================= SAVE / LOAD ================= */
+const SAVE_PREFIX='snp.save.';
+function slotIndex(){try{return JSON.parse(localStorage.getItem('snp.slots')||'[]');}catch(e){return [];}}
+function writeSlotIndex(ix){try{localStorage.setItem('snp.slots',JSON.stringify(ix));}catch(e){}}
+function freeSlot(){
+ const ix=slotIndex();
+ for(let i=0;i<6;i++)if(!ix.some(e=>e.slot===i))return i;
+ ix.sort((a,b)=>a.when-b.when);
+ return ix[0].slot;
+}
+function saveBlob(){
+ const s=G.ship;
+ return {v:1,when:Date.now(),seed:W.seed,fac:G.fac,day:G.day,time:G.time,gold:G.gold,
+  mode:G.mode,shipName:G.shipName,flyFlag:G.flyFlag,hot:G.hot,hotPage:G.hotPage,lastIsle:G.lastIsle,
+  dockIsle:G.dockIsle,visitedP:G.visitedP,
+  p:{x:P.x,y:P.y,z:P.z,yaw:P.yaw,pitch:P.pitch},
+  ship:{blocks:[...s.blocks],ax:s.ax,az:s.az,yawSnap:s.yawSnap,sailing:s.sailing,x:s.x,z:s.z,yaw:s.yaw,
+   hp:s.hp,sailDmg:s.sailDmg,gunsOut:s.gunsOut},
+  inv:G.inv,crew:G.crew,spec:G.spec,morale:G.morale,wanted:G.wanted,crimes:G.crimes,rep:G.rep,
+  smug:G.smug,forged:G.forged,aggro:G.aggro,kills:G.kills,stats:G.stats,titles:G.titles,relics:G.relics,
+  perks:G.perks,quests:G.quests,jobs:G.jobs,tmap:G.tmap,buffs:G.buffs,course:G.course,fakeX:G.fakeX,
+  ledger:G.ledger,jobseq:JOBSEQ,war:G.war,
+  wx:{wdir:WX.wdir,wstr:WX.wstr,kind:WX.kind,until:WX.until},
+  ed:[...ED],
+  treasures:W.treasures,
+  legends:W.legends.map(l=>({found:l.found})),
+  coves:W.coves.map(c=>({found:c.found,rumor:c.rumor})),
+  isles:W.isles.map(i=>({id:i.id,disc:i.disc,stock:i.stock,state:i.state,jobs:i.jobs,jobsDay:i.jobsDay,up:i.up,store:i.store})),
+  npcs:G.pirates.filter(p=>!p.dying&&!p.fade&&p.kind!=='ghost'&&p.kind!=='trader').map(p=>({
+   kind:p.kind,cls:p.clsName,x:p.x,z:p.z,yaw:p.yaw,hp:p.hp,neutral:p.neutral,name:p.name,
+   surrendered:p.surrendered,side:p.side,isl:p.isl,post:p.post,postA:p.postA,untilDay:p.untilDay,
+   distress:p.distress,jobId:p.jobId,bounty:p.bounty,escortJob:p.escortJob,pass:p.pass,
+   label:p.bar?p.bar.label:null})),
+ };
+}
+function persistSave(slot){
+ if(!G)return false;
+ try{
+  const blob=saveBlob();
+  localStorage.setItem(SAVE_PREFIX+slot,JSON.stringify(blob));
+  const ix=slotIndex().filter(e=>e.slot!==slot);
+  ix.push({slot,name:G.shipName,when:blob.when,fac:G.fac,day:G.day,gold:G.gold,
+   blocks:G.ship.blocks.size,shipName:G.shipName,lastIsle:G.lastIsle||'open sea'});
+  writeSlotIndex(ix);
+  return true;
+ }catch(e){return false;}
+}
+let saveCD=0,savePend=false;
+function autosave(){if(G&&G.slot!==undefined)savePend=true;}
+function saveFlush(dt){
+ saveCD-=dt;
+ if(savePend&&saveCD<=0){
+  savePend=false;saveCD=2.5;
+  persistSave(G.slot);
+ }
+}
+function manualSave(){
+ if(!G)return;
+ if(persistSave(G.slot))toast('Voyage saved — slot '+(G.slot+1)+' ('+G.shipName+')');
+ else toast('Could not save (storage blocked?)',true);
+}
+function loadGame(slot){
+ let d=null;
+ try{d=JSON.parse(localStorage.getItem(SAVE_PREFIX+slot)||'null');}catch(e){}
+ if(!d)return;
+ startGame(d.fac,d.seed,d,slot);
+}
+function applySave(d){
+ G.day=d.day;G.time=d.time;G.gold=d.gold;G.shipName=d.shipName||G.shipName;G.flyFlag=d.flyFlag||'none';
+ G.hot=d.hot|0;G.hotPage=d.hotPage|0;HOTKEYS=HOTPAGES[G.hotPage]||HOTPAGES[0];
+ G.lastIsle=d.lastIsle;G.dockIsle=d.dockIsle!=null?d.dockIsle:null;
+ G.visitedP=d.visitedP||{};
+ G.inv=d.inv||{};G.crew=d.crew|0;G.spec=d.spec||{};
+ G.morale=d.morale!=null?d.morale:70;
+ G.wanted=d.wanted|0;G.crimes=d.crimes||[];
+ if(d.rep)G.rep=d.rep;
+ G.smug=d.smug|0;G.forged=d.forged|0;G.aggro=d.aggro|0;G.kills=d.kills|0;
+ G.stats=Object.assign(initStats(),d.stats||{});
+ G.stats.jobs=Object.assign({},(d.stats&&d.stats.jobs)||{});
+ G.titles=d.titles||[];G.relics=d.relics||[];G.perks=d.perks||{};
+ G.quests=Object.assign(initQuests(),d.quests||{});
+ if(!G.quests.maps)G.quests.maps={pieces:0,site:null};
+ G.jobs=d.jobs||[];G.tmap=d.tmap||null;G.buffs=d.buffs||{};G.course=d.course||null;G.fakeX=d.fakeX||null;
+ G.ledger=d.ledger||{};G.war=d.war||null;
+ JOBSEQ=Math.max(JOBSEQ,d.jobseq||1);
+ if(d.wx){WX.wdir=d.wx.wdir;WX.wstr=d.wx.wstr;WX.kind=d.wx.kind;WX.until=d.wx.until;}
+ ED=new Map(d.ed||[]);
+ if(d.treasures)W.treasures=d.treasures;
+ (d.legends||[]).forEach((l,i)=>{if(W.legends[i])W.legends[i].found=l.found;});
+ (d.coves||[]).forEach((c,i)=>{if(W.coves[i]){W.coves[i].found=c.found;W.coves[i].rumor=c.rumor;}});
+ for(const si of d.isles||[]){
+  const isl=W.isles.find(o=>o.id===si.id);
+  if(!isl)continue;
+  isl.disc=!!si.disc;
+  if(si.stock)isl.stock=si.stock;
+  isl.state=si.state||null;
+  isl.jobs=si.jobs||null;
+  isl.jobsDay=si.jobsDay!=null?si.jobsDay:-99;
+  if(si.up)isl.up=si.up;
+  if(si.store)isl.store=si.store;
+  if(isl.up&&(isl.up.dock||isl.up.mkt||isl.up.def||isl.up.wh))decoratePort(isl);
+ }
+ /* the ship herself */
+ const s=G.ship,sv=d.ship;
+ s.blocks=new Map(sv.blocks);
+ s.ax=sv.ax;s.az=sv.az;s.yawSnap=sv.yawSnap|0;
+ s.sailing=!!sv.sailing;
+ s.x=sv.x;s.z=sv.z;s.yaw=sv.yaw||0;
+ s.sailDmg=sv.sailDmg|0;s.gunsOut=sv.gunsOut|0;
+ G.mode=s.sailing?'sail':'walk';
+ rebuildShip();
+ s.hp=clamp(sv.hp,1,s.maxHp);
+ P.x=d.p.x;P.y=d.p.y;P.z=d.p.z;P.yaw=d.p.yaw;P.pitch=d.p.pitch;
+ if(s.sailing){ensureCaptain();CAPB.visible=true;CAPH.visible=true;s.cells.clear();}
+ else computeCells();
+ /* the rest of the sea */
+ for(const nd of d.npcs||[]){
+  if(!CLS[nd.cls])continue;
+  const pr=spawnShipNPC(nd.kind,nd.cls,nd.x,nd.z,nd.label?{label:nd.label}:undefined);
+  pr.yaw=nd.yaw||0;
+  pr.hp=Math.min(nd.hp,pr.maxHp);
+  pr.neutral=!!nd.neutral;pr.name=nd.name||null;
+  pr.surrendered=!!nd.surrendered;pr.side=nd.side;pr.isl=nd.isl;
+  pr.post=nd.post;pr.postA=nd.postA||0;pr.untilDay=nd.untilDay;
+  pr.distress=!!nd.distress;pr.jobId=nd.jobId;pr.bounty=!!nd.bounty;
+  pr.escortJob=nd.escortJob;pr.pass=!!nd.pass;
+ }
+}
+function buildSaves(){
+ const area=$('saveArea');
+ if(!area)return;
+ const ix=slotIndex().sort((a,b)=>b.when-a.when);
+ area.innerHTML='';
+ if(!ix.length)return;
+ const latest=ix[0];
+ const cont=document.createElement('button');
+ cont.className='gold';cont.id='contBtn';
+ cont.textContent='⚓ Continue — '+(latest.shipName||'Slot '+(latest.slot+1))+' · Day '+latest.day;
+ cont.onclick=()=>{AU.init();loadGame(latest.slot);};
+ area.appendChild(cont);
+ for(const e of ix){
+  const row=document.createElement('div');row.className='slotRow';
+  const fn=FACTIONS[e.fac]?FACTIONS[e.fac].n:e.fac;
+  const meta=document.createElement('div');meta.className='meta';
+  meta.innerHTML='<b>'+esc(e.shipName||('Slot '+(e.slot+1)))+'</b> — '+esc(fn)+
+   '<br><span class="muted">Day '+e.day+' · '+e.gold+'g · '+e.blocks+' ship blocks · last at '+esc(e.lastIsle||'open sea')+'</span>';
+  row.appendChild(meta);
+  const lb=document.createElement('button');lb.textContent='Set sail';
+  lb.onclick=()=>{AU.init();loadGame(e.slot);};
+  const db=document.createElement('button');db.className='wax';db.textContent='✕';
+  db.onclick=()=>{
+   try{localStorage.removeItem(SAVE_PREFIX+e.slot);}catch(err){}
+   writeSlotIndex(slotIndex().filter(o=>o.slot!==e.slot));
+   buildSaves();
+  };
+  row.appendChild(lb);row.appendChild(db);
+  area.appendChild(row);
+ }
+}
+
+/* ================= CAPTAIN'S PROFILE ================= */
+const SHIPNAMES=['The Salty Gull','Black Meridian','Crimson Wake','Sea Lantern','Wandering Doubloon',
+ 'Kraken’s Luck','Iron Tide','Morning Star','The Pelican','Dancing Marlin','Gull’s Revenge','The Thirsty Compass'];
+function randShipName(){return SHIPNAMES[(Math.random()*SHIPNAMES.length)|0];}
+function initStats(){
+ return {mined:0,built:0,bought:0,sold:0,soldAbroad:0,tradeProfit:0,lootGold:0,ore:0,
+  pirateKills:0,merchKills:0,navyKills:0,ghosts:0,serpents:0,plundered:0,
+  portsVisited:0,chests:0,legends:0,rescues:0,coves:0,crimes:0,contra:0,
+  bribes:0,slips:0,jobsDone:0,jobs:{}};
+}
+function initQuests(){return {tut:0,league:0,crown:0,brotherhood:0,compact:0,maps:{pieces:0,site:null}};}
+const ENDGOALS=[
+ ['Found a trade company','3 warehouses funded + 10,000g trade profit',()=>W.isles.filter(i=>i.up&&i.up.wh).length>=3&&G.stats.tradeProfit>=10000],
+ ['Pirate Lord','Brotherhood questline + 12 merchant sinkings',()=>(G.quests.brotherhood|0)>=QLINES.brotherhood.steps.length&&G.stats.merchKills>=12],
+ ['Royal Charter','Crown questline + Trusted with the Crown + a clean name',()=>(G.quests.crown|0)>=QLINES.crown.steps.length&&(G.rep.crown||0)>=60&&G.wanted<10],
+ ['Master of the Chart','Discover every isle and every cove',()=>W.isles.every(i=>i.disc)&&W.coves.every(c=>c.found)],
+ ['A Legend Afloat','A ship of 60+ blocks, 8+ sails, 8+ cannons',()=>G.ship.blocks.size>=60&&G.ship.sails>=8&&G.ship.cannons.length>=8],
+];
+function openProfile(){
+ titleTick();
+ const st=G.stats;
+ let html='<div class="card"><h3>'+esc(G.shipName)+'</h3>'+
+  '<div class="rowF"><span>Captain under the '+FACTIONS[G.fac].n+'</span><button id="renameB">Rename ship</button></div>'+
+  '<div class="muted">Colours: '+(G.flyFlag==='none'?'none':(G.flyFlag.indexOf('false:')===0?'FALSE — '+FACTIONS[G.flyFlag.slice(6)].n:FACTIONS[G.flyFlag].n))+'</div></div>';
+ html+='<div class="card"><h3>Titles</h3>'+(G.titles.length?G.titles.map(t=>'<span class="badge gold">'+esc(t)+'</span>').join(' '):'<span class="muted">None yet. The sea is watching.</span>')+'</div>';
+ html+='<div class="card"><h3>Standing</h3>';
+ for(const k of FKEYS){
+  const v=G.rep[k]||0;
+  html+='<div class="rowF"><span>'+FACTIONS[k].n+'</span><b>'+repLvlName(v)+' ('+v+')</b></div>';
+ }
+ html+='<div class="rowF"><span>Smuggler’s name</span><b>'+(G.smug>=20?'Respected':G.smug>=8?'Known':G.smug>0?'Whispered':'None')+'</b></div></div>';
+ html+='<div class="card"><h3>The law</h3><div class="rowF"><span>Wanted level</span><b>'+wantedName()+' ('+Math.round(G.wanted)+')</b></div>';
+ if(G.crimes.length){
+  html+='<div class="muted" style="margin-top:4px">Last known crimes:</div>';
+  for(const c of G.crimes.slice(-5).reverse())html+='<div class="muted">· Day '+c.d+': '+esc(c.t)+'</div>';
+ }
+ html+='</div>';
+ html+='<div class="card"><h3>The log</h3><div class="statGrid">'+
+  '<div>Gold earned trading <b>'+st.tradeProfit+'</b></div>'+
+  '<div>Ships sunk <b>'+(st.pirateKills+st.merchKills+st.navyKills)+'</b></div>'+
+  '<div>Pirates <b>'+st.pirateKills+'</b></div>'+
+  '<div>Merchants <b>'+st.merchKills+'</b></div>'+
+  '<div>Navy <b>'+st.navyKills+'</b></div>'+
+  '<div>Ports found <b>'+st.portsVisited+'</b></div>'+
+  '<div>Chests dug <b>'+st.chests+'</b></div>'+
+  '<div>Contracts done <b>'+st.jobsDone+'</b></div>'+
+  '<div>Contraband moved <b>'+st.contra+'</b></div>'+
+  '<div>Crimes <b>'+st.crimes+'</b></div>'+
+  '<div>Souls rescued <b>'+st.rescues+'</b></div>'+
+  '<div>Blocks mined <b>'+st.mined+'</b></div>'+
+  '<div>Blocks built <b>'+st.built+'</b></div>'+
+  '<div>Coves found <b>'+st.coves+'</b></div>'+
+  '<div>Relics <b>'+G.relics.length+'</b></div>'+
+  '</div></div>';
+ if(G.relics.length)html+='<div class="card"><h3>Relics</h3>'+G.relics.map(r=>'<div class="muted">· '+esc(r)+'</div>').join('')+'</div>';
+ html+='<div class="card"><h3>Crew</h3><div class="rowF"><span>Hands: '+G.crew+'/'+G.ship.crewMax+' · morale '+moraleName()+' ('+Math.round(G.morale)+')</span></div>';
+ for(const k in G.spec){
+  if(!G.spec[k])continue;
+  html+='<div class="rowF"><span>'+esc(G.spec[k].name)+' — '+SPECS[k].t+' ('+SPECS[k].w+'g/day)</span><button data-fire="'+k+'">Dismiss</button></div>';
+ }
+ html+='</div>';
+ html+='<div class="card"><h3>Questlines</h3>';
+ for(const key in QLINES){
+  const ql=QLINES[key];
+  const stp=G.quests[key]|0;
+  const locked=ql.fac&&ql.fac!==G.fac&&(G.rep[ql.fac]||0)<10;
+  if(stp>=ql.steps.length)html+='<div class="rowF"><span>'+ql.n+'</span><b class="up">complete</b></div>';
+  else if(locked)html+='<div class="rowF muted"><span>'+ql.n+'</span><span>needs standing 10+</span></div>';
+  else html+='<div class="rowF"><span>'+ql.n+' ('+stp+'/'+ql.steps.length+')</span><span class="muted">'+esc(ql.steps[stp].d)+'</span></div>';
+ }
+ if(G.quests.maps.pieces>0)html+='<div class="rowF"><span>Torn map</span><b>'+G.quests.maps.pieces+'/3 pieces'+(G.quests.maps.site?' — '+esc(G.quests.maps.site)+' marked!':'')+'</b></div>';
+ html+='</div>';
+ html+='<div class="card"><h3>Long voyages (endgame)</h3>';
+ for(const [n,d,c] of ENDGOALS)html+='<div class="rowF"><span>'+n+'</span>'+(c()?'<b class="up">achieved!</b>':'<span class="muted">'+d+'</span>')+'</div>';
+ html+='</div>';
+ const body=$('profBody');
+ body.innerHTML=html;
+ const rb=body.querySelector('#renameB');
+ if(rb)rb.onclick=()=>{
+  showDlg('Rename your ship','<input id="shipNm" maxlength="28" style="font-family:inherit;font-size:1.2rem;background:var(--slot);border:2px solid #000;color:var(--hi);padding:.3rem .6rem;width:100%" value="'+esc(G.shipName)+'">',
+   [{t:'Christen her',f:()=>{
+     const v=$('shipNm');
+     if(v&&v.value.trim()){G.shipName=v.value.trim().slice(0,28);toast('She is the '+G.shipName+' now and ever.');updateHUD();autosave();}
+    }},{t:'Belay that',f:()=>{}}]);
+  setTimeout(()=>{openProfile();},50);
+ };
+ body.querySelectorAll('button[data-fire]').forEach(b=>b.onclick=()=>{
+  const k=b.getAttribute('data-fire');
+  if(G.spec[k]){toast(G.spec[k].name+' takes their sea-bag ashore.');G.spec[k]=null;shipStats(G.ship);openProfile();}
+ });
+ openPanel('profM');
+}
 
 /* ---------------- toasts / dialogs ---------------- */
 function toast(msg,bad){
@@ -2206,9 +4183,9 @@ function updateHUD(){
  $('goldV').textContent=G.gold;
  $('dayV').textContent=G.day;
  $('cargoV').textContent=cargoUsed()+'/'+cargoCap();
- $('crewV').textContent=G.crew;
+ $('crewV').textContent=G.crew+'/'+(G.ship.crewMax||4)+(G.crew>0?' · '+moraleName():'');
  const f=FACTIONS[G.fac];
- $('facChip').textContent=f.n;
+ $('facChip').textContent=f.n+(G.titles.length?' · '+G.titles[G.titles.length-1]:'');
  $('facChip').style.color=f.c==='#2e2e34'?'#cfd2da':f.c;
  const s=G.ship;
  const chip=$('shipChip');
@@ -2218,12 +4195,24 @@ function updateHUD(){
  $('hpBar').style.width=(r*100)+'%';
  $('hpBar').style.background=r>0.5?'var(--good)':r>0.25?'var(--gold)':'var(--bad)';
  $('spdV').textContent=Math.round(s.spd*2);
+ /* wind */
+ const AR=['→','↘','↓','↙','←','↖','↑','↗'];
+ const wi=((Math.round(WX.wdir/(Math.PI/4)))%8+8)%8;
+ $('windV').textContent=AR[wi]+' '+(WX.wstr<0.15?'calm':WX.wstr<0.45?'light':WX.wstr<0.8?'fresh':'gale')+(WX.kind!=='clear'?' · '+WX.kind:'');
+ /* the law */
+ $('wantChip').classList.toggle('hidden',G.wanted<10);
+ $('wantV').textContent=wantedName();
+ /* objective */
+ const ob=objectiveText();
+ $('objChip').classList.toggle('hidden',!ob);
+ $('objV').textContent=ob;
 }
 let HOTCNV=[];
 function buildHotbar(){
  const hb=$('hotbar');hb.innerHTML='';HOTCNV=[];
  HOTKEYS.forEach((it,i)=>{
   const sl=document.createElement('div');sl.className='hslot'+(i===G.hot?' on':'');
+  sl.title=ITEMNAME[it]||it;
   const cn=document.createElement('canvas');cn.width=16;cn.height=16;
   cn.getContext('2d').drawImage(iconFor(it),0,0);
   sl.appendChild(cn);
@@ -2232,14 +4221,20 @@ function buildHotbar(){
   sl.onclick=()=>{G.hot=i;AU.sel();updateHotbar();};
   hb.appendChild(sl);HOTCNV.push(ct);
  });
+ const pg=document.createElement('button');
+ pg.id='hotPage';
+ pg.textContent=(G.hotPage+1)+'⇄';
+ pg.title='Cycle block pages (Tab)';
+ pg.onclick=()=>{G.hotPage=(G.hotPage+1)%HOTPAGES.length;HOTKEYS=HOTPAGES[G.hotPage];buildHotbar();AU.sel();};
+ hb.appendChild(pg);
  updateHotbar();
 }
 function updateHotbar(){
  if(!G)return;
  const hb=$('hotbar');
- [...hb.children].forEach((sl,i)=>{
+ [...hb.querySelectorAll('.hslot')].forEach((sl,i)=>{
   sl.classList.toggle('on',i===G.hot);
-  HOTCNV[i].textContent=G.inv[HOTKEYS[i]]|0;
+  if(HOTCNV[i])HOTCNV[i].textContent=G.inv[HOTKEYS[i]]|0;
  });
  $('cargoV').textContent=cargoUsed()+'/'+cargoCap();
 }
@@ -2263,6 +4258,7 @@ function buildTitle(){
  }
  $('seedIn').value=randSeed();
  $('seedRnd').onclick=()=>{$('seedIn').value=randSeed();AU.sel();};
+ buildSaves();
 }
 function randSeed(){
  const A=['salty','black','golden','misty','crimson','lucky','drowned','wandering'];
@@ -2271,10 +4267,13 @@ function randSeed(){
 }
 
 /* ---------------- start ---------------- */
-function startGame(fac,seed){
+function startGame(fac,seed,saved,slot){
  if(G){
   for(const pr of G.pirates){scene.remove(pr.mesh);if(pr.bar)scene.remove(pr.bar.spr);}
   for(const l of G.loots)scene.remove(l.mesh);
+  for(const f of G.flot)scene.remove(f.mesh);
+  for(const wk of G.wrecks)scene.remove(wk.mesh);
+  if(G.serp)for(const m of G.serp.segs)scene.remove(m);
   for(const v of VNPCS)rmPerson(v.p);
   VNPCS=[];
   for(const p of CREWF)rmPerson(p);
@@ -2282,13 +4281,34 @@ function startGame(fac,seed){
   if(G.ship&&G.ship.mesh){scene.remove(G.ship.mesh);G.ship.mesh.geometry.dispose();}
  }
  genWorld(seed);
- G={fac,gold:FACTIONS[fac].gold,day:1,time:DAY*0.05,mode:'walk',hot:0,crew:0,kills:0,aggro:0,
-  inv:{planks:24,log:4,sail:1,grain:4},pirates:[],loots:[],tmap:null,stallIsle:null,wage:0};
+ G={fac,gold:FACTIONS[fac].gold,day:1,time:DAY*0.05,mode:'walk',hot:0,hotPage:0,crew:0,kills:0,aggro:0,
+  inv:{planks:24,log:4,sail:1,grain:4},pirates:[],loots:[],flot:[],wrecks:[],serp:null,
+  tmap:null,stallIsle:null,wage:0,dockIsle:null,lastIsle:null,visitedP:{},
+  shipName:randShipName(),flyFlag:'none',
+  rep:{league:0,crown:0,brotherhood:0,compact:0},wanted:0,crimes:[],smug:0,forged:0,
+  morale:70,spec:{},jobs:[],quests:initQuests(),stats:initStats(),titles:[],relics:[],perks:{},
+  ledger:{},course:null,buffs:{},fakeX:null,war:null,
+  slot:slot!==undefined?slot:freeSlot()};
+ G.rep[fac]=30;
+ if(fac==='crown')G.rep.brotherhood=-25;
+ if(fac==='brotherhood')G.rep.crown=-25;
+ HOTKEYS=HOTPAGES[0];
+ EVT.t=50;
+ WX.kind='clear';WX.until=G.time+90;WX.fog=0.012;
  const home=W.isles.find(i=>i.fac===fac)||W.isles[0];
  home.disc=true;
  for(const isl of W.isles)if(Math.hypot(isl.cx-home.cx,isl.cz-home.cz)<90)isl.disc=true;
  G.ship=makeShip(fac,0,0,0);
- respawnShip(home);
+ if(saved){
+  respawnShip(home); /* builds a valid baseline before the save overwrites it */
+  applySave(saved);
+ }else{
+  respawnShip(home);
+  G.visitedP[home.id]=1;
+  G.stats.portsVisited=1;
+  G.lastIsle=home.name;
+  G.dockIsle=home.id;
+ }
  /* clear leftovers from a previous run */
  for(const ch of CHUNKS.values())if(ch.mesh){scene.remove(ch.mesh);ch.mesh.geometry.dispose();}
  CHUNKS.clear();
@@ -2299,9 +4319,15 @@ function startGame(fac,seed){
  $('hud').classList.add('on');
  if(TOUCH)$('touchUI').classList.add('on');
  buildHotbar();updateHUD();miniTick(0,true);
- toast('Welcome to '+home.name+'. The stall with the striped awning trades.');
- setTimeout(()=>toast('Mine blocks (hold), place from your hotbar, and build onto your ship at anchor.'),2600);
- setTimeout(()=>toast('Step to the helm and press '+(TOUCH?'USE':'F')+' to set sail.'),5600);
+ if(saved){
+  toast('The '+G.shipName+' sails again. Day '+G.day+', '+(G.lastIsle?'last at '+G.lastIsle:'open water')+'.');
+ }else{
+  persistSave(G.slot);
+  buildSaves();
+  toast('Welcome to '+home.name+'. The stall with the striped awning trades.');
+  setTimeout(()=>toast('Mine blocks (hold), place from your hotbar, and build onto your ship at anchor.'),2600);
+  setTimeout(()=>toast('Step to the helm and press '+(TOUCH?'USE':'F')+' to set sail.'),5600);
+ }
 }
 
 /* ---------------- stall / trade panel ---------------- */
@@ -2316,17 +4342,38 @@ function nearestStallIsle(){
  return bd<5?best:null;
 }
 function openStall(isl){
+ /* a port remembers who you are to its masters */
+ if(isl.fac&&repOf(isl)<=-60&&isl.bribedDay!==G.day&&!(isl.state&&isl.state.type==='lawless')){
+  showDlg('No trade for you','<div class="card">'+FACTIONS[isl.fac].n+' wants nothing to do with you here. The stall-keeper looks through you.</div>',[
+   {t:'Grease palms (100g)',f:()=>{
+     if(G.gold<100)return toast('Not enough gold',true);
+     G.gold-=100;isl.bribedDay=G.day;updateHUD();openStall(isl);
+    }},
+   {t:'Leave',f:()=>{}},
+  ]);
+  return;
+ }
  G.stallIsle=isl.id;
  isl.disc=true;
+ recordLedger(isl);
+ genJobs(isl);
  $('tName').textContent=isl.name;
- $('tFac').textContent=isl.fac?FACTIONS[isl.fac].n:'free port';
+ let facTxt=isl.fac?FACTIONS[isl.fac].n+' — '+repLvlName(repOf(isl)):'free port';
+ if(isl.state)facTxt+=' · '+STATES[isl.state.type].n;
+ $('tFac').textContent=facTxt;
  curTab='market';
  renderStall(isl);
  openPanel('tradeM');
  AU.bell();
 }
+function stallTabs(isl){
+ const tabs=[['market','Market'],['yard','Shipwright'],['tavern','Tavern'],['jobs','Jobs']];
+ tabs.push(['port','Port']);
+ if(isl.state&&isl.state.type==='lawless')tabs.push(['black','Black Mkt']);
+ return tabs;
+}
 function renderStall(isl){
- const tabs=[['market','Market'],['yard','Shipwright'],['tavern','Tavern']];
+ const tabs=stallTabs(isl);
  const tb=$('tTabs');tb.innerHTML='';
  tabs.forEach(([k,n])=>{
   const d=document.createElement('div');d.className='tab'+(curTab===k?' on':'');d.textContent=n;
@@ -2336,7 +4383,137 @@ function renderStall(isl){
  const body=$('tBody');
  if(curTab==='market')renderMarket(isl,body);
  else if(curTab==='yard')renderYard(isl,body);
+ else if(curTab==='jobs')renderJobs(isl,body);
+ else if(curTab==='port')renderPort(isl,body);
+ else if(curTab==='black')renderBlack(isl,body);
  else renderTavern(isl,body);
+}
+function renderJobs(isl,body){
+ const jobs=genJobs(isl);
+ let html='';
+ if(isl.state)html+='<div class="card jobCard"><b>'+STATES[isl.state.type].n+':</b> '+
+  ({starving:'The granaries are empty. Food is worth its weight in silver.',
+    flooded:'The spring tide drowned the docks. Timber and hands wanted.',
+    blockaded:'Hostile sail rings the port. Prices climb by the hour.',
+    lawless:'No law here past the tide line. Mind your purse.',
+    prosperous:'Trade booms. Stock is deep and coin flows.',
+    raided:'Raiders hit a week past. The town rebuilds.',
+    quarantined:'Sickness ashore. The wardens burn sulphur on the quay.',
+    festival:'Festival days! Rum and silk command silly prices.'}[isl.state.type]||'')+'</div>';
+ html+='<div class="card"><h3>The notice board</h3>';
+ if(!jobs.length)html+='<div class="muted">Nothing posted today. Try again in a few days.</div>';
+ html+='</div>';
+ body.innerHTML=html;
+ const board=body.querySelector('.card:last-child');
+ for(const j of jobs){
+  const c=document.createElement('div');
+  c.className='card jobCard';
+  const left=j.dl-G.day;
+  c.innerHTML='<div class="rowF"><span><span class="badge">'+JOBT[j.t]+'</span>'+esc(j.txt)+'</span></div>'+
+   '<div class="rowF"><span class="muted">Pay <b>'+j.pay+'g</b> · '+left+' day(s)'+(j.rep?' · standing +'+j.rep:'')+(j.srep?' · <span class="badge warn">smuggling</span>':'')+'</span><button class="gold">Accept</button></div>';
+  c.querySelector('button').onclick=()=>{acceptJob(j,isl);renderStall(isl);};
+  board.appendChild(c);
+ }
+ if(G.jobs.length){
+  const mine=document.createElement('div');
+  mine.className='card';
+  mine.innerHTML='<h3>Your contracts</h3>';
+  for(const j of G.jobs){
+   const row=document.createElement('div');
+   row.className='card jobCard active';
+   const left=j.dl-G.day;
+   let prog='';
+   if(j.t==='delivery'||j.t==='smuggle')prog=' · '+Math.min(j.n,G.inv[j.good]|0)+'/'+j.n+' aboard';
+   if(j.t==='construction')prog=' · '+Object.entries(j.mats).map(([k,v])=>Math.min(v,G.inv[k]|0)+'/'+v+' '+ITEMNAME[k].toLowerCase()).join(', ');
+   if(j.t==='bounty')prog=j.got?' · target sunk!':' · target at large';
+   if(j.t==='salvage')prog=j.got?' · cargo recovered!':'';
+   row.innerHTML='<div class="rowF"><span><span class="badge">'+JOBT[j.t]+'</span>'+esc(j.txt)+prog+'</span></div>'+
+    '<div class="rowF"><span class="muted">'+(left>=0?left+' day(s) left':'<span class="badge warn">overdue — half pay</span>')+' · '+j.pay+'g</span><span></span></div>';
+   const btnRow=row.querySelector('.rowF:last-child span:last-child');
+   if(j.to===isl.id&&(j.t==='delivery'||j.t==='construction'||j.t==='bounty'||j.t==='salvage'||j.t==='smuggle')){
+    const b=document.createElement('button');
+    b.className='gold';b.textContent=j.t==='smuggle'?'Meet the buyer':'Fulfill';
+    b.onclick=()=>{jobFulfill(j);renderStall(isl);};
+    btnRow.appendChild(b);
+   }
+   const ab=document.createElement('button');
+   ab.className='wax';ab.textContent='Abandon';
+   ab.onclick=()=>{failJob(j,'you washed your hands of it');renderStall(isl);};
+   btnRow.appendChild(ab);
+   mine.appendChild(row);
+  }
+  body.appendChild(mine);
+ }
+}
+function renderPort(isl,body){
+ let html='<div class="card"><h3>'+esc(isl.name)+'</h3><div class="muted">'+
+  (isl.fac?'A '+FACTIONS[isl.fac].n+' port. Your standing: '+repLvlName(repOf(isl))+' ('+repOf(isl)+').':'A free port — no colours, few questions.')+
+  (isl.state?'<br>Currently <b>'+STATES[isl.state.type].n+'</b> until day '+isl.state.until+'.':'')+'</div></div>';
+ html+='<div class="card"><h3>Port works</h3>';
+ for(const u of UPGR){
+  if(isl.up[u.k])html+='<div class="rowF"><span>'+u.n+'</span><b class="up">built</b></div>';
+  else{
+   const matsTxt=Object.entries(u.mats).map(([k,v])=>v+' '+ITEMNAME[k].toLowerCase()).join(' + ');
+   html+='<div class="rowF"><span>'+u.n+' <span class="muted">('+u.d+')</span><br><span class="muted">'+matsTxt+' + '+u.gold+'g</span></span><button data-up="'+u.k+'">Fund it</button></div>';
+  }
+ }
+ html+='<div class="muted">Construction contracts also push these works along.</div></div>';
+ if(isl.up.wh){
+  html+='<div class="card"><h3>Warehouse</h3><table class="ledg"><tr><th>Good</th><th>Stored</th><th>Aboard</th><th></th></tr>';
+  for(const g of GKEYS){
+   const st=isl.store[g]|0,ab=G.inv[g]|0;
+   if(!st&&!ab)continue;
+   html+='<tr><td>'+ITEMNAME[g]+'</td><td>'+st+'</td><td>'+ab+'</td><td>'+
+    '<button data-dep="'+g+'">Store</button><button data-wd="'+g+'">Take</button></td></tr>';
+  }
+  html+='</table></div>';
+ }
+ body.innerHTML=html;
+ body.querySelectorAll('button[data-up]').forEach(b=>b.onclick=()=>{
+  const u=UPGR.find(o=>o.k===b.getAttribute('data-up'));
+  for(const k in u.mats)if((G.inv[k]|0)<u.mats[k])return toast('Need '+u.mats[k]+' '+ITEMNAME[k].toLowerCase(),true);
+  if(G.gold<u.gold)return toast('Not enough gold',true);
+  for(const k in u.mats)G.inv[k]-=u.mats[k];
+  G.gold-=u.gold;
+  isl.up[u.k]=1;
+  if(u.k==='mkt')for(const g of GKEYS)isl.ideal[g]=Math.round(isl.ideal[g]*1.2);
+  decoratePort(isl);
+  if(isl.fac)repAdd(isl.fac,8);
+  toast(u.n+' raised at '+isl.name+'! The port will remember.');
+  AU.bell();updateHotbar();updateHUD();renderStall(isl);
+  autosave();
+ });
+ body.querySelectorAll('button[data-dep]').forEach(b=>b.onclick=()=>{
+  const g=b.getAttribute('data-dep');
+  if((G.inv[g]|0)<1)return;
+  G.inv[g]--;isl.store[g]=(isl.store[g]|0)+1;
+  updateHotbar();renderStall(isl);
+ });
+ body.querySelectorAll('button[data-wd]').forEach(b=>b.onclick=()=>{
+  const g=b.getAttribute('data-wd');
+  if((isl.store[g]|0)<1)return;
+  if(cargoUsed()>=cargoCap())return toast('Hold is full',true);
+  isl.store[g]--;give(g,1);
+  renderStall(isl);
+ });
+}
+function renderBlack(isl,body){
+ let html='<div class="card"><h3>Behind the fish stall</h3><div class="muted">A buyer who pays in clipped coin and never gives a name.'+(G.smug>=8?' They know your work — better rates.':'')+'</div></div>';
+ html+='<table class="mkt"><tr><th>Contraband</th><th>Have</th><th>Buy</th><th>Sell</th><th></th></tr>';
+ for(const k of CKEYS){
+  const bp2=blackPrice(k,false),sp2=blackPrice(k,true);
+  html+='<tr><td>'+ITEMNAME[k]+'</td><td>'+(G.inv[k]|0)+'</td><td>'+bp2+'</td><td class="up">'+sp2+'</td>'+
+   '<td><button data-cb="'+k+'">+1</button><button data-cs="'+k+'">−1</button></td></tr>';
+ }
+ html+='</table><div class="card"><div class="rowF"><span>Forged papers (pass one inspection, mostly)</span><button id="forgB">50g</button></div></div>';
+ body.innerHTML=html;
+ body.querySelectorAll('button[data-cb]').forEach(b=>b.onclick=()=>{buyContra(b.getAttribute('data-cb'),blackPrice(b.getAttribute('data-cb'),false));renderStall(isl);});
+ body.querySelectorAll('button[data-cs]').forEach(b=>b.onclick=()=>{const k=b.getAttribute('data-cs');sellContra(k,1,blackPrice(k,true));renderStall(isl);});
+ const fb=body.querySelector('#forgB');
+ if(fb)fb.onclick=()=>{
+  if(G.gold<50)return toast('Not enough gold',true);
+  G.gold-=50;G.forged++;AU.coin();toast('Papers, “signed” and sealed. ('+G.forged+' held)');updateHUD();
+ };
 }
 function renderMarket(isl,body){
  let html='<table class="mkt"><tr><th>Good</th><th>Have</th><th>Buy</th><th>Sell</th><th></th></tr>';
@@ -2359,52 +4536,106 @@ function renderMarket(isl,body){
  });
 }
 function doBuy(isl,g,n){
- let bought=0;
+ let bought=0,spent=0;
  for(let i=0;i<n;i++){
   const p=buyP(isl,g);
   if(G.gold<p){if(!bought)toast('Not enough gold',true);break;}
   if(cargoUsed()>=cargoCap()){if(!bought)toast('Hold is full — build a bigger ship',true);break;}
-  G.gold-=p;isl.stock[g]=Math.max(4,isl.stock[g]-1);give(g,1);bought++;
+  G.gold-=p;spent+=p;isl.stock[g]=Math.max(4,isl.stock[g]-1);give(g,1);bought++;
  }
- if(bought)AU.coin();
+ if(bought){
+  AU.coin();
+  G.stats.bought+=bought;
+  G.stats.tradeProfit-=spent;
+  recordLedger(isl);
+  questPing();
+  autosave();
+ }
  renderStall(isl);updateHUD();
 }
 function doSell(isl,g,n){
- let sold=0;
+ let sold=0,earned=0;
  for(let i=0;i<n;i++){
   if((G.inv[g]|0)<1){if(!sold)toast('None to sell',true);break;}
   const p=sellP(isl,g);
-  G.gold+=p;G.inv[g]--;isl.stock[g]+=1;sold++;
+  G.gold+=p;earned+=p;G.inv[g]--;isl.stock[g]+=1;sold++;
  }
- if(sold)AU.coin();
+ if(sold){
+  AU.coin();
+  G.stats.sold+=sold;
+  G.stats.tradeProfit+=earned;
+  const home=W.isles.find(o=>o.fac===G.fac);
+  if(!home||isl.id!==home.id)G.stats.soldAbroad+=sold;
+  if(isl.state&&isl.state.type==='starving'&&(g==='grain'||g==='rum'||g==='sugar')&&isl.fac)repAdd(isl.fac,1);
+  recordLedger(isl);
+  questPing();titleTick();
+  autosave();
+ }
  updateHotbar();renderStall(isl);updateHUD();
 }
+const YARDPARTS=[
+ ['sail',25],['cannon',90,'canCost'],['helm',70,'canCost'],
+ ['cargohold',40],['reinf',8],['lightp',5],['fastsail',45],['heavysail',35],
+ ['bunk',30],['rudder',50],['lantern',20],['charttable',120],['bench',90],
+ ['hiddenc',70],['keg',80],['flag',15],['figurehead',150],
+];
 function renderYard(isl,body){
  const s=G.ship;
  const miss=s.maxHp-Math.round(s.hp);
- const rc=Math.ceil(miss*0.6);
- const canB=Math.round(90*FACTIONS[G.fac].canCost);
- const helmB=Math.round(70*FACTIONS[G.fac].canCost);
- body.innerHTML=
-  '<div class="card"><h3>Repairs</h3><div class="rowF"><span>Hull '+Math.round(s.hp)+'/'+s.maxHp+'</span>'+
-  '<button id="repB" '+(miss<1?'disabled':'')+'>Repair ('+rc+'g)</button></div></div>'+
-  '<div class="card"><h3>Chandlery</h3><div class="rowF"><span>Cannon block</span><button id="buyCan">'+canB+'g</button></div>'+
-  '<div class="rowF"><span>Helm block</span><button id="buyHelm">'+helmB+'g</button></div>'+
-  '<div class="rowF"><span>Sail block</span><button id="buySail">25g</button></div></div>'+
-  '<div class="card muted">Anchor your ship, then place blocks against her hull to grow her. More sails = faster; more blocks = tougher and roomier, but heavier.</div>';
- $('repB').onclick=()=>{
+ const carpD=G.spec.carp?0.7:1;
+ const rc=Math.ceil(miss*0.6*carpD);
+ const sailC=s.sailDmg*8,gunC=s.gunsOut*12;
+ let html='<div class="card"><h3>Repairs — the '+esc(G.shipName)+'</h3>'+
+  '<div class="rowF"><span>Hull '+Math.round(s.hp)+'/'+s.maxHp+'</span><button id="repB" '+(miss<1?'disabled':'')+'>Repair ('+rc+'g)</button></div>';
+ if(s.sailDmg>0)html+='<div class="rowF"><span>'+s.sailDmg+' torn sail(s)</span><button id="repSail">Stitch ('+sailC+'g)</button></div>';
+ if(s.gunsOut>0)html+='<div class="rowF"><span>'+s.gunsOut+' dismounted gun(s)</span><button id="repGun">Remount ('+gunC+'g)</button></div>';
+ html+='<div class="rowF"><span class="muted">She answers to “'+esc(G.shipName)+'”</span><button id="renameY">Rename</button></div></div>';
+ html+='<div class="card"><h3>Chandlery</h3>';
+ const mktUp=isl.up&&isl.up.mkt;
+ const parts=mktUp?YARDPARTS:YARDPARTS.slice(0,11);
+ for(const [it,base,mul] of parts){
+  const c=Math.round(base*(mul?FACTIONS[G.fac][mul]:1));
+  html+='<div class="rowF"><span>'+ITEMNAME[it]+'</span><button data-part="'+it+'" data-c="'+c+'">'+c+'g</button></div>';
+ }
+ if(!mktUp)html+='<div class="muted">A greater market would stock rarer parts (see the Port tab).</div>';
+ html+='</div><div class="card muted">Anchor her, then place blocks against the hull to grow her. Cargo holds carry more than bare planks; reinforced planks shrug off shot; kegs speed the guns but burn; bunks berth more crew; a rudder turns her quicker.</div>';
+ body.innerHTML=html;
+ const rep=body.querySelector('#repB');
+ if(rep)rep.onclick=()=>{
   const pay=Math.min(G.gold,rc);
   if(pay<=0)return;
-  const frac=pay/rc;
-  G.ship.hp=clamp(G.ship.hp+miss*frac,0,G.ship.maxHp);
+  const frac=pay/Math.max(1,rc);
+  s.hp=clamp(s.hp+miss*frac,0,s.maxHp);
+  if(s.hp>=s.maxHp-0.5)s.leak=0;
   G.gold-=pay;AU.put();renderStall(isl);updateHUD();
  };
- $('buyCan').onclick=()=>{if(G.gold<canB)return toast('Not enough gold',true);G.gold-=canB;give('cannon',1);AU.coin();renderStall(isl);updateHUD();};
- $('buyHelm').onclick=()=>{if(G.gold<helmB)return toast('Not enough gold',true);G.gold-=helmB;give('helm',1);AU.coin();renderStall(isl);updateHUD();};
- $('buySail').onclick=()=>{if(G.gold<25)return toast('Not enough gold',true);G.gold-=25;give('sail',1);AU.coin();renderStall(isl);updateHUD();};
+ const rs=body.querySelector('#repSail');
+ if(rs)rs.onclick=()=>{
+  if(G.gold<sailC)return toast('Not enough gold',true);
+  G.gold-=sailC;s.sailDmg=0;shipStats(s);AU.put();renderStall(isl);updateHUD();
+ };
+ const rg=body.querySelector('#repGun');
+ if(rg)rg.onclick=()=>{
+  if(G.gold<gunC)return toast('Not enough gold',true);
+  G.gold-=gunC;s.gunsOut=0;AU.put();renderStall(isl);updateHUD();
+ };
+ const rn=body.querySelector('#renameY');
+ if(rn)rn.onclick=()=>{
+  showDlg('Rename your ship','<input id="shipNm" maxlength="28" style="font-family:inherit;font-size:1.2rem;background:var(--slot);border:2px solid #000;color:var(--hi);padding:.3rem .6rem;width:100%" value="'+esc(G.shipName)+'">',
+   [{t:'Christen her',f:()=>{
+     const v=$('shipNm');
+     if(v&&v.value.trim()){G.shipName=v.value.trim().slice(0,28);toast('She is the '+G.shipName+' now and ever.');updateHUD();autosave();}
+    }},{t:'Belay that',f:()=>{}}]);
+ };
+ body.querySelectorAll('button[data-part]').forEach(b=>b.onclick=()=>{
+  const c=+b.getAttribute('data-c');
+  if(G.gold<c)return toast('Not enough gold',true);
+  G.gold-=c;give(b.getAttribute('data-part'),1);
+  AU.coin();updateHUD();
+ });
 }
 function renderTavern(isl,body){
- const mapC=Math.round(120*FACTIONS[G.fac].mapCost);
+ const mapC=Math.round(120*FACTIONS[G.fac].mapCost*(G.perks.charts?0.5:1));
  const undug=W.treasures.length>0;
  let rumor='';
  {
@@ -2418,19 +4649,42 @@ function renderTavern(isl,body){
   if(best&&best.m>0)rumor='“'+ITEMNAME[best.g]+' bought at '+best.a.name+' sells dear at '+best.b.name+' — '+best.m+'g a crate clear.”';
   else rumor='“Quiet seas, quiet markets.”';
  }
- body.innerHTML=
-  '<div class="card"><h3>Hire a hand</h3><div class="rowF"><span>Crew '+G.crew+'/4 · wage 6g a day each</span>'+
-  '<button id="hireB" '+(G.crew>=4?'disabled':'')+'>Hire (40g)</button></div>'+
-  '<div class="muted">Each hand: faster ship, quicker cannons.</div></div>'+
-  '<div class="card"><h3>Treasure map</h3><div class="rowF"><span>'+(G.tmap?'You hold a map to '+isleNameById(G.tmap.isle):'A dog-eared chart, X marked')+'</span>'+
+ const wxR=WX.season?'“Hurricane season. The wrecks’ll be rich — for whoever’s still floating.”':
+  WX.kind==='storm'?'“Caught out in this? God help ye.”':'“Glass is steady. Fair sailing a while yet.”';
+ let html='<div class="card"><h3>Hire hands</h3><div class="rowF"><span>Crew '+G.crew+'/'+G.ship.crewMax+' · wage 6g a day each</span>'+
+  '<button id="hireB" '+(G.crew>=G.ship.crewMax?'disabled':'')+'>Hire (40g)</button></div>'+
+  '<div class="muted">Each hand: faster ship, quicker cannons. Bunks aboard raise the limit.</div></div>';
+ const offers=specOffers(isl);
+ if(offers.length){
+  html+='<div class="card"><h3>Specialists in the snug</h3>';
+  for(const k of offers)html+='<div class="rowF"><span><b>'+SPECS[k].t+'</b> — '+SPECS[k].d+'<br><span class="muted">'+SPECS[k].w+'g/day wage</span></span><button data-spec="'+k+'">Hire (60g)</button></div>';
+  html+='<div class="muted">Three specialists at most. ('+specCount()+'/3 aboard)</div></div>';
+ }
+ html+='<div class="card"><h3>The bar</h3>';
+ for(let i=0;i<DRINKS.length;i++){
+  const d=DRINKS[i];
+  html+='<div class="rowF"><span>'+d.n+' <span class="muted">— '+d.d+'</span></span><button data-drink="'+i+'">'+d.c+'g</button></div>';
+ }
+ html+='</div>';
+ html+='<div class="card"><h3>Treasure map</h3><div class="rowF"><span>'+(G.tmap?'You hold a map to '+isleNameById(G.tmap.isle):'A dog-eared chart, X marked')+'</span>'+
   '<button id="mapB" '+(G.tmap||!undug?'disabled':'')+'>Buy ('+mapC+'g)</button></div>'+
-  '<div class="muted">Sail there, find the glittering spot, and dig.</div></div>'+
-  '<div class="card"><h3>Rumors</h3>'+rumor+'</div>';
+  '<div class="muted">Sail there, find the glittering spot, and dig.</div></div>';
+ const unrumored=W.coves.find(c=>!c.found&&!c.rumor);
+ if(unrumored)html+='<div class="card"><h3>A whispered word</h3><div class="rowF"><span>“There’s a place that ain’t on any chart…”</span><button id="coveB">30g</button></div></div>';
+ if(isl.fac&&G.wanted>=10&&!(isl.state&&isl.state.type==='lawless')){
+  const pc=Math.round(G.wanted*8);
+  html+='<div class="card"><h3>The magistrate’s clerk</h3><div class="rowF"><span>A pardon, signed and sealed — your slate wiped clean</span><button id="pardB">'+pc+'g</button></div></div>';
+ }
+ html+='<div class="card"><h3>Rumors</h3>'+rumor+'<br>'+wxR+'</div>';
+ body.innerHTML=html;
  $('hireB').onclick=()=>{
+  if(G.crew>=G.ship.crewMax)return toast('No bunks free',true);
   if(G.gold<40)return toast('Not enough gold',true);
   G.gold-=40;G.crew++;shipStats(G.ship);AU.coin();renderStall(isl);updateHUD();
+  questPing();autosave();
  };
- $('mapB').onclick=()=>{
+ const mb=$('mapB');
+ if(mb)mb.onclick=()=>{
   if(G.gold<mapC)return toast('Not enough gold',true);
   const ti=(Math.random()*W.treasures.length)|0;
   const t=W.treasures.splice(ti,1)[0];
@@ -2438,6 +4692,31 @@ function renderTavern(isl,body){
   G.gold-=mapC;AU.coin();
   toast('The X lies on '+isleNameById(t.isle));
   renderStall(isl);updateHUD();
+ };
+ body.querySelectorAll('button[data-spec]').forEach(b=>b.onclick=()=>hireSpec(b.getAttribute('data-spec'),isl));
+ body.querySelectorAll('button[data-drink]').forEach(b=>b.onclick=()=>{
+  const d=DRINKS[+b.getAttribute('data-drink')];
+  if(G.gold<d.c)return toast('Not enough gold',true);
+  G.gold-=d.c;d.f();AU.coin();
+  toast(d.n+' goes down easy. '+d.d+'.');
+  updateHUD();
+ });
+ const cb2=body.querySelector('#coveB');
+ if(cb2)cb2.onclick=()=>{
+  if(G.gold<30)return toast('Not enough gold',true);
+  const c=W.coves.find(o=>!o.found&&!o.rumor);
+  if(!c)return;
+  G.gold-=30;c.rumor=true;
+  toast('“Look to '+isleNameById(c.isle)+'.” A “?” marks your chart.');
+  renderStall(isl);updateHUD();
+ };
+ const pb=body.querySelector('#pardB');
+ if(pb)pb.onclick=()=>{
+  const pc=Math.round(G.wanted*8);
+  if(G.gold<pc)return toast('Not enough gold',true);
+  G.gold-=pc;G.wanted=0;
+  toast('Your name is struck from the lists. Walk lightly.');
+  AU.bell();renderStall(isl);updateHUD();autosave();
  };
 }
 function isleNameById(id){const i=W.isles.find(s=>s.id===id);return i?i.name:'a lost isle';}
@@ -2448,11 +4727,28 @@ const CRAFTS=[
  {out:'sail',n:1,need:{planks:2},lbl:'2 planks → 1 sail'},
  {out:'cannon',n:1,need:{iron:6,planks:4},lbl:'6 iron + 4 planks → cannon'},
  {out:'helm',n:1,need:{planks:8,iron:1},lbl:'8 planks + 1 iron → helm'},
+ {out:'cargohold',n:1,need:{planks:4,log:1},lbl:'4 planks + 1 log → cargo hold'},
+ {out:'reinf',n:2,need:{planks:2,iron:1},lbl:'2 planks + 1 iron → 2 reinforced'},
+ {out:'lightp',n:2,need:{planks:2},lbl:'2 planks → 2 light planks'},
+ {out:'fastsail',n:1,need:{sail:1,silk:1},lbl:'1 sail + 1 silk → fast sail'},
+ {out:'heavysail',n:1,need:{sail:1,log:1},lbl:'1 sail + 1 log → heavy sail'},
+ {out:'hiddenc',n:1,need:{planks:5},lbl:'5 planks → hidden compartment'},
+ {out:'keg',n:1,need:{iron:3,planks:2},lbl:'3 iron + 2 planks → powder magazine'},
+ {out:'bunk',n:1,need:{planks:3},lbl:'3 planks → crew bunk'},
+ {out:'charttable',n:1,need:{planks:4,gold:1},lbl:'4 planks + 1 gold ore → chart table'},
+ {out:'bench',n:1,need:{planks:4,iron:2},lbl:'4 planks + 2 iron → repair bench'},
+ {out:'lantern',n:1,need:{iron:1,gold:1},lbl:'1 iron + 1 gold ore → lantern'},
+ {out:'flag',n:1,need:{planks:1,silk:1},lbl:'1 plank + 1 silk → flag'},
+ {out:'figurehead',n:1,need:{gold:2,planks:2},lbl:'2 gold ore + 2 planks → figurehead'},
+ {out:'rudder',n:1,need:{planks:3,iron:1},lbl:'3 planks + 1 iron → rudder'},
 ];
 function openInv(){
  const body=$('invBody');
  let html='<div id="invGrid">';
- const all=[...HOTKEYS,...GKEYS.filter(g=>!(g in ITEM2BLK))];
+ const seen={};
+ const all=[];
+ for(const pg of HOTPAGES)for(const it of pg)if(!seen[it]){seen[it]=1;all.push(it);}
+ for(const g of [...GKEYS,...CKEYS,'salv'])if(!seen[g]){seen[g]=1;all.push(g);}
  for(const it of all){
   const n=G.inv[it]|0;if(n<1&&!(it in ITEM2BLK))continue;
   html+='<div class="islot" data-i="'+it+'" title="'+ITEMNAME[it]+'"><span class="ct">'+n+'</span></div>';
@@ -2520,8 +4816,18 @@ function miniTick(dt,force){
   dot(pr.x,pr.z,pc,pr.kind==='merchant'?3:4);
  }
  for(const l of G.loots)dot(l.x,l.z,'#e7b94a',3);
+ for(const f of G.flot)dot(f.x,f.z,'#7fd0d0',3);
+ for(const cv of W.coves)if(cv.found)dot(cv.x,cv.z,'#9a7fd0',4);
+ for(const j of G.jobs)if(j.tx!==undefined&&!j.got)dot(j.tx,j.tz,'#e7b94a',5);
  if(G.tmap&&!G.tmap.found)dot(G.tmap.x,G.tmap.z,'#ff3b2e',5);
+ if(G.serp)dot(G.serp.x,G.serp.z,'#3fae9c',5);
  const ctr=cn.width/2;
+ /* course tick on the rim */
+ if(G.course){
+  const ca=Math.atan2(G.course.z-cz,G.course.x-cx);
+  c.fillStyle='#7fd0d0';
+  c.fillRect(ctr+Math.cos(ca)*(ctr-5)-2,ctr+Math.sin(ca)*(ctr-5)-2,4,4);
+ }
  if(G.mode==='sail'){
   c.strokeStyle='#ffffffaa';c.lineWidth=2;
   c.beginPath();c.moveTo(ctr,ctr);
@@ -2551,36 +4857,136 @@ function openMap(){
   if(isl.stall){
    c.fillStyle=isl.fac?FACTIONS[isl.fac].c:'#e7d8ab';
    c.fillRect(isl.stall.x*S-3,isl.stall.z*S-3,6,6);
+   /* port state icons read from the chart */
+   if(isl.state){
+    const st=STATES[isl.state.type];
+    c.fillStyle=st.c;
+    c.beginPath();c.arc(isl.stall.x*S+7,isl.stall.z*S-6,6,0,7);c.fill();
+    c.fillStyle='#0c0e12';c.fillText(st.i,isl.stall.x*S+4,isl.stall.z*S-2);
+    if(isl.state.type==='blockaded'){
+     c.strokeStyle='#c0392b';c.lineWidth=2;
+     c.beginPath();c.arc(isl.stall.x*S,isl.stall.z*S,28*S,0,7);c.stroke();
+    }
+   }
   }
   c.fillStyle='#0c0e12';c.fillText(isl.name,isl.cx*S-22+1,(isl.cz-isl.r-2)*S+1);
   c.fillStyle='#e7d8ab';c.fillText(isl.name,isl.cx*S-22,(isl.cz-isl.r-2)*S);
  }
+ /* war zones */
+ if(G.war){
+  const isl=W.isles.find(o=>o.id===G.war.isl);
+  if(isl){
+   c.strokeStyle='#e05a4a';c.lineWidth=3;
+   c.setLineDash([6,4]);
+   c.beginPath();c.arc(isl.cx*S,isl.cz*S,(isl.r+24)*S,0,7);c.stroke();
+   c.setLineDash([]);
+   c.fillStyle='#e05a4a';c.fillText('WAR',isl.cx*S-12,(isl.cz+isl.r+10)*S);
+  }
+ }
+ /* coves: found get a mark, rumors get a question */
+ c.font='14px VT323';
+ for(const cv of W.coves){
+  if(cv.found){
+   c.fillStyle='#9a7fd0';
+   c.fillRect(cv.x*S-3,cv.z*S-3,6,6);
+   c.fillStyle='#fff';c.fillText('⌂',cv.x*S-3,cv.z*S-5);
+  }else if(cv.rumor){
+   const isl=W.isles.find(o=>o.id===cv.isle);
+   if(isl){c.fillStyle='#e7d8ab';c.fillText('?',isl.cx*S,isl.cz*S);}
+  }
+ }
+ /* active contracts */
+ for(const j of G.jobs){
+  let jx=null,jz=null;
+  if(j.tx!==undefined&&!j.got){jx=j.tx;jz=j.tz;}
+  else{const d2=W.isles.find(o=>o.id===j.to);if(d2&&d2.stall){jx=d2.stall.x;jz=d2.stall.z;}}
+  if(jx===null)continue;
+  c.strokeStyle='#e7b94a';c.lineWidth=2;
+  c.beginPath();
+  c.moveTo(jx*S,jz*S-7);c.lineTo(jx*S+6,jz*S);c.lineTo(jx*S,jz*S+7);c.lineTo(jx*S-6,jz*S);
+  c.closePath();c.stroke();
+ }
+ c.font='15px VT323';
  if(G.tmap&&!G.tmap.found){
   c.strokeStyle='#c4503a';c.lineWidth=2;
   const tx=G.tmap.x*S,tz=G.tmap.z*S;
   c.beginPath();c.moveTo(tx-5,tz-5);c.lineTo(tx+5,tz+5);c.moveTo(tx+5,tz-5);c.lineTo(tx-5,tz+5);c.stroke();
  }
- /* player/ship with facing */
+ if(G.fakeX){
+  c.strokeStyle='#c4503a';c.lineWidth=2;
+  const tx=G.fakeX.x*S,tz=G.fakeX.z*S;
+  c.beginPath();c.moveTo(tx-5,tz-5);c.lineTo(tx+5,tz+5);c.moveTo(tx+5,tz-5);c.lineTo(tx-5,tz+5);c.stroke();
+ }
+ if(G.quests.maps.site){
+  const leg=W.legends.find(l=>l.name===G.quests.maps.site&&!l.found);
+  if(leg){
+   c.fillStyle='#ffd76a';
+   c.beginPath();c.arc(leg.x*S,leg.z*S,5,0,7);c.fill();
+   c.fillStyle='#0c0e12';c.fillText('✦',leg.x*S-4,leg.z*S+4);
+   c.fillStyle='#ffd76a';c.fillText(leg.name,leg.x*S-30,leg.z*S-8);
+  }
+ }
+ /* player/ship with facing, course line */
  const px=(G.mode==='sail'?G.ship.x:P.x)*S,pz=(G.mode==='sail'?G.ship.z:P.z)*S;
+ if(G.course){
+  c.strokeStyle='#7fd0d0';c.lineWidth=2;
+  c.setLineDash([4,4]);
+  c.beginPath();c.moveTo(px,pz);c.lineTo(G.course.x*S,G.course.z*S);c.stroke();
+  c.setLineDash([]);
+  c.fillStyle='#7fd0d0';
+  c.fillRect(G.course.x*S-3,G.course.z*S-3,6,6);
+ }
  if(G.mode==='sail'){
   c.strokeStyle='#fff';c.lineWidth=2;
   c.beginPath();c.moveTo(px,pz);c.lineTo(px+Math.cos(G.ship.yaw)*16,pz-Math.sin(G.ship.yaw)*16);c.stroke();
  }
  drawArrow(c,px,pz,Math.atan2(Math.cos(P.yaw),Math.sin(P.yaw)),9);
- $('mapInfo').textContent='Squares are trading stalls. Sail near an island to chart it. '+(G.tmap&&!G.tmap.found?'Red ✕ marks your treasure.':'');
+ /* wind rose */
+ c.save();
+ c.translate(34,cn.height-34);
+ c.fillStyle='rgba(8,10,14,0.6)';c.beginPath();c.arc(0,0,26,0,7);c.fill();
+ drawArrow(c,0,0,WX.wdir,14);
+ c.fillStyle='#cfe3ea';c.font='12px VT323';
+ c.fillText('wind · '+(WX.wstr<0.15?'calm':WX.wstr<0.45?'light':WX.wstr<0.8?'fresh':'gale'),-24,38);
+ c.restore();
+ let info='Squares are stalls; circled letters are port states. Click anywhere to plot a course.';
+ if(G.course){
+  const dist=Math.hypot(G.course.x-(G.mode==='sail'?G.ship.x:P.x),G.course.z-(G.mode==='sail'?G.ship.z:P.z));
+  const spd=Math.max(2,G.ship.spdMax*0.8*windMul(Math.atan2(-(G.course.z-(G.mode==='sail'?G.ship.z:P.z)),G.course.x-(G.mode==='sail'?G.ship.x:P.x))));
+  const eta=Math.round(dist/spd);
+  const dayFrac=Math.round(eta/DAY*10)/10;
+  info='Course: '+Math.round(dist)+' to the '+dirTo(G.course.x,G.course.z)+' · about '+eta+'s ('+dayFrac+' day'+(dayFrac===1?'':'s')+') at present trim.';
+  const haz=[];
+  if(WX.kind==='storm')haz.push('storm');
+  if(G.war)haz.push('war zone');
+  if(G.wanted>=50)haz.push('hunters out');
+  if(haz.length)info+=' Hazards: '+haz.join(', ')+'.';
+ }
+ if(G.tmap&&!G.tmap.found)info+=' Red ✕ marks your treasure.';
+ $('mapInfo').textContent=info;
  openPanel('mapM');
 }
 
 /* ---------------- help ---------------- */
 function buildHelp(){
  $('helpBody').innerHTML=
+  '<div class="card"><h3>Captain’s desk</h3><div class="rowF">'+
+  '<button id="saveNow" class="gold">⚓ Save voyage</button>'+
+  '<button id="profBtn">Captain’s profile (P)</button>'+
+  '<button id="ledgBtn">Ledger (L)</button>'+
+  '</div><div class="muted" style="margin-top:4px">The game also saves itself when you dock, set sail, trade, build, hire, dig and at every dawn.</div></div>'+
   '<div class="card"><h3>The loop</h3>Mine the isles for wood, stone and ore. Buy goods cheap where they\'re made, sail them where they\'re wanted. Spend the gold on cannons, crew and a bigger ship — built block by block with your own hands.</div>'+
-  '<div class="card"><h3>Your ship</h3>Drop anchor (use the helm) and she becomes solid — walk her deck, place blocks against her hull to extend her, mine blocks off to reshape. Sails make speed; every block adds hull and hold. She needs one helm and one sail to leave port.</div>'+
-  '<div class="card"><h3>Sailing view</h3>Under sail the camera rises behind your ship. Drag (or move the mouse) to swing around her; the minimap arrow always shows your heading, and tapping the minimap opens the full chart.</div>'+
-  '<div class="card"><h3>Fighting</h3>Cannons fire the way they point — place them facing where you look: broadsides, bow chasers, stern guns, your call. Space (or FIRE) lets every gun speak at once. Sunk pirates drop floating loot. If your hull reaches zero, you lose your cargo and wash up at home.</div>'+
-  '<div class="card"><h3>Treasure</h3>Tavern keepers sell maps. The X is on your chart (M); near the spot you\'ll see golden sparks. Dig the marked block, crack the chest.</div>'+
-  '<div class="card"><h3>Keys</h3>WASD move · mouse look (click once) · hold L-click mine · R-click place · 1-8 hotbar · E sea chest · F use/helm · M map · Space jump / fire · H this page</div>'+
-  '<div class="card"><h3>Phone</h3>Touch anywhere lower-left and the stick appears under your thumb · drag the right side to look · you hop up blocks automatically · hold the big button to mine or fire · PLACE sets your selected block · tap the gold prompt for stalls, helm and anchor.</div>';
+  '<div class="card"><h3>Your ship</h3>Drop anchor (use the helm) and she becomes solid — walk her deck, place blocks against her hull to extend her, mine blocks off to reshape. Sails make speed; every block adds hull and hold. She needs one helm and one sail to leave port. Tab (or the ⇄ button) flips the hotbar to ship parts: cargo holds, reinforced and light planks, fast and heavy sails, bunks, rudders, lanterns, powder magazines, hidden compartments, chart tables, repair benches, flags and figureheads.</div>'+
+  '<div class="card"><h3>Wind & weather</h3>The wind chip (and the chart’s wind rose) show direction and strength — run with the wind and you fly; beat against it and you crawl. Storms tear fast sails, hurl lightning and breed wreck fields. Fog hides everything. Doldrums becalm you.</div>'+
+  '<div class="card"><h3>Work & standing</h3>Every port posts contracts: deliveries, couriers, bounties, salvage, construction, escorts and smuggling. Each faction remembers what you do — standing buys discounts or slammed doors. Crimes raise your wanted level: patrols, bounty hunters, then real trouble. Pardons are sold at lawful taverns; pirates respect a black name.</div>'+
+  '<div class="card"><h3>Damage at sea</h3>Shot can tear sails, dismount guns, spring leaks (X patches with planks) and start fires (C douses). Powder magazines speed reloads but explode. A repair bench aboard mends at sea; the shipwright does it properly in port.</div>'+
+  '<div class="card"><h3>Fighting</h3>Cannons fire the way they point — place them facing where you look. Space (or FIRE) lets every gun speak. Beaten ships may strike their colours: come alongside and press F to board — loot, press crew, spare or burn. If your hull reaches zero, you lose your cargo and wash up at home.</div>'+
+  '<div class="card"><h3>Treasure & secrets</h3>Tavern maps mark an X — dig it up. Torn map fragments (three make a legend) come from castaways, bottles and chests. Hidden coves don’t appear on any chart until you find them: smugglers, wreckers, healers and pirate dens trade there.</div>'+
+  '<div class="card"><h3>Keys</h3>WASD move · mouse look (click once) · hold L-click mine · R-click place · 1-8 hotbar · Tab block pages · E sea chest · F use/helm/board · M map (click to plot a course) · L ledger · P profile · X patch leak · C douse fire · Space jump / fire · H this page</div>'+
+  '<div class="card"><h3>Phone</h3>Touch anywhere lower-left and the stick appears under your thumb · drag the right side to look · hold the big button to mine or fire · PLACE sets blocks ashore and patches leaks at sea · JUMP douses fires at sea · tap the gold prompt for stalls, helm, anchor and boarding.</div>';
+ $('saveNow').onclick=()=>manualSave();
+ $('profBtn').onclick=()=>{closePanel('helpM');openProfile();};
+ $('ledgBtn').onclick=()=>{closePanel('helpM');openLedger();};
 }
 /* ---------------- input ---------------- */
 const KEYS=new Set();
@@ -2599,18 +5005,76 @@ function helmWorld(){
  const h=G.ship.helm;if(!h)return null;
  return shipLocalToWorld(h[0],h[1],h[2]);
 }
+function boardableNPC(){
+ const s=G.ship;
+ if(!s.sailing)return null;
+ let best=null,bd=9;
+ for(const pr of G.pirates){
+  if(pr.dying||pr.fade)continue;
+  if(!(pr.surrendered||pr.kind==='trader'||pr.kind==='plague'))continue;
+  const d=Math.hypot(pr.x-s.x,pr.z-s.z);
+  if(d<bd){bd=d;best=pr;}
+ }
+ return best;
+}
+function benchDialog(){
+ const s=G.ship;
+ const miss=s.maxHp-Math.round(s.hp);
+ const needs=[];
+ if(miss>0)needs.push(Math.round(miss/6)+' planks mend the hull');
+ if(s.sailDmg>0)needs.push(s.sailDmg+' torn sail(s), 1 plank each');
+ if(s.gunsOut>0)needs.push(s.gunsOut+' dismounted gun(s), 1 iron each');
+ showDlg('Repair bench','<div class="card">'+(needs.length?needs.join('<br>'):'She’s in fine trim, captain.')+'</div>',[
+  {t:'Mend hull (1 plank → 6 hull)',f:()=>{
+    if((G.inv.planks|0)<1)return toast('No planks',true);
+    if(miss<1)return toast('Hull is sound');
+    G.inv.planks--;s.hp=Math.min(s.maxHp,s.hp+6);AU.put();updateHotbar();updateHUD();benchDialog();
+   }},
+  {t:'Stitch sails (1 plank each)',f:()=>{
+    if(s.sailDmg<1)return toast('Sails are whole');
+    if((G.inv.planks|0)<1)return toast('No planks',true);
+    G.inv.planks--;s.sailDmg--;shipStats(s);AU.put();updateHotbar();benchDialog();
+   }},
+  {t:'Remount guns (1 iron each)',f:()=>{
+    if(s.gunsOut<1)return toast('All guns mounted');
+    if((G.inv.iron|0)<1)return toast('No iron',true);
+    G.inv.iron--;s.gunsOut--;AU.put();updateHotbar();benchDialog();
+   }},
+  {t:'Done',f:()=>{}},
+ ]);
+}
 function doAct(){
  if(!G||anyPanelOpen())return;
- if(G.mode==='sail'){dropAnchor();return;}
+ if(G.mode==='sail'){
+  const b=boardableNPC();
+  if(b){
+   if(b.kind==='trader')floatMarket(b);
+   else if(b.kind==='plague')plagueDialog(b);
+   else if(b.distress)distressDialog(b);
+   else boardShip(b);
+   return;
+  }
+  dropAnchor();return;
+ }
  const hit=eyeRay();
  if(hit){
   const isl=findStallIsle(hit.x,hit.y,hit.z);
   if(isl){openStall(isl);return;}
   const sc=shipCellAt(hit.x,hit.y,hit.z);
-  if(sc&&G.ship.blocks.get(sc)===12){setSail();return;}
+  if(sc){
+   const id=G.ship.blocks.get(sc);
+   if(id===12){setSail();return;}
+   if(id===30){openLedger();return;}
+   if(id===31){benchDialog();return;}
+   if(id===33){flagDialog();return;}
+  }
  }
+ const cv2=nearestCove(6);
+ if(cv2){coveDialog(cv2);return;}
  const vn=villagerNear(2.4);
  if(vn){greetVillager(vn);return;}
+ const cw=crewNear(2.2);
+ if(cw){greetCrew();return;}
  const near=nearestStallIsle();
  if(near){openStall(near);return;}
  const hw=helmWorld();
@@ -2619,16 +5083,33 @@ function doAct(){
 }
 function promptText(){
  const U=TOUCH?'Tap':'F';
- if(G.mode==='sail')return U+': drop anchor · '+(TOUCH?'FIRE':'Space')+': broadside';
+ if(G.mode==='sail'){
+  const b=boardableNPC();
+  if(b)return U+': '+(b.kind==='trader'?'hail the floating market':b.kind==='plague'?'approach the plague ship':b.distress?'answer the distress call':'board the prize');
+  let t=U+': drop anchor · '+(TOUCH?'FIRE':'Space')+': broadside';
+  if(G.ship.leak)t+=' · '+(TOUCH?'PLACE':'X')+': patch leak!';
+  if(G.ship.fire>0)t+=' · '+(TOUCH?'JUMP':'C')+': douse fire!';
+  return t;
+ }
  const hit=eyeRay();
  if(hit){
   if(findStallIsle(hit.x,hit.y,hit.z))return U+': trade at the stall';
   const sc=shipCellAt(hit.x,hit.y,hit.z);
-  if(sc&&G.ship.blocks.get(sc)===12)return U+': take the helm & set sail';
+  if(sc){
+   const id=G.ship.blocks.get(sc);
+   if(id===12)return U+': take the helm & set sail';
+   if(id===30)return U+': open the captain’s ledger';
+   if(id===31)return U+': use the repair bench';
+   if(id===33)return U+': choose your colours';
+  }
   if(hit.id===13)return 'Mine the chest to open it';
  }
+ const cv2=nearestCove(6);
+ if(cv2)return U+': enter the '+COVEN[cv2.kind].n.toLowerCase();
  const vn=villagerNear(2.4);
  if(vn)return U+': hail the '+vn.role.toLowerCase();
+ const cw=crewNear(2.2);
+ if(cw)return U+': talk to your crew';
  const near=nearestStallIsle();
  if(near)return U+': trade at '+near.name;
  const hw=helmWorld();
@@ -2646,8 +5127,13 @@ function wireInput(){
   if(k==='KeyE'){if($('invM').classList.contains('open'))closePanel('invM');else if(!anyPanelOpen())openInv();return;}
   if(k==='KeyM'){if($('mapM').classList.contains('open'))closePanel('mapM');else if(!anyPanelOpen())openMap();return;}
   if(k==='KeyH'){if($('helpM').classList.contains('open'))closePanel('helpM');else if(!anyPanelOpen())openPanel('helpM');return;}
+  if(k==='KeyL'){if($('ledgM').classList.contains('open'))closePanel('ledgM');else if(!anyPanelOpen())openLedger();return;}
+  if(k==='KeyP'){if($('profM').classList.contains('open'))closePanel('profM');else if(!anyPanelOpen())openProfile();return;}
   if(k==='KeyF'){doAct();return;}
+  if(k==='Tab'&&!anyPanelOpen()){e.preventDefault();G.hotPage=(G.hotPage+1)%HOTPAGES.length;HOTKEYS=HOTPAGES[G.hotPage];buildHotbar();AU.sel();return;}
   if(anyPanelOpen())return;
+  if(k==='KeyX'&&G.mode==='sail'){patchLeak();return;}
+  if(k==='KeyC'&&G.mode==='sail'){douseFire();return;}
   KEYS.add(k);
   if(k==='Space'){e.preventDefault();if(G.mode==='sail')fireHeld=true;else jumpHeld=true;}
  });
@@ -2722,28 +5208,106 @@ function wireInput(){
   b.addEventListener('pointerdown',e=>{e.preventDefault();AU.init();on();});
   b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);
  };
- hold('btnJump',()=>jumpHeld=true,()=>jumpHeld=false);
+ hold('btnJump',()=>{if(G&&G.mode==='sail')douseFire();else jumpHeld=true;},()=>jumpHeld=false);
  hold('btnMine',()=>{if(G&&G.mode==='sail')fireHeld=true;else mineHeld=true;},()=>{mineHeld=false;fireHeld=false;});
- $('btnPlace').addEventListener('pointerdown',e=>{e.preventDefault();AU.init();tryPlace();});
+ $('btnPlace').addEventListener('pointerdown',e=>{e.preventDefault();AU.init();if(G&&G.mode==='sail')patchLeak();else tryPlace();});
  $('btnUse').addEventListener('pointerdown',e=>{e.preventDefault();AU.init();doAct();});
  $('btnBag').addEventListener('pointerdown',e=>{e.preventDefault();if(!G)return;if($('invM').classList.contains('open'))closePanel('invM');else openInv();});
  $('btnMapT').addEventListener('pointerdown',e=>{e.preventDefault();if(!G)return;if($('mapM').classList.contains('open'))closePanel('mapM');else openMap();});
  $('btnHelp').addEventListener('pointerdown',e=>{e.preventDefault();if($('helpM').classList.contains('open'))closePanel('helpM');else openPanel('helpM');});
  $('prompt').addEventListener('pointerdown',e=>{e.preventDefault();AU.init();doAct();});
  $('mini').addEventListener('pointerdown',e=>{e.preventDefault();if(G&&!anyPanelOpen())openMap();});
+ $('objChip').addEventListener('pointerdown',e=>{e.preventDefault();if(G&&!anyPanelOpen())openMap();});
+ /* chart plotting: click the big map to set a course */
+ $('mapCan').addEventListener('pointerdown',e=>{
+  if(!G)return;
+  const cn=$('mapCan');
+  const r=cn.getBoundingClientRect();
+  const wx=(e.clientX-r.left)/r.width*WORLD;
+  const wz=(e.clientY-r.top)/r.height*WORLD;
+  G.course={x:Math.round(wx),z:Math.round(wz)};
+  openMap();
+ });
 }
 
 /* ---------------- day tick ---------------- */
+const STATES={
+ starving:{n:'Starving',c:'#e07a6a',i:'S'},
+ flooded:{n:'Flooded',c:'#5fa8d0',i:'F'},
+ blockaded:{n:'Blockaded',c:'#c0392b',i:'B'},
+ lawless:{n:'Lawless',c:'#9a7fd0',i:'L'},
+ prosperous:{n:'Prosperous',c:'#7fd07f',i:'P'},
+ raided:{n:'Raided',c:'#d8a23c',i:'R'},
+ quarantined:{n:'Quarantined',c:'#b8c44a',i:'Q'},
+ festival:{n:'Festival',c:'#e7b94a',i:'★'},
+};
+function rollStates(){
+ for(const isl of W.isles){
+  if(!isl.stall)continue;
+  if(isl.state){
+   /* states keep working on the town */
+   const t=isl.state.type;
+   if(t==='starving'){isl.stock.grain=Math.max(4,isl.stock.grain*0.5);isl.stock.sugar=Math.max(4,isl.stock.sugar*0.6);}
+   if(t==='prosperous')for(const g of GKEYS)isl.stock[g]=Math.min(240,isl.stock[g]*1.12);
+   if(t==='raided')for(const g of GKEYS)isl.stock[g]=Math.max(4,isl.stock[g]*0.8);
+   if(t==='blockaded')for(const g of GKEYS)isl.stock[g]=Math.max(4,isl.stock[g]*0.88);
+   if(G.day>=isl.state.until){
+    if(t==='blockaded')liftBlockade(isl);
+    if(isl.disc)toast(isl.name+' is '+STATES[t].n.toLowerCase()+' no more.');
+    isl.state=null;
+   }
+   continue;
+  }
+  if(Math.random()<0.10-(isl.up.def||0)*0.015){
+   const keys=Object.keys(STATES);
+   let t=keys[(Math.random()*keys.length)|0];
+   if(t==='raided'&&(isl.up.def||0)>=2)t='prosperous';
+   const dur=t==='festival'?2:2+(Math.random()*3|0);
+   isl.state={type:t,until:G.day+dur};
+   if(t==='blockaded')isl.state.by=Math.random()<0.5?'crown':'brotherhood';
+   if(isl.disc)toast('Word from '+isl.name+': the port is '+STATES[t].n.toLowerCase()+'.'+(t==='festival'?' Rum and silk will fetch a fine price!':''));
+  }
+ }
+}
 function dayTick(){
  G.day++;
  econDay();
- if(G.crew>0){
-  const w=G.crew*6;
-  if(G.gold>=w){G.gold-=w;}
-  else{G.crew--;shipStats(G.ship);toast('A hand walks off unpaid.',true);}
+ rollStates();
+ if(G.war&&G.day>=G.war.until)endWarZone();
+ /* deadlines */
+ for(const j of [...G.jobs]){
+  if(G.day===j.dl+1&&!j.late){j.late=true;toast('Contract overdue — '+j.txt+' (half pay now)',true);}
+  else if(G.day>j.dl+1)failJob(j,'the deadline is long past');
  }
+ /* wages & morale */
+ const w=wagesDue();
+ let paid=true;
+ if(w>0){
+  if(G.gold>=w)G.gold-=w;
+  else{
+   paid=false;
+   moraleAdd(-15);
+   if(G.crew>0&&Math.random()<0.6){G.crew--;shipStats(G.ship);toast('A hand walks off unpaid.',true);}
+   else for(const k in G.spec)if(G.spec[k]){toast(G.spec[k].name+' quits over back pay.',true);G.spec[k]=null;shipStats(G.ship);break;}
+  }
+ }
+ moraleAdd(paid?2:0);
+ if(G.spec.cook)moraleAdd(4);
+ if(WX.kind==='storm')moraleAdd(-4);
+ if(WX.kind==='doldrums')moraleAdd(-2);
+ if((G.inv.grain|0)>0&&G.crew>0){G.inv.grain--;moraleAdd(2);} /* the cook draws from stores */
+ if(G.morale<30&&G.crew>0&&Math.random()<0.3){G.crew--;shipStats(G.ship);toast('A hand deserts in the night.',true);}
+ if(G.morale<15&&G.crew>1)toast('Mutinous talk below decks — guns crew drag their feet.',true);
+ /* heat fades */
+ G.wanted=Math.max(0,G.wanted-(G.perks.warrant?3:1.5));
+ /* expired oddities */
+ if(G.fakeX&&G.day>G.fakeX.until)G.fakeX=null;
+ for(const k in G.buffs)if(G.buffs[k]&&G.day>G.buffs[k])G.buffs[k]=0;
+ wxRoll(true);
+ questPing();titleTick();
  AU.bell();
- toast('Day '+G.day+'. Markets stir.');
+ toast('Day '+G.day+'. Markets stir.'+(w>0?' Wages paid: '+w+'g.':''));
+ autosave();
  updateHUD();
 }
 
@@ -2779,6 +5343,9 @@ function sim(dt){
  }
  for(let i=G.pirates.length-1;i>=0;i--)pirateTick(G.pirates[i],dt,i);
  maintainSea(dt);
+ wxTick(dt);
+ jobSiteTick();
+ saveFlush(dt);
  tickVillagers(dt);
  updateCrewFigs();
  ballsTick(dt);
@@ -2838,9 +5405,11 @@ function frame(now){
   /* speed-of-sail FOV kick */
   const fT=72+(G.mode==='sail'?clamp(Math.abs(G.ship.spd)*0.8,0,12):0);
   if(Math.abs(camera.fov-fT)>0.08){camera.fov=lerp(camera.fov,fT,clamp(dt*3,0,1));camera.updateProjectionMatrix();}
-  /* underwater tint */
+  /* underwater tint; lanterns cut the night fog a little */
   const uw=camera.position.y<SEA+0.42;
-  scene.fog.density=uw?0.09:0.012;
+  const lantB=G.ship&&G.ship.lant>0&&SKY.day<0.3?0.85:1;
+  scene.fog.density=uw?0.09:WX.fog*lantB;
+  if(waterUni)waterUni.fogDensity.value=uw?0.09:WX.fog*lantB;
   if(uw)scene.background=new THREE.Color(0x16475e);
  }
  renderer.render(scene,camera);
