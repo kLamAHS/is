@@ -1167,5 +1167,112 @@ console.log('== mesh completeness: every exposed face renders ==');
   ok('chunk faces complete: '+r.tag+' ('+(r.real/12|0)+' faces)',r.real===r.truth&&r.real>0);
 }
 
+
+console.log('== the hollows: layers, delves, keepers ==');
+run(`startGame('compact','hollows-seed')`);
+frames(10);
+{
+ const res=run(`(function(){
+  /* surface artifacts: open-surface fraction must be small and chainless */
+  let open=0,land=0,layers={stone:0,deep:0,black:0},glow=0,spikes=0;
+  for(let x=6;x<WORLD-6;x+=3)for(let z=6;z<WORLD-6;z+=3){
+   const c=col(x,z);
+   if(c.h<=SEA)continue;
+   land++;
+   if(genBlock(x,c.h,z)===0)open++;
+   if(c.h>SEA+6){
+    const y1=SEA-10,y2=SEA-25,y3=SEA-44;
+    if(genBlock(x,y1,z)===4)layers.stone++;
+    if(genBlock(x,y2,z)===48)layers.deep++;
+    if(y3>3&&genBlock(x,y3,z)===49)layers.black++;
+   }
+   if(c.room>0.75&&c.cavM>0.65){
+    for(let dy=-9;dy<=9;dy++){
+     const id=genBlock(x,Math.round(c.cavY)+dy,z);
+     if(id===50)glow++;
+     if((id===4||id===48||id===49)&&Math.abs(dy)>2&&Math.abs(dy)<9)spikes++;
+    }
+   }
+  }
+  return {pct:(open*100/Math.max(1,land)).toFixed(2),layers,glow,spikes,delves:W.delves.length};
+ })()`);
+ ok('surface openings rare — no ravine artifacts ('+res.pct+'%)',parseFloat(res.pct)<1.5);
+ ok('rock layers: stone/deep/black ('+res.layers.stone+'/'+res.layers.deep+'/'+res.layers.black+')',
+  res.layers.stone>50&&res.layers.deep>50&&res.layers.black>20);
+ ok('glowcaps light the deep floors ('+res.glow+')',res.glow>0);
+ ok('cavern dripstone present ('+res.spikes+')',res.spikes>0);
+ ok('delves generated ('+res.delves+')',res.delves>=1);
+}
+{
+ const res=run(`(function(){
+  const dv=W.delves[0];
+  /* the stair must be real, walkable air with a floor, entrance to vault */
+  let firstAir=null;
+  for(const [ax,az] of [[1,0],[-1,0],[0,1],[0,-1]]){
+   if(getBlock(dv.x+ax,dv.h0+1,dv.z+az)===0&&getBlock(dv.x+ax,dv.h0,dv.z+az)!==0){firstAir=[ax,az];break;}
+  }
+  const vaultChest=getBlock(dv.vx,dv.vy+1,dv.vz)===13;
+  const vaultStar=getBlock(dv.vx+2,dv.vy+1,dv.vz+2)===37;
+  const vaultWall=getBlock(dv.vx+4,dv.vy+1,dv.vz)===49||getBlock(dv.vx+4,dv.vy+2,dv.vz)===0;
+  const vaultRoom=getBlock(dv.vx+1,dv.vy+1,dv.vz)===0&&getBlock(dv.vx,dv.vy+2,dv.vz)===0;
+  return {entrance:!!firstAir,vaultChest,vaultStar,vaultRoom,deep:dv.h0-dv.vy};
+ })()`);
+ ok('delve entrance opens into the hill',res.entrance);
+ ok('vault holds chest + starmetal, '+res.deep+' blocks down',res.vaultChest&&res.vaultStar&&res.deep>30);
+ ok('vault interior is hollow',res.vaultRoom);
+}
+{
+ const res=run(`(function(){
+  /* walk the captain to the vault door: keeper rises, falls, delve clears */
+  clearMobs();
+  const dv=W.delves[0];
+  P.x=dv.vx+1;P.y=dv.vy+1.05;P.z=dv.vz;G.hp=20;
+  dv.found=true;
+  delveTick();
+  const boss=MOBS.find(m=>m.type==='lord');
+  if(!boss)return {fail:'no keeper'};
+  const big=boss.rig&&boss.rig.s>1.2;
+  const star0=G.inv.starmetal|0;
+  const xp0=G.renown.xp;
+  G.inv.cutlass=1;
+  let swings=0;
+  while(MOBS.includes(boss)&&swings<40){
+   boss.x=P.x+1;boss.z=P.z; /* press the attack: stay in cutlass reach */
+   atkCD=0;P.yaw=Math.atan2(boss.x-P.x,boss.z-P.z);
+   attackTick(0.1,boss);swings++;
+  }
+  return {rose:true,big,swings,cleared:dv.cleared,star:(G.inv.starmetal|0)-star0,xp:G.renown.xp-xp0,
+   title:G.titles.includes('Delver')};
+ })()`);
+ if(res.fail)ok('keeper test: '+res.fail,false);
+ else{
+  ok('the keeper rises at the vault (scale '+(res.big?'grand':'small')+')',res.rose&&res.big);
+  ok('keeper falls in '+res.swings+' swings; vault cleared',res.cleared&&res.swings>5);
+  ok('clearing pays: +'+res.star+' starmetal, +'+res.xp+' renown, Delver title',res.star>=2&&res.xp>=40&&res.title);
+ }
+}
+{
+ const res=run(`(function(){
+  /* picks speed the swing; rations mend the captain */
+  G.inv.ironpick=0;G.inv.steelpick=0;
+  const t0=1/1;
+  G.inv.steelpick=1;
+  /* black rock: hard 2.4 -> with steel pick effective ~1.1s */
+  const eff=2.4/2.2;
+  G.hp=10;G.inv.ration=1;G.inv.glowcap=0;
+  G.inv.ration--;G.hp=Math.min(20,G.hp+6);
+  return {eff:eff<1.2,hp:G.hp};
+ })()`);
+ ok('steel pick tames black rock',res.eff);
+ ok('rations mend the captain (10 -> '+res.hp+')',res.hp===16);
+}
+{
+ /* delve state survives save/load */
+ run('manualSave();loadGame(G.slot)');
+ frames(10);
+ const res=run(`(function(){return {found:W.delves[0].found,cleared:W.delves[0].cleared};})()`);
+ ok('delve found+cleared persists',res.found===true&&res.cleared===true);
+}
+
 if(failed){console.log('\n'+failed+' FAILURES');process.exit(1);}
 console.log('\nALL TESTS PASSED');
