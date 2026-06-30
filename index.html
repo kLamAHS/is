@@ -1001,7 +1001,7 @@ let vignetteSoft=null;            // gentle cinematic vignette for unlit (daylig
 // ---- human visual adaptation state ----
 let adaptLum=0.42, lastPostT=0;   // the luminance the eye is currently adapted to (lags the scene), + last post timestamp
 let postDark=0, postFlick=1, postExp=1;   // per frame: scotopic amount 0..1, torch-flicker shimmer, exposure multiplier
-const ADAPT_DARK_TAU=7.0;         // dark adaptation is SLOW (seconds of rising sensitivity)
+const ADAPT_DARK_TAU=5.0;         // dark adaptation is SLOW (seconds of rising sensitivity)
 const ADAPT_LIGHT_TAU=0.45;       // light adaptation is FAST (a brief wash-out, then recovery)
 let torchList=[];           // wall torches in the current zone (used as point lights)
 const glowQ=[];             // additive torch glows queued during the current frame
@@ -1183,7 +1183,7 @@ function updateAdapt(){
   // ruins your night vision; look away and you slowly dark-adapt again.
   const amb = (Z&&Z.ambient!=null) ? Z.ambient : (litZone?0.12:0.42);
   const fovea = measureLum();
-  const target = amb + Math.max(0, fovea-0.40)*1.5;
+  const target = amb + Math.max(0, fovea-0.58)*1.1;   // only a bright light filling view (not a distant torch) constricts
   const tau = (target<adaptLum) ? ADAPT_DARK_TAU : ADAPT_LIGHT_TAU;
   adaptLum += (target-adaptLum) * (1-Math.exp(-dt/tau));
   if(adaptLum<0.012) adaptLum=0.012; else if(adaptLum>1) adaptLum=1;
@@ -1193,11 +1193,11 @@ function updateAdapt(){
   // blinded (image darkens, recovers over ~DARK_TAU); too dark-adapted for a bright
   // place and it washes out (recovers fast). Steady state -> ~1, no artificial dark.
   const mismatch = adaptLum - target;
-  const transient = (mismatch>0) ? (1 - Math.min(0.86, mismatch*2.3))     // entered the dark -> blinded
+  const transient = (mismatch>0) ? (1 - Math.min(0.80, mismatch*2.6))     // entered the dark -> briefly blinded (near-black)
                                  : (1 + Math.min(5, -mismatch*4.5));      // entered the light -> wash-out
-  // a dark place is SEEN DIMLY even once adapted (scotopic steady < 1); the
-  // transient blinds you on entry and washes you out in sudden light.
-  postExp = (1 - postDark*0.40) * transient;
+  // a dark place stays a little dim even once adapted, but the eye CLEARLY
+  // brightens from the blinded entry to the adapted state (eyes adjusting).
+  postExp = (1 - postDark*0.26) * transient;
   postFlick = litZone ? (0.985 + 0.016*Math.sin(time*15.0) + 0.012*Math.sin(time*6.3) + 0.009*Math.sin(time*27.7)) : 1;
 }
 /* Build the per-frame channel LUTs: the zone's mood grade folded together with
@@ -1210,10 +1210,10 @@ function buildAdaptLUT(){
   const zCon=g.con??1, zBright=g.bright??1, zGamma=g.gamma??1, zLift=g.lift??0, zSat=g.sat??1, zTint=g.tint||[1,1,1];
   let exposure=postExp; if(exposure<0.12)exposure=0.12; else if(exposure>6)exposure=6;
   const dark=postDark, flick=postFlick;
-  const con = zCon*(1-dark*0.46);                 // contrast sensitivity drops in the dark
-  const pivot = 0.5 - dark*0.22;                  // compress around a LOW point: dark tones merge into darkness
-  const lift = zLift + dark*0.025;                // a touch of lift so blacks aren't a dead crush
-  const sat = zSat*(1-dark*0.82);                 // rods are colour-blind -> toward grayscale
+  const con = zCon*(1-dark*0.10);                 // a slight contrast softening in deep dark
+  const pivot = 0.5 - dark*0.05;
+  const lift = zLift;                             // keep shadows honest (no haze)
+  const sat = zSat*(1-dark*0.20);                 // a hint of desaturation in deep shadow, not gray mush
   const mk=ch=>{ const lut=new Uint8Array(256), tn=zTint[ch];
     for(let i=0;i<256;i++){ let v=(i/255)*exposure*flick;   // adaptation exposure (with flicker shimmer)
       v=(v-pivot)*con+pivot;                      // contrast compressed toward the dark pivot (edges blend into shadow)
@@ -1483,19 +1483,10 @@ function castFrame(){
   ctx.putImageData(img,0,0);
   if(lit) drawTorchGlows();
   if(fxOn) drawBloom();         // bloom/glare — wider & stronger when dark-adapted (pupil open)
-  if(fxOn && postDark>0.12) drawAcuityBlur();   // rods pool signal -> reduced acuity in low light
   // cinematic vignette — warm-dark in torchlit zones, a gentle one elsewhere
   if(lit){ ctx.fillStyle=vignette; ctx.fillRect(0,0,RW,RH); }
   else if(fxOn && vignetteSoft){ ctx.fillStyle=vignetteSoft; ctx.fillRect(0,0,RW,RH); }
   drawViewmodels();
-}
-/* reduced visual acuity in low light — a gentle full-frame softening that grows
-   with dark adaptation (fine detail and crisp edges go first) */
-function drawAcuityBlur(){
-  const bp = postDark*Math.max(0.7, RW*0.0042);
-  if(bp<0.3) return;
-  ctx.save(); ctx.filter='blur('+bp.toFixed(2)+'px)'; ctx.globalAlpha=0.85;
-  ctx.drawImage(view,0,0,RW,RH,0,0,RW,RH); ctx.restore();
 }
 /* ---- bloom: a real luma-threshold bright-pass, blurred and added back -------
    Only pixels brighter than BLOOM_THRESH (sky, torch flames, bright highlights)
