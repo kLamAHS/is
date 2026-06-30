@@ -175,18 +175,26 @@
   .btn-t{pointer-events:auto; touch-action:none; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
     display:flex; align-items:center; justify-content:center; user-select:none;
     background:rgba(20,14,10,.5); color:var(--ink); border:1px solid rgba(255,157,60,.3);
-    border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,.4); backdrop-filter:blur(2px);
+    border-radius:50%; box-shadow:0 4px 14px rgba(0,0,0,.4); backdrop-filter:blur(2px);
     font-family:"Press Start 2P",monospace;}
-  .btn-t.on{background:rgba(255,157,60,.34); border-color:var(--warm); color:#1a0f06;}
-  .btn-t svg{width:44%;height:44%;fill:currentColor}
-  #dpad{position:absolute; left:3.5%; bottom:6%; width:min(36vw,150px); height:min(36vw,150px); pointer-events:none;}
-  #dpad .btn-t{position:absolute; width:34%; height:34%;}
-  #dpad .up{left:33%;top:0} #dpad .down{left:33%;bottom:0} #dpad .left{left:0;top:33%} #dpad .right{right:0;top:33%}
-  #rot{position:absolute; right:3.5%; bottom:6%; display:flex; gap:10px;}
-  #rot .btn-t{position:relative; width:min(15vw,58px); height:min(15vw,58px);}
-  #act{position:absolute; left:50%; bottom:7%; transform:translateX(-50%); gap:8px; padding:0 16px;
-    min-width:min(36vw,150px); height:min(13vw,54px); font-size:clamp(8px,1.4vw,11px); letter-spacing:1px;}
-  #act .ic{font-size:1.5em;line-height:1}
+  .btn-t.on{background:rgba(255,157,60,.34); border-color:var(--warm); color:#1a0f06; transform:scale(.94);}
+  .btn-t svg{width:46%;height:46%;fill:currentColor}
+  /* movement joystick (left) — analog, drag the nub in any direction */
+  #stick{position:absolute; left:5%; bottom:7%; width:min(40vw,168px); height:min(40vw,168px);
+    pointer-events:auto; touch-action:none; border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, rgba(255,157,60,.10), rgba(20,14,10,.42));
+    border:1px solid rgba(255,157,60,.30); box-shadow:0 4px 16px rgba(0,0,0,.45); backdrop-filter:blur(2px);}
+  #stick .nub{position:absolute; left:50%; top:50%; width:44%; height:44%; margin:-22% 0 0 -22%;
+    border-radius:50%; background:rgba(255,157,60,.32); border:1px solid var(--warm);
+    box-shadow:0 2px 8px rgba(0,0,0,.5); will-change:transform;}
+  #stick.on .nub{background:rgba(255,157,60,.5);}
+  /* primary action button (right) — attack / talk / open / use */
+  #act{position:absolute; right:5%; bottom:9%; flex-direction:column; gap:2px; text-align:center;
+    width:min(23vw,104px); height:min(23vw,104px); font-size:clamp(7px,1.5vw,10px); letter-spacing:1px;}
+  #act .ic{font-size:1.8em;line-height:1}
+  /* utility buttons (top-centre) — inventory & menu; clear of HUD, minimap, joystick & action */
+  #tbtns{position:absolute; top:10px; left:50%; transform:translateX(-50%); display:flex; gap:14px; pointer-events:none;}
+  #tbtns .btn-t{width:min(13vw,50px); height:min(13vw,50px);}
   /* ---- map painter ---- */
   #editor{position:absolute; inset:0; z-index:60; display:none; flex-direction:column;
     background:#0d0b09; color:var(--ink); font-family:'VT323',monospace;}
@@ -326,17 +334,12 @@
 
   <!-- on-screen touch controls (shown on touch devices while playing) -->
   <div id="touch">
-    <div id="dpad">
-      <div class="btn-t up"    data-k="w"><svg viewBox="0 0 24 24"><path d="M12 7l7 10H5z"/></svg></div>
-      <div class="btn-t left"  data-k="a"><svg viewBox="0 0 24 24"><path d="M7 12l10-7v14z"/></svg></div>
-      <div class="btn-t right" data-k="d"><svg viewBox="0 0 24 24"><path d="M17 12L7 5v14z"/></svg></div>
-      <div class="btn-t down"  data-k="s"><svg viewBox="0 0 24 24"><path d="M12 17L5 7h14z"/></svg></div>
+    <div id="stick"><div class="nub" id="nub"></div></div>
+    <div id="tbtns">
+      <div class="btn-t" id="tbInv" aria-label="Inventory"><svg viewBox="0 0 24 24"><path d="M7 4h10l1 4H6zM5 9h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1m4 3v3h6v-3z"/></svg></div>
+      <div class="btn-t" id="tbMenu" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></div>
     </div>
     <div id="act" class="btn-t"><span class="ic" id="actic">⚔️</span><span id="actlbl">Attack</span></div>
-    <div id="rot">
-      <div class="btn-t" data-k="arrowleft"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg></div>
-      <div class="btn-t" data-k="arrowright"><svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg></div>
-    </div>
   </div>
 
   <div id="hint">move WASD &middot; drag mouse / &larr; &rarr; to look &middot; attack click &middot; interact E &middot; debug ~</div>
@@ -352,8 +355,8 @@
       <span><b>I</b> inventory &middot; <b>~</b> debug</span><span><b>Walk into portals</b> to travel</span>
     </div>
     <div class="legend tc">
-      <span><b>D-pad</b> move &amp; strafe</span><span><b>&#8634; &#8635;</b> turn</span>
-      <span><b>Drag screen</b> to look</span><span><b>Action</b> attack / talk / open</span>
+      <span><b>Left stick</b> move &amp; strafe</span><span><b>Drag screen</b> to look / turn</span>
+      <span><b>Action</b> attack / talk / open</span><span><b>&#127890; Pack</b> &middot; <b>&#9776; Menu</b></span>
     </div>
   </div>
 
@@ -668,6 +671,7 @@ const ITEMS={
                   desc:"Restores 90 vigour.", use(){ heal(90); msg("You quaff a Greater Potion. (+90)"); sfx('pickup'); }},
   // weapons
   rusty_sword:   {name:"Rusty Sword",  type:'weapon', slot:'weapon', stack:false, icon:'\u2694', value:20,
+                  sprite:'assets/weapons/steel_sword.png',
                   stats:{atk:6}, desc:"A pitted blade. +6 attack."},
   knight_sword:  {name:"Knight's Sword",type:'weapon', slot:'weapon', stack:false, icon:'\u2694', value:80,
                   stats:{atk:16, range:0.2}, desc:"Well-balanced steel. +16 attack, +reach."},
@@ -993,6 +997,7 @@ let PS=Object.assign({},BASE_STATS);    // cached derived stats
 let godMode=false, noclip=false;        // debug toggles
 let state='title', time=0, last=0, portalLock=false, transitioning=false;
 const keys=new Set(); let mouseLook=true; let lookSens=0.0026;
+const touchMove={active:false, mv:0, sv:0};   // analog joystick: forward (mv) & strafe (sv) in [-1,1]
 
 /* ---- skyboxes (open-air zones) ----
    A skybox is a 360° horizontal panorama sampled by the camera's yaw. To add
@@ -1031,6 +1036,7 @@ function loadSkybox(name, src){
    the rest fall back to this default procedurally-drawn blade. */
 let WEAP=null;
 const WEAP_IMG={};             // preloaded weapon sprite images, keyed by item id
+let defaultWeapImg=null;       // base sword shown when the equipped weapon has no sprite of its own
 function buildWeapon(){
   const w=140,h=170, cv=document.createElement('canvas');cv.width=w;cv.height=h;
   const c=cv.getContext('2d'); c.imageSmoothingEnabled=false;
@@ -1050,9 +1056,13 @@ function buildWeapon(){
   WEAP=cv;
 }
 function loadWeaponSprites(){ for(const id in ITEMS){ const d=ITEMS[id];
-  if(d.sprite){ const im=new Image(); im.src=d.sprite; WEAP_IMG[id]=im; } } }
+  if(d.sprite){ const im=new Image(); im.src=d.sprite; WEAP_IMG[id]=im; } }
+  defaultWeapImg=new Image(); defaultWeapImg.src='assets/weapons/steel_sword.png'; }
+const ready=im=>im && im.complete && im.naturalWidth>0;
 function equippedSprite(){ const id=equip.weapon, im=id&&WEAP_IMG[id];
-  return (im && im.complete && im.naturalWidth) ? im : null; }
+  if(ready(im)) return im;                 // weapon's own art
+  if(ready(defaultWeapImg)) return defaultWeapImg;   // base sword fallback
+  return null; }
 
 /* ---- map parsing + solidity ---- */
 function parseMap(rows){ return layerFromChars(rows); }
@@ -1138,6 +1148,11 @@ function castFrame(){
     let ra=Math.atan2(ry,rx)/(Math.PI*2); ra=((ra%1)+1)%1; skyX[x]=(ra*SKYTEX.w)|0; } }
 
   // ---------- WALLS ----------
+  // Front-to-back DDA: step through EVERY cell the ray crosses (don't stop at the
+  // first solid one). Keep a falling "clip" = the highest screen row already covered
+  // by a nearer wall. Each solid cell draws only the strip between its own top and
+  // the current clip, then lowers the clip to its top. This lets a TALLER wall behind
+  // a SHORTER one poke its top above the near wall instead of being hidden.
   for(let x=0;x<RW;x++){
     const camX=2*x/RW-1, rdx=dirX+planeX*camX, rdy=dirY+planeY*camX;
     let mapX=Math.floor(P.x), mapY=Math.floor(P.y);
@@ -1148,42 +1163,66 @@ function castFrame(){
     let side=0, guard=0;
     doorD[x]=0;                                              // reset lintel record for this column
     let odSide=0, odMX=0, odMY=0, odPerp=0, odSeen=false;
-    while(guard++<128){ if(sdx<sdy){sdx+=ddx;mapX+=stepX;side=0;}else{sdy+=ddy;mapY+=stepY;side=1;}
+
+    let clip=RH;                                             // lowest row a farther wall may draw down to (rises as near walls are painted)
+    let firstHit=true;                                       // nearest solid: owns zbuf / eBot / floor cutoff
+    let lastTop=RH;                                          // smallest wall-top row painted so far (-> sTop for ceiling/sky cutoff)
+
+    while(guard++<128){
+      if(sdx<sdy){sdx+=ddx;mapX+=stepX;side=0;}else{sdy+=ddy;mapY+=stepY;side=1;}
       if(!odSeen){ const dm=wallMatAt(mapX,mapY);            // remember the first OPEN doorway the ray crosses
         if(dm&&dm.door&&DOORS.has(mapX+','+mapY)){ odSeen=true; odSide=side; odMX=mapX; odMY=mapY; odPerp=(side===0)?(sdx-ddx):(sdy-ddy); } }
-      if(solidCell(mapX,mapY)) break; }
-    let perp=(side===0)?(sdx-ddx):(sdy-ddy); if(perp<0.0001)perp=0.0001;
-    const lineHf=RH/perp;
-    const hmat=wallMatAt(mapX,mapY);
-    let wh = enclosed ? roomH : wHgt(mapX,mapY);             // per-cell wall height (variety restored)
-    // a door = a short leaf [0,openH] with a solid wall lintel [openH,wh] above it
-    let isDoor=!!(hmat&&hmat.door), openH=0, opening=0, htex=null;
-    if(isDoor){ wh = enclosed ? roomH : (wHgt(mapX,mapY)||1.7); openH=Math.min(DOOR_OPEN,wh); opening=openH; htex=headerTex(mapX,mapY); }
+
+      const oob = !inLM(mapX,mapY);
+      if(!solidCell(mapX,mapY)){ if(oob) break; else continue; }   // open door / empty: keep walking (OOB is solid stone -> handled below)
+
+      // --- a solid cell: compute its slice geometry ---
+      let perp=(side===0)?(sdx-ddx):(sdy-ddy); if(perp<0.0001)perp=0.0001;
+      const lineHf=RH/perp;
+      const hmat=wallMatAt(mapX,mapY);
+      let wh = enclosed ? roomH : wHgt(mapX,mapY);           // per-cell wall height (variety preserved)
+      // a door = a short leaf [0,openH] with a solid wall lintel [openH,wh] above it
+      let isDoor=!!(hmat&&hmat.door), openH=0, htex=null;
+      if(isDoor){ wh = enclosed ? roomH : (wHgt(mapX,mapY)||1.7); openH=Math.min(DOOR_OPEN,wh); htex=headerTex(mapX,mapY); }
+
+      const floorY=lineHf/2+HH, topY=floorY-lineHf*wh;
+      let s=Math.floor(topY); let e=Math.floor(floorY); if(s<0)s=0; if(e>RH)e=RH;
+
+      if(firstHit){ zbuf[x]=perp; eBot[x]=e; firstHit=false; }   // nearest wall: sprite depth + floor cutoff
+      // this slice is only visible above everything nearer: clamp its bottom to the running clip
+      let drawBot=e; if(drawBot>clip) drawBot=clip;
+      if(s<drawBot){                                          // there is a visible strip for this cell
+        const tex=TEXTURES[texAt(mapX,mapY)]||TEXTURES.stone;
+        let wallX=(side===0)?(P.y+perp*rdy):(P.x+perp*rdx); wallX-=Math.floor(wallX);
+        let texX=(wallX*TEX)|0; if((side===0&&rdx>0)||(side===1&&rdy<0)) texX=TEX-texX-1;
+        const base=texX, stepT=TEX/lineHf; let texPos=(s-topY)*stepT;
+        const sf=side===1?0.7:1.0;
+        let fa=0, aw=0, fogT=0;
+        if(lit){ let br=playerBright(perp); if(side===1)br*=0.74; fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93;
+          const hx=P.x+rdx*perp, hy=P.y+rdy*perp; aw=torchWarm(hx,hy)*0.55; if(aw>0.7)aw=0.7; }
+        else { fogT=perp*Z.fog; if(fogT>0.92)fogT=0.92; }
+        for(let y=s;y<drawBot;y++){ let texel;
+          if(isDoor){ const worldH=(floorY-y)/lineHf;
+            if(worldH<=openH){ let vt=(((openH-worldH)/openH)*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=tex.data[vt*TEX+base]; }
+            else { let vt=(((wh-worldH)/(wh-openH))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=htex.data[vt*TEX+base]; } }
+          else { const ty=(texPos)&(TEX-1); texel=tex.data[ty*TEX+base]; }
+          texPos+=stepT;
+          buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,sf,fogT); }
+        if(s<lastTop) lastTop=s;                             // remember the highest top actually painted
+      }
+      // raise the clip to this cell's top; once nothing more can poke above, stop
+      if(s<clip) clip=s;
+      if(clip<=0 || oob) break;          // clip filled, or this was the map-boundary wall (nothing renderable lies beyond it)
+    }
+
+    if(firstHit){ zbuf[x]=1e9; eBot[x]=RH; }                 // ray never hit anything solid (shouldn't happen with OOB stone, but stay safe)
+    sTop[x]=(lastTop<0)?0:lastTop;                           // ceiling/sky only fills rows above the highest wall top
+
     if(odSeen && odPerp>0.0001){                             // an open doorway: stash its lintel band to overdraw later
       const owh = enclosed ? roomH : (wHgt(odMX,odMY)||1.7), ooh=Math.min(DOOR_OPEN,owh);
       if(owh>ooh){ doorD[x]=odPerp; doorWHa[x]=owh; doorOHa[x]=ooh; doorHT[x]=headerTex(odMX,odMY);
         let owx=(odSide===0)?(P.y+odPerp*rdy):(P.x+odPerp*rdx); owx-=Math.floor(owx);
         let otx=(owx*TEX)|0; if((odSide===0&&rdx>0)||(odSide===1&&rdy<0)) otx=TEX-otx-1; doorTX[x]=otx; } }
-    const floorY=lineHf/2+HH, topY=floorY-lineHf*wh;
-    let s=Math.floor(topY); let e=Math.floor(floorY); if(s<0)s=0; if(e>RH)e=RH;
-    zbuf[x]=perp; sTop[x]=s; eBot[x]=e;
-
-    const tex=TEXTURES[texAt(mapX,mapY)]||TEXTURES.stone;
-    let wallX=(side===0)?(P.y+perp*rdy):(P.x+perp*rdx); wallX-=Math.floor(wallX);
-    let texX=(wallX*TEX)|0; if((side===0&&rdx>0)||(side===1&&rdy<0)) texX=TEX-texX-1;
-    const base=texX, stepT=TEX/lineHf; let texPos=(s-topY)*stepT;
-    const sf=side===1?0.7:1.0;
-    let fa=0, aw=0, fogT=0;
-    if(lit){ let br=playerBright(perp); if(side===1)br*=0.74; fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93;
-      const hx=P.x+rdx*perp, hy=P.y+rdy*perp; aw=torchWarm(hx,hy)*0.55; if(aw>0.7)aw=0.7; }
-    else { fogT=perp*Z.fog; if(fogT>0.92)fogT=0.92; }
-    for(let y=s;y<e;y++){ let texel;
-      if(isDoor){ const worldH=(floorY-y)/lineHf;
-        if(worldH<=openH){ let vt=(((openH-worldH)/openH)*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=tex.data[vt*TEX+base]; }
-        else { let vt=(((wh-worldH)/(wh-openH))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=htex.data[vt*TEX+base]; } }
-      else { const ty=(texPos)&(TEX-1); texel=tex.data[ty*TEX+base]; }
-      texPos+=stepT;
-      buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,sf,fogT); }
   }
 
   // ---------- FLOOR (plane at height 0) ----------
@@ -1300,9 +1339,9 @@ function drawViewmodels(){
     if(P.swing>0){ const ph=1-P.swing/SWING_DUR, k=Math.sin(ph*Math.PI); ang=0.6*k; lift=26*k; }
     const spr=equippedSprite();
     if(spr){ // image weapon (diagonal art): hilt anchored low-right, blade sweeping up-left
-      const dh=RH*0.96, dw=dh*spr.width/spr.height;
-      ctx.save(); ctx.translate(RW*0.68+bobX, RH+bobY-lift); ctx.rotate(ang); ctx.scale(-1,1);
-      ctx.drawImage(spr, -dw*0.18, -dh*0.94, dw, dh); ctx.restore();
+      const dh=RH*0.82, dw=dh*spr.width/spr.height;
+      ctx.save(); ctx.translate(RW*0.74+bobX, RH+18+bobY-lift); ctx.rotate(ang); ctx.scale(-1,1);
+      ctx.drawImage(spr, -dw*0.12, -dh*0.92, dw, dh); ctx.restore();
     } else { // default procedural blade (mirrored, drawn from the hilt up)
       const dh=RH*0.58, dw=dh*(WEAP.width/WEAP.height);
       ctx.save(); ctx.translate(RW*0.30+bobX, RH+bobY-lift); ctx.scale(-1,1); ctx.rotate(ang);
@@ -1460,7 +1499,9 @@ function update(dt){
   let mv=0,sv=0;
   if(keys.has('w')||keys.has('arrowup'))mv+=1; if(keys.has('s')||keys.has('arrowdown'))mv-=1;
   if(keys.has('a'))sv-=1; if(keys.has('d'))sv+=1;
-  P.moving=(mv!==0||sv!==0);
+  if(touchMove.active){ mv+=touchMove.mv; sv+=touchMove.sv; }   // analog joystick adds in
+  mv=Math.max(-1,Math.min(1,mv)); sv=Math.max(-1,Math.min(1,sv));
+  P.moving=(Math.abs(mv)>0.02||Math.abs(sv)>0.02);
   const rx=Math.cos(P.angle+Math.PI/2), ry=Math.sin(P.angle+Math.PI/2);
   const vx=(dirX*mv*MOVE + rx*sv*STRAFE)*dt, vy=(dirY*mv*MOVE + ry*sv*STRAFE)*dt;
   if(noclip||!blocked(P.x+vx,P.y)) P.x+=vx;
@@ -1650,20 +1691,41 @@ function wireEvents(){
   $('respawnBtn').addEventListener('click',respawn);
 
   // ── on-screen touch controls ──
-  const hold=el=>{ const k=el.dataset.k;
-    const on=e=>{ e.preventDefault(); keys.add(k); el.classList.add('on'); try{el.setPointerCapture(e.pointerId)}catch(_){} };
-    const off=e=>{ e.preventDefault(); keys.delete(k); el.classList.remove('on'); };
-    el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off);
-    el.addEventListener('pointercancel',off); el.addEventListener('lostpointercapture',off);
-  };
-  document.querySelectorAll('#dpad .btn-t, #rot .btn-t').forEach(hold);
+  // analog movement joystick (left): drag the nub; vector drives move + strafe
+  const stick=$('stick'), nub=$('nub');
+  let stickId=null, sox=0, soy=0, srad=1;
+  const stickReset=()=>{ stickId=null; touchMove.active=false; touchMove.mv=0; touchMove.sv=0;
+    stick.classList.remove('on'); nub.style.transform=''; };
+  const stickApply=e=>{ let dx=e.clientX-sox, dy=e.clientY-soy;
+    const m=Math.hypot(dx,dy); if(m>srad){ dx=dx/m*srad; dy=dy/m*srad; }
+    nub.style.transform=`translate(${dx}px,${dy}px)`;
+    touchMove.active=true; touchMove.sv=dx/srad; touchMove.mv=-dy/srad; };
+  stick.addEventListener('pointerdown',e=>{ e.preventDefault(); if(stickId!==null)return;
+    const r=stick.getBoundingClientRect(); sox=r.left+r.width/2; soy=r.top+r.height/2; srad=r.width*0.42;
+    stickId=e.pointerId; stick.classList.add('on'); try{stick.setPointerCapture(e.pointerId)}catch(_){}
+    stickApply(e); });
+  stick.addEventListener('pointermove',e=>{ if(e.pointerId!==stickId)return; e.preventDefault(); stickApply(e); });
+  const stickEnd=e=>{ if(e.pointerId===stickId) stickReset(); };
+  stick.addEventListener('pointerup',stickEnd); stick.addEventListener('pointercancel',stickEnd);
+  stick.addEventListener('lostpointercapture',stickEnd);
+
+  // primary action button (attack / talk / open / use — auto-selected)
   const ab=$('act');
   ab.addEventListener('pointerdown',e=>{ e.preventDefault(); ab.classList.add('on');
     const a=currentAction(); if(a.kind==='interact') interact(); else playerAttack(); });
   const aoff=e=>{ e.preventDefault(); ab.classList.remove('on'); };
   ab.addEventListener('pointerup',aoff); ab.addEventListener('pointercancel',aoff);
 
-  // drag anywhere on the view to look around (touch)
+  // utility buttons: fire on release so a tap doesn't also drag-look the view
+  const tapBtn=(el,fn)=>{ if(!el)return;
+    el.addEventListener('pointerdown',e=>{ e.preventDefault(); el.classList.add('on'); try{el.setPointerCapture(e.pointerId)}catch(_){} });
+    el.addEventListener('pointerup',e=>{ e.preventDefault(); el.classList.remove('on'); fn(); });
+    const c=e=>{ e.preventDefault(); el.classList.remove('on'); };
+    el.addEventListener('pointercancel',c); el.addEventListener('lostpointercapture',c); };
+  tapBtn($('tbInv'), toggleInv);
+  tapBtn($('tbMenu'), togglePause);
+
+  // drag anywhere on the view to look around (touch); ignore touches that start on a control
   let lookId=null, lookX=0;
   view.addEventListener('pointerdown',e=>{ if(e.pointerType==='mouse')return;
     if(lookId===null){ lookId=e.pointerId; lookX=e.clientX; try{view.setPointerCapture(e.pointerId)}catch(_){} } });
