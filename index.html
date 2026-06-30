@@ -316,6 +316,7 @@
     <button data-act="resume">Resume</button>
     <button data-act="save">Save game</button>
     <button data-act="load">Load game</button>
+    <button data-act="grade" id="pausegrade">Mood grade: On</button>
     <div class="plbl">Mouse sensitivity</div>
     <input type="range" id="pausesens" min="6" max="60" value="26">
     <div class="pctl dim">WASD move &middot; drag / &larr;&rarr; look &middot; click attack &middot; E interact &middot; I pack &middot; ~ debug</div>
@@ -860,6 +861,8 @@ const ZONES={
     floorTex:'cobble', roofHeight:1.7,                    // cobble ground; roofs over interiors at 1.7
     floorColor:rgb(120,114,106), ceilingColor:rgb(120,150,190),
     fogColor:rgb(156,176,202), fog:0.012,
+    grade:{ sat:1.10, con:1.05, bright:1.03, tint:[1.06,1.0,0.90] },   // warm sunlit daylight
+
     roofColor:rgb(48,34,22), indoorFloor:rgb(74,54,34),   // building interiors: timber roof + plank floor
     start:{x:17.5, y:26.5, angle:-1.5708},
     entities:[
@@ -886,6 +889,7 @@ const ZONES={
     roomHeight:1.5, floorTex:'flagstone', ceilTex:'flagstone',  // enclosed box: stone floor+ceiling
     floorColor:rgb(90,66,48), ceilingColor:rgb(38,26,18),
     fogColor:rgb(10,7,5), fog:0.05,
+    grade:{ sat:0.80, con:1.14, bright:0.95, tint:[0.92,0.99,1.12], lift:0.012 },  // cold, grim, desaturated
     light:{},   // enables torchlight; warmth comes from torch props + the player's own light
     start:{x:2.5,y:2.5,angle:0},
     entities:[
@@ -919,6 +923,7 @@ const ZONES={
     roomHeight:1.5, floorTex:'flagstone', ceilTex:'flagstone',
     floorColor:rgb(86,84,96), ceilingColor:rgb(40,38,52),
     fogColor:rgb(14,13,18), fog:0.045, light:{},
+    grade:{ sat:0.90, con:1.05, tint:[0.96,0.99,1.07] },   // cool, clinical proving-ground
     start:{x:9.5,y:10.5,angle:-Math.PI/2},
     entities:[
       {type:'portal', sprite:'portal', x:2.5, y:11.5,
@@ -982,6 +987,7 @@ const $=id=>document.getElementById(id);
 // per-zone globals set by loadZone
 let Z=null, ZID=null, LM=null, ENTS=[], DOORS=new Set();
 let FOG=0, FLOOR=0, CEIL=0, ISKY=false;
+let GRADE=null, gradeOn=true;     // per-zone colour grade (mood): precomputed LUTs, applied to the final frame
 let torchList=[];           // wall torches in the current zone (used as point lights)
 const glowQ=[];             // additive torch glows queued during the current frame
 const zoneRuntime={};                 // persistent per-zone state (deaths, pickups, doors)
@@ -1099,6 +1105,8 @@ function loadZone(id, spawn){
   torchList = ENTS.filter(e=>e.type==='decoration' && e.sprite==='torch');
   FOG=Z.fogColor; FLOOR=Z.floorColor; CEIL=Z.ceilingColor; ISKY=(Z.ceiling==='sky');
   SKYTEX = ISKY ? (SKYBOXES[Z.sky] || SKYBOXES.proc || null) : null;
+  GRADE = gradeOn ? buildGrade(Z.grade) : null;        // per-zone mood grade
+  Z._grade = Z.grade;                                   // remembered so the toggle can rebuild it
   const sp=spawn||Z.start; P.x=sp.x; P.y=sp.y; P.angle=sp.angle;
   portalLock=true;
   $('zone').textContent=Z.name;
@@ -1128,6 +1136,43 @@ function over(dst,src,a){ const ia=255-a;
   const r=(((src&255)*a+(dst&255)*ia)/255)|0, g=((((src>>8)&255)*a+((dst>>8)&255)*ia)/255)|0, b=((((src>>16)&255)*a+((dst>>16)&255)*ia)/255)|0;
   return (0xff000000|(b<<16)|(g<<8)|r)>>>0; }
 
+/* ---- per-zone colour grade (mood) ----------------------------------------
+   A zone's `grade` gives the scene a distinct atmosphere. Contrast, brightness,
+   per-channel tint, lift and gamma fold into three 256-entry channel LUTs so the
+   per-frame pass is just three table lookups per pixel; saturation (cross-channel)
+   is a cheap luma mix. Fields (all optional, neutral defaults):
+     sat    saturation   (1 = unchanged, <1 desaturate, >1 punchier)
+     con    contrast     (around mid-grey; 1 = unchanged)
+     bright brightness   (1 = unchanged)
+     tint   [r,g,b] gain (warm = boost R / cut B; cold = the reverse)
+     lift   raise blacks (adds a flat amount; small, e.g. 0.02)
+     gamma  midtone curve(1 = unchanged) */
+function buildGrade(g){
+  if(!g) return null;
+  const con=g.con??1, bright=g.bright??1, gamma=g.gamma??1, lift=g.lift??0, sat=g.sat??1, tint=g.tint||[1,1,1];
+  if(con===1&&bright===1&&gamma===1&&lift===0&&sat===1&&tint[0]===1&&tint[1]===1&&tint[2]===1) return null; // neutral -> skip
+  const mk=ch=>{ const lut=new Uint8Array(256);
+    for(let i=0;i<256;i++){ let v=i/255;
+      v=(v-0.5)*con+0.5;            // contrast about mid-grey
+      v=v*bright*tint[ch]+lift;     // brightness, per-channel tint, lifted blacks
+      if(v<0)v=0; else if(v>1)v=1;
+      if(gamma!==1) v=Math.pow(v,1/gamma);
+      lut[i]=(v*255+0.5)|0; }
+    return lut; };
+  return {lutR:mk(0), lutG:mk(1), lutB:mk(2), sat};
+}
+function applyGrade(){
+  if(!GRADE) return; const {lutR,lutG,lutB,sat}=GRADE, n=RW*RH;
+  if(sat===1){ for(let i=0;i<n;i++){ const p=buf[i];
+    buf[i]=(p&0xff000000)|(lutB[(p>>16)&255]<<16)|(lutG[(p>>8)&255]<<8)|lutR[p&255]; } }
+  else { for(let i=0;i<n;i++){ const p=buf[i];
+    let r=lutR[p&255], gg=lutG[(p>>8)&255], b=lutB[(p>>16)&255];
+    const l=(r*77+gg*150+b*29)>>8;                 // luma (0.30/0.59/0.11 in 8.8 fixed point)
+    r=l+(((r-l)*sat)|0); gg=l+(((gg-l)*sat)|0); b=l+(((b-l)*sat)|0);
+    r=r<0?0:r>255?255:r; gg=gg<0?0:gg>255?255:gg; b=b<0?0:b>255?255:b;
+    buf[i]=(p&0xff000000)|(b<<16)|(gg<<8)|r; } }
+}
+
 /* ---- THE RAYCASTER: one column per screen x ---- */
 function castFrame(){
   const dirX=Math.cos(P.angle), dirY=Math.sin(P.angle);
@@ -1147,6 +1192,7 @@ function castFrame(){
   if(useSky){ for(let x=0;x<RW;x++){ const camX=2*x/RW-1, rx=dirX+planeX*camX, ry=dirY+planeY*camX;
     let ra=Math.atan2(ry,rx)/(Math.PI*2); ra=((ra%1)+1)%1; skyX[x]=(ra*SKYTEX.w)|0; } }
 
+  const fZone=TEXTURES[Z.floorTex]||null;   // zone-default floor skin (used by short-wall far-floor + the floor pass)
   // ---------- WALLS ----------
   // Front-to-back DDA: step through EVERY cell the ray crosses (don't stop at the
   // first solid one). Keep a falling "clip" = the highest screen row already covered
@@ -1184,6 +1230,8 @@ function castFrame(){
       // a door = a short leaf [0,openH] with a solid wall lintel [openH,wh] above it
       let isDoor=!!(hmat&&hmat.door), openH=0, htex=null;
       if(isDoor){ wh = enclosed ? roomH : (wHgt(mapX,mapY)||1.7); openH=Math.min(DOOR_OPEN,wh); htex=headerTex(mapX,mapY); }
+      // a nearest non-door wall shorter than eye height (0.5) is looked DOWN upon: its TOP shows
+      const isShort = firstHit && !isDoor && !enclosed && wh<0.5;
 
       const floorY=lineHf/2+HH, topY=floorY-lineHf*wh;
       let s=Math.floor(topY); let e=Math.floor(floorY); if(s<0)s=0; if(e>RH)e=RH;
@@ -1210,6 +1258,92 @@ function castFrame(){
           buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,sf,fogT); }
         if(s<lastTop) lastTop=s;                             // remember the highest top actually painted
       }
+
+      // ---- SHORT-WALL TOP CAP (+ far floor beyond) -----------------------------
+      // The very first wall the ray meets, when shorter than eye height (wh<0.5),
+      // is looked DOWN upon: its horizontal TOP is visible, receding from the
+      // front-top edge (row topY) up toward the horizon, ending where a TALLER wall
+      // rises behind it (a far face) or where it opens to far floor (height 0).
+      // We march the height-wh plane outward row-by-row, draw the cap (and any far
+      // floor above it), then set `clip` to that junction so taller walls behind
+      // draw only ABOVE the junction (never over the cap). Bounded to this column
+      // and skipped entirely unless the nearest wall is a non-door short wall in an
+      // open (non-enclosed) zone -> ~zero cost when no short walls are in view.
+      if(isShort){
+        const capTex=TEXTURES[texAt(mapX,mapY)]||TEXTURES.stone;   // cap wears the wall's own skin
+        const hcapR=Math.floor(HH);                               // integer horizon row (ceiling/sky owns row hcapR)
+        let yTop=s-1;                                              // first row above the front-top edge
+        if(yTop>=RH) yTop=RH-1;
+        // Default junction sits ONE row below the horizon so the ceiling/sky pass (cy<=floor(HH))
+        // owns the exact horizon row; this prevents an orphaned unpainted row at even RH. (FIX B)
+        let junction=hcapR+1;
+        for(let y=yTop; y>hcapR; y--){                            // stop above the horizon row (ceiling pass owns it)
+          const n=y-HH; if(n<=0) break;                           // never cross above the horizon
+          const invR=n/RH;                                        // eye-ray drops invR world-height per unit distance
+          const dist=(0.5-wh)/invR;                               // depth of the height-wh (cap) plane at this row
+          if(dist<perp){ continue; }                              // numerical guard: stay at/behind the front edge
+          // Walk the ray cells from the cap-plane point OUT toward the floor point, in order of
+          // increasing distance, and stop at the FIRST cell that rises into the line of sight
+          // (wall height >= the eye-ray's world height where the ray enters that cell). That cell's
+          // FACE — drawn later by the DDA, clipped to `junction` — owns this row and everything
+          // above it. This correctly handles open-gap-then-taller-wall topologies that a single
+          // height-0 floor probe skips over. (FIX A)
+          const wx=P.x+rdx*dist, wy=P.y+rdy*dist;                 // world point on the cap plane (height wh)
+          const ci=wx|0, cj=wy|0;
+          const fdist=0.5/invR;                                   // depth of the height-0 (floor) plane at this row
+          const fwx=P.x+rdx*fdist, fwy=P.y+rdy*fdist;             // world point on the floor plane
+          const ffi=fwx|0, ffj=fwy|0;
+          // Detect an occluding wall between the cap point (near) and the floor point (far).
+          // If the cap cell itself is taller than wh, a wall rises right here -> junction.
+          let blocked=false;
+          if((enclosed?roomH:wHgt(ci,cj))>wh+1e-3){ blocked=true; }
+          else if(ci!==ffi || cj!==ffj){
+            // The ray crosses one or more cells between cap and floor; DDA-step through them and
+            // test each against the eye-ray height at its near edge. Bounded: the gap is at most a
+            // few cells, and only short-wall columns reach here.
+            let bx=Math.abs(1/rdx), by=Math.abs(1/rdy);
+            let sx,sy,nx=ci,ny=cj,tx,ty;
+            if(rdx<0){sx=-1;tx=(wx-ci)*bx;}else{sx=1;tx=(ci+1-wx)*bx;}
+            if(rdy<0){sy=-1;ty=(wy-cj)*by;}else{sy=1;ty=(cj+1-wy)*by;}
+            for(let g2=0;g2<32;g2++){
+              let td; if(tx<ty){ td=tx; tx+=bx; nx+=sx; } else { td=ty; ty+=by; ny+=sy; }
+              const cd=dist+td;                                   // distance at which the ray ENTERS cell (nx,ny)
+              if(cd>=fdist) break;                                // reached the floor cell with nothing blocking
+              const rayH=0.5-invR*cd;                             // eye-ray world height at that crossing
+              const ch2=(enclosed?roomH:wHgt(nx,ny));
+              if(ch2>=rayH-1e-4 && solidCell(nx,ny)){ blocked=true; break; }   // a wall rises into view -> blocks
+            }
+          }
+          if(blocked){ junction=y+1; break; }                    // taller/intervening wall: cap ends, its face draws above
+          let col;
+          if((enclosed?roomH:wHgt(ci,cj))>=wh-1e-3 && solidCell(ci,cj)){   // still over the near wall body: TOP cap
+            let dfogT=0, dfa=0, daw=0;
+            if(lit){ const br=playerBright(dist); dfa=1-br; if(dfa<0)dfa=0; else if(dfa>0.93)dfa=0.93;
+              daw=torchWarm(wx,wy)*0.5; if(daw>0.7)daw=0.7; }
+            else { dfogT=dist*Z.fog; if(dfogT>0.92)dfogT=0.92; }
+            const u=((wx-ci)*TEX)&(TEX-1), v=((wy-cj)*TEX)&(TEX-1);
+            const texel=capTex.data[v*TEX+u];
+            col= lit? shadeTorch(texel,dfa,daw) : shadeWall(texel,1.0,dfogT);
+          } else {                                                // open/shorter beyond, unobstructed -> FAR FLOOR (h=0)
+            const ffm=fMat(ffi,ffj), fft=ffm?TEXTURES[MAT_FLOOR[ffm].tex]:fZone;
+            const fu=((fwx-ffi)*TEX)&(TEX-1), fv=((fwy-ffj)*TEX)&(TEX-1);
+            let ffogT=0, ffa=0, faw=0;
+            if(lit){ const br=playerBright(fdist); ffa=1-br; if(ffa<0)ffa=0; else if(ffa>0.93)ffa=0.93;
+              faw=torchWarm(fwx,fwy)*0.5; if(faw>0.7)faw=0.7; }
+            else { ffogT=fdist*Z.fog; if(ffogT>0.92)ffogT=0.92; }
+            col= fft ? (lit?shadeTorch(fft.data[fv*TEX+fu],ffa,faw):shadeWall(fft.data[fv*TEX+fu],1.0,ffogT)) : floorRow[y];
+            buf[y*RW+x]=col;                                       // paint the floor texel...
+            if(solidCell(ffi,ffj)){ junction=y; break; }          // ...the floor cell itself is a wall base: hand off
+            continue;
+          }
+          buf[y*RW+x]=col;
+        }
+        // taller walls behind only show ABOVE the junction; cap owns rows [junction, topY)
+        clip=junction;
+        if(junction<lastTop) lastTop=junction;                   // ceiling/sky stops at the cap/junction, not below it
+        if(junction<=0||oob) break;
+        continue;                                                 // skip the generic clip-raise; cap already governs it
+      }
       // raise the clip to this cell's top; once nothing more can poke above, stop
       if(s<clip) clip=s;
       if(clip<=0 || oob) break;          // clip filled, or this was the map-boundary wall (nothing renderable lies beyond it)
@@ -1227,7 +1361,7 @@ function castFrame(){
 
   // ---------- FLOOR (plane at height 0) ----------
   const rd0x=dirX-planeX, rd0y=dirY-planeY, rd1x=dirX+planeX, rd1y=dirY+planeY;
-  const fZone=TEXTURES[Z.floorTex]||null, PLK=TEXTURES.planks;
+  const PLK=TEXTURES.planks;
   for(let y=Math.floor(HH)+1; y<RH; y++){
     const n=y-HH; const dist=(0.5*RH)/n;                       // floor distance for this row
     const sFX=(rd1x-rd0x)*dist/RW, sFY=(rd1y-rd0y)*dist/RW;
@@ -1280,6 +1414,7 @@ function castFrame(){
       buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,0.9,fogT); }
   }
   drawSprites(dirX,dirY,planeX,planeY);
+  applyGrade();                 // per-zone mood grade over the finished scene
   ctx.putImageData(img,0,0);
   if(lit){ drawTorchGlows(); ctx.fillStyle=vignette; ctx.fillRect(0,0,RW,RH); }
   drawViewmodels();
@@ -1878,8 +2013,11 @@ function wirePause(){ const p=$('pause'); if(!p||p._wired)return; p._wired=true;
   p.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
     switch(b.dataset.act){ case 'resume': togglePause(); break;
       case 'save': quickSave(); break; case 'load': quickLoad(); togglePause(); break;
+      case 'grade': toggleGrade(); break;
       case 'title': quitToTitle(); break; } });
   const s=$('pausesens'); if(s) s.addEventListener('input',()=>{ lookSens=(+s.value)/10000; }); }
+function toggleGrade(){ gradeOn=!gradeOn; GRADE = gradeOn ? buildGrade(Z&&Z._grade) : null;
+  const b=$('pausegrade'); if(b) b.textContent='Mood grade: '+(gradeOn?'On':'Off'); }
 function quitToTitle(){ pauseOpen=invOpen=debugOpen=shopOpen=false;
   ['pause','inv','debug','shop'].forEach(id=>{ const el=$(id); if(el)el.classList.remove('show'); });
   state='title'; setPlaying(false); document.exitPointerLock&&document.exitPointerLock();
@@ -2060,9 +2198,11 @@ function edEntities(){ const m=ED.lm, ents=[];
 function edBuildZone(name){ const v=ZONES.village;
   const z={ name:name||'Editor Preview', layer:serialLayer(ED.lm), start:edSpawn(), entities:edEntities() };
   if(ED.lit){ Object.assign(z,{ ceiling:rgb(16,11,8), roomHeight:1.7, ceilTex:'flagstone', floorTex:'flagstone',
-      light:true, floorColor:rgb(40,30,22), ceilingColor:rgb(20,15,10), roofColor:rgb(30,22,14), fogColor:rgb(12,10,8), fog:0.05 }); }
+      light:true, floorColor:rgb(40,30,22), ceilingColor:rgb(20,15,10), roofColor:rgb(30,22,14), fogColor:rgb(12,10,8), fog:0.05,
+      grade:{ sat:0.80, con:1.14, bright:0.95, tint:[0.92,0.99,1.12], lift:0.012 } }); }   // cold torchlit mood
   else { Object.assign(z,{ ceiling:'sky', sky:'realm', roofHeight:1.7, floorTex:'grass', light:false,
-      fogColor:v.fogColor, fog:v.fog, floorColor:v.floorColor, ceilingColor:v.ceilingColor, roofColor:v.roofColor }); }
+      fogColor:v.fogColor, fog:v.fog, floorColor:v.floorColor, ceilingColor:v.ceilingColor, roofColor:v.roofColor,
+      grade:{ sat:1.10, con:1.05, bright:1.03, tint:[1.06,1.0,0.90] } }); }   // warm daylight mood
   return z; }
 function edToggleLight(){ ED.lit=!ED.lit; $('edLightBtn').innerHTML=ED.lit?'\u263E Torchlit':'\u2600 Daylight'; }
 function edPlay(){ delete zoneRuntime.__edit__; ZONES.__edit__=edBuildZone('Editor Preview'); delete ZONES.__edit__._lm;
