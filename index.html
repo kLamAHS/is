@@ -316,6 +316,7 @@
     <button data-act="resume">Resume</button>
     <button data-act="save">Save game</button>
     <button data-act="load">Load game</button>
+    <button data-act="grade" id="pausegrade">Mood grade: On</button>
     <div class="plbl">Mouse sensitivity</div>
     <input type="range" id="pausesens" min="6" max="60" value="26">
     <div class="pctl dim">WASD move &middot; drag / &larr;&rarr; look &middot; click attack &middot; E interact &middot; I pack &middot; ~ debug</div>
@@ -860,6 +861,8 @@ const ZONES={
     floorTex:'cobble', roofHeight:1.7,                    // cobble ground; roofs over interiors at 1.7
     floorColor:rgb(120,114,106), ceilingColor:rgb(120,150,190),
     fogColor:rgb(156,176,202), fog:0.012,
+    grade:{ sat:1.10, con:1.05, bright:1.03, tint:[1.06,1.0,0.90] },   // warm sunlit daylight
+
     roofColor:rgb(48,34,22), indoorFloor:rgb(74,54,34),   // building interiors: timber roof + plank floor
     start:{x:17.5, y:26.5, angle:-1.5708},
     entities:[
@@ -886,6 +889,7 @@ const ZONES={
     roomHeight:1.5, floorTex:'flagstone', ceilTex:'flagstone',  // enclosed box: stone floor+ceiling
     floorColor:rgb(90,66,48), ceilingColor:rgb(38,26,18),
     fogColor:rgb(10,7,5), fog:0.05,
+    grade:{ sat:0.80, con:1.14, bright:0.95, tint:[0.92,0.99,1.12], lift:0.012 },  // cold, grim, desaturated
     light:{},   // enables torchlight; warmth comes from torch props + the player's own light
     start:{x:2.5,y:2.5,angle:0},
     entities:[
@@ -919,6 +923,7 @@ const ZONES={
     roomHeight:1.5, floorTex:'flagstone', ceilTex:'flagstone',
     floorColor:rgb(86,84,96), ceilingColor:rgb(40,38,52),
     fogColor:rgb(14,13,18), fog:0.045, light:{},
+    grade:{ sat:0.90, con:1.05, tint:[0.96,0.99,1.07] },   // cool, clinical proving-ground
     start:{x:9.5,y:10.5,angle:-Math.PI/2},
     entities:[
       {type:'portal', sprite:'portal', x:2.5, y:11.5,
@@ -982,6 +987,7 @@ const $=id=>document.getElementById(id);
 // per-zone globals set by loadZone
 let Z=null, ZID=null, LM=null, ENTS=[], DOORS=new Set();
 let FOG=0, FLOOR=0, CEIL=0, ISKY=false;
+let GRADE=null, gradeOn=true;     // per-zone colour grade (mood): precomputed LUTs, applied to the final frame
 let torchList=[];           // wall torches in the current zone (used as point lights)
 const glowQ=[];             // additive torch glows queued during the current frame
 const zoneRuntime={};                 // persistent per-zone state (deaths, pickups, doors)
@@ -1099,6 +1105,8 @@ function loadZone(id, spawn){
   torchList = ENTS.filter(e=>e.type==='decoration' && e.sprite==='torch');
   FOG=Z.fogColor; FLOOR=Z.floorColor; CEIL=Z.ceilingColor; ISKY=(Z.ceiling==='sky');
   SKYTEX = ISKY ? (SKYBOXES[Z.sky] || SKYBOXES.proc || null) : null;
+  GRADE = gradeOn ? buildGrade(Z.grade) : null;        // per-zone mood grade
+  Z._grade = Z.grade;                                   // remembered so the toggle can rebuild it
   const sp=spawn||Z.start; P.x=sp.x; P.y=sp.y; P.angle=sp.angle;
   portalLock=true;
   $('zone').textContent=Z.name;
@@ -1127,6 +1135,43 @@ function shadeTorch(c,fa,aw){ let r=(c&255),g=((c>>8)&255),b=((c>>16)&255);
 function over(dst,src,a){ const ia=255-a;
   const r=(((src&255)*a+(dst&255)*ia)/255)|0, g=((((src>>8)&255)*a+((dst>>8)&255)*ia)/255)|0, b=((((src>>16)&255)*a+((dst>>16)&255)*ia)/255)|0;
   return (0xff000000|(b<<16)|(g<<8)|r)>>>0; }
+
+/* ---- per-zone colour grade (mood) ----------------------------------------
+   A zone's `grade` gives the scene a distinct atmosphere. Contrast, brightness,
+   per-channel tint, lift and gamma fold into three 256-entry channel LUTs so the
+   per-frame pass is just three table lookups per pixel; saturation (cross-channel)
+   is a cheap luma mix. Fields (all optional, neutral defaults):
+     sat    saturation   (1 = unchanged, <1 desaturate, >1 punchier)
+     con    contrast     (around mid-grey; 1 = unchanged)
+     bright brightness   (1 = unchanged)
+     tint   [r,g,b] gain (warm = boost R / cut B; cold = the reverse)
+     lift   raise blacks (adds a flat amount; small, e.g. 0.02)
+     gamma  midtone curve(1 = unchanged) */
+function buildGrade(g){
+  if(!g) return null;
+  const con=g.con??1, bright=g.bright??1, gamma=g.gamma??1, lift=g.lift??0, sat=g.sat??1, tint=g.tint||[1,1,1];
+  if(con===1&&bright===1&&gamma===1&&lift===0&&sat===1&&tint[0]===1&&tint[1]===1&&tint[2]===1) return null; // neutral -> skip
+  const mk=ch=>{ const lut=new Uint8Array(256);
+    for(let i=0;i<256;i++){ let v=i/255;
+      v=(v-0.5)*con+0.5;            // contrast about mid-grey
+      v=v*bright*tint[ch]+lift;     // brightness, per-channel tint, lifted blacks
+      if(v<0)v=0; else if(v>1)v=1;
+      if(gamma!==1) v=Math.pow(v,1/gamma);
+      lut[i]=(v*255+0.5)|0; }
+    return lut; };
+  return {lutR:mk(0), lutG:mk(1), lutB:mk(2), sat};
+}
+function applyGrade(){
+  if(!GRADE) return; const {lutR,lutG,lutB,sat}=GRADE, n=RW*RH;
+  if(sat===1){ for(let i=0;i<n;i++){ const p=buf[i];
+    buf[i]=(p&0xff000000)|(lutB[(p>>16)&255]<<16)|(lutG[(p>>8)&255]<<8)|lutR[p&255]; } }
+  else { for(let i=0;i<n;i++){ const p=buf[i];
+    let r=lutR[p&255], gg=lutG[(p>>8)&255], b=lutB[(p>>16)&255];
+    const l=(r*77+gg*150+b*29)>>8;                 // luma (0.30/0.59/0.11 in 8.8 fixed point)
+    r=l+(((r-l)*sat)|0); gg=l+(((gg-l)*sat)|0); b=l+(((b-l)*sat)|0);
+    r=r<0?0:r>255?255:r; gg=gg<0?0:gg>255?255:gg; b=b<0?0:b>255?255:b;
+    buf[i]=(p&0xff000000)|(b<<16)|(gg<<8)|r; } }
+}
 
 /* ---- THE RAYCASTER: one column per screen x ---- */
 function castFrame(){
@@ -1369,6 +1414,7 @@ function castFrame(){
       buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,0.9,fogT); }
   }
   drawSprites(dirX,dirY,planeX,planeY);
+  applyGrade();                 // per-zone mood grade over the finished scene
   ctx.putImageData(img,0,0);
   if(lit){ drawTorchGlows(); ctx.fillStyle=vignette; ctx.fillRect(0,0,RW,RH); }
   drawViewmodels();
@@ -1967,8 +2013,11 @@ function wirePause(){ const p=$('pause'); if(!p||p._wired)return; p._wired=true;
   p.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
     switch(b.dataset.act){ case 'resume': togglePause(); break;
       case 'save': quickSave(); break; case 'load': quickLoad(); togglePause(); break;
+      case 'grade': toggleGrade(); break;
       case 'title': quitToTitle(); break; } });
   const s=$('pausesens'); if(s) s.addEventListener('input',()=>{ lookSens=(+s.value)/10000; }); }
+function toggleGrade(){ gradeOn=!gradeOn; GRADE = gradeOn ? buildGrade(Z&&Z._grade) : null;
+  const b=$('pausegrade'); if(b) b.textContent='Mood grade: '+(gradeOn?'On':'Off'); }
 function quitToTitle(){ pauseOpen=invOpen=debugOpen=shopOpen=false;
   ['pause','inv','debug','shop'].forEach(id=>{ const el=$(id); if(el)el.classList.remove('show'); });
   state='title'; setPlaying(false); document.exitPointerLock&&document.exitPointerLock();
@@ -2149,9 +2198,11 @@ function edEntities(){ const m=ED.lm, ents=[];
 function edBuildZone(name){ const v=ZONES.village;
   const z={ name:name||'Editor Preview', layer:serialLayer(ED.lm), start:edSpawn(), entities:edEntities() };
   if(ED.lit){ Object.assign(z,{ ceiling:rgb(16,11,8), roomHeight:1.7, ceilTex:'flagstone', floorTex:'flagstone',
-      light:true, floorColor:rgb(40,30,22), ceilingColor:rgb(20,15,10), roofColor:rgb(30,22,14), fogColor:rgb(12,10,8), fog:0.05 }); }
+      light:true, floorColor:rgb(40,30,22), ceilingColor:rgb(20,15,10), roofColor:rgb(30,22,14), fogColor:rgb(12,10,8), fog:0.05,
+      grade:{ sat:0.80, con:1.14, bright:0.95, tint:[0.92,0.99,1.12], lift:0.012 } }); }   // cold torchlit mood
   else { Object.assign(z,{ ceiling:'sky', sky:'realm', roofHeight:1.7, floorTex:'grass', light:false,
-      fogColor:v.fogColor, fog:v.fog, floorColor:v.floorColor, ceilingColor:v.ceilingColor, roofColor:v.roofColor }); }
+      fogColor:v.fogColor, fog:v.fog, floorColor:v.floorColor, ceilingColor:v.ceilingColor, roofColor:v.roofColor,
+      grade:{ sat:1.10, con:1.05, bright:1.03, tint:[1.06,1.0,0.90] } }); }   // warm daylight mood
   return z; }
 function edToggleLight(){ ED.lit=!ED.lit; $('edLightBtn').innerHTML=ED.lit?'\u263E Torchlit':'\u2600 Daylight'; }
 function edPlay(){ delete zoneRuntime.__edit__; ZONES.__edit__=edBuildZone('Editor Preview'); delete ZONES.__edit__._lm;
