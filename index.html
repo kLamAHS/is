@@ -316,7 +316,7 @@
     <button data-act="resume">Resume</button>
     <button data-act="save">Save game</button>
     <button data-act="load">Load game</button>
-    <button data-act="grade" id="pausegrade">Mood grade: On</button>
+    <button data-act="grade" id="pausegrade">Effects: On</button>
     <div class="plbl">Mouse sensitivity</div>
     <input type="range" id="pausesens" min="6" max="60" value="26">
     <div class="pctl dim">WASD move &middot; drag / &larr;&rarr; look &middot; click attack &middot; E interact &middot; I pack &middot; ~ debug</div>
@@ -974,12 +974,17 @@ function resize(){
   zbuf=new Float32Array(RW); floorRow=new Uint32Array(RH); ceilRow=new Uint32Array(RH);
   sTop=new Int16Array(RW); eBot=new Int16Array(RW); skyX=new Int32Array(RW);
   doorD=new Float32Array(RW); doorTX=new Float32Array(RW); doorWHa=new Float32Array(RW); doorOHa=new Float32Array(RW); doorHT=new Array(RW);
+  bloomCv=document.createElement('canvas'); bloomCv.width=Math.max(1,RW>>1); bloomCv.height=Math.max(1,RH>>1);
+  bloomCtx=bloomCv.getContext('2d',{alpha:true});
   buildVignette();
 }
-function buildVignette(){   // soft warm-dark edge (no scanlines), used in torchlit zones
+function buildVignette(){   // soft warm-dark edge (no scanlines)
   vignette=ctx.createRadialGradient(RW/2,RH*0.52,RH*0.22, RW/2,RH*0.52,RH*0.94);
   vignette.addColorStop(0,'rgba(0,0,0,0)'); vignette.addColorStop(0.70,'rgba(0,0,0,0)');
   vignette.addColorStop(1,'rgba(6,3,1,0.42)');
+  vignetteSoft=ctx.createRadialGradient(RW/2,RH*0.5,RH*0.30, RW/2,RH*0.5,RH*1.02);   // gentler, for daylight
+  vignetteSoft.addColorStop(0,'rgba(0,0,0,0)'); vignetteSoft.addColorStop(0.66,'rgba(0,0,0,0)');
+  vignetteSoft.addColorStop(1,'rgba(8,6,12,0.30)');
 }
 const mini=document.getElementById('minimap'); const mctx=mini.getContext('2d');
 const $=id=>document.getElementById(id);
@@ -987,7 +992,9 @@ const $=id=>document.getElementById(id);
 // per-zone globals set by loadZone
 let Z=null, ZID=null, LM=null, ENTS=[], DOORS=new Set();
 let FOG=0, FLOOR=0, CEIL=0, ISKY=false;
-let GRADE=null, gradeOn=true;     // per-zone colour grade (mood): precomputed LUTs, applied to the final frame
+let GRADE=null, fxOn=true;        // post-process effects: per-zone grade + bloom + vignette
+let bloomCv=null, bloomCtx=null, bloomImg=null, bloomBuf=null;  // offscreen bright-pass buffer for the bloom pass
+let vignetteSoft=null;            // gentle cinematic vignette for unlit (daylight) zones
 let torchList=[];           // wall torches in the current zone (used as point lights)
 const glowQ=[];             // additive torch glows queued during the current frame
 const zoneRuntime={};                 // persistent per-zone state (deaths, pickups, doors)
@@ -1105,7 +1112,7 @@ function loadZone(id, spawn){
   torchList = ENTS.filter(e=>e.type==='decoration' && e.sprite==='torch');
   FOG=Z.fogColor; FLOOR=Z.floorColor; CEIL=Z.ceilingColor; ISKY=(Z.ceiling==='sky');
   SKYTEX = ISKY ? (SKYBOXES[Z.sky] || SKYBOXES.proc || null) : null;
-  GRADE = gradeOn ? buildGrade(Z.grade) : null;        // per-zone mood grade
+  GRADE = fxOn ? buildGrade(Z.grade) : null;           // per-zone mood grade
   Z._grade = Z.grade;                                   // remembered so the toggle can rebuild it
   const sp=spawn||Z.start; P.x=sp.x; P.y=sp.y; P.angle=sp.angle;
   portalLock=true;
@@ -1416,8 +1423,35 @@ function castFrame(){
   drawSprites(dirX,dirY,planeX,planeY);
   applyGrade();                 // per-zone mood grade over the finished scene
   ctx.putImageData(img,0,0);
-  if(lit){ drawTorchGlows(); ctx.fillStyle=vignette; ctx.fillRect(0,0,RW,RH); }
+  if(lit) drawTorchGlows();
+  if(fxOn) drawBloom();         // light bloom: bright areas (sky, torches, highlights) bleed a soft glow
+  // cinematic vignette — warm-dark in torchlit zones, a gentle one elsewhere
+  if(lit){ ctx.fillStyle=vignette; ctx.fillRect(0,0,RW,RH); }
+  else if(fxOn && vignetteSoft){ ctx.fillStyle=vignetteSoft; ctx.fillRect(0,0,RW,RH); }
   drawViewmodels();
+}
+/* ---- bloom: a real luma-threshold bright-pass, blurred and added back -------
+   Only pixels brighter than BLOOM_THRESH (sky, torch flames, bright highlights)
+   contribute, scaled by how far over the threshold they are — so mid-tone walls
+   and floor never glow. Sampled at half-res into a small buffer (cheap), then
+   the GPU blurs and additively composites it. */
+let BLOOM_STR=0.55, BLOOM_THRESH=205;   // threshold is a 0..255 luma cutoff
+function drawBloom(){
+  if(!bloomCv) return; const bw=bloomCv.width, bh=bloomCv.height;
+  if(!bloomImg || bloomImg.width!==bw || bloomImg.height!==bh){ bloomImg=bloomCtx.createImageData(bw,bh); bloomBuf=new Uint32Array(bloomImg.data.buffer); }
+  const T=BLOOM_THRESH, inv=1/(256-T);
+  for(let by=0;by<bh;by++){ let si=(by<<1)*RW, di=by*bw;
+    for(let bx=0;bx<bw;bx++,di++,si+=2){ const p=buf[si];
+      const r=p&255, g=(p>>8)&255, b=(p>>16)&255, l=(r*77+g*150+b*29)>>8;
+      if(l>T){ const f=(l-T)*inv; bloomBuf[di]=0xff000000|((b*f|0)<<16)|((g*f|0)<<8)|(r*f|0); }
+      else bloomBuf[di]=0xff000000; } }
+  bloomCtx.putImageData(bloomImg,0,0);
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';                       // additive glow
+  ctx.filter='blur('+Math.max(1.5,RW*0.014).toFixed(2)+'px)';
+  ctx.globalAlpha=BLOOM_STR;
+  ctx.drawImage(bloomCv,0,0,bw,bh,0,0,RW,RH);
+  ctx.restore();   // restores filter/alpha/composite
 }
 function drawTorchGlows(){
   for(let i=0;i<glowQ.length;i++){ const q=glowQ[i];
@@ -2016,8 +2050,8 @@ function wirePause(){ const p=$('pause'); if(!p||p._wired)return; p._wired=true;
       case 'grade': toggleGrade(); break;
       case 'title': quitToTitle(); break; } });
   const s=$('pausesens'); if(s) s.addEventListener('input',()=>{ lookSens=(+s.value)/10000; }); }
-function toggleGrade(){ gradeOn=!gradeOn; GRADE = gradeOn ? buildGrade(Z&&Z._grade) : null;
-  const b=$('pausegrade'); if(b) b.textContent='Mood grade: '+(gradeOn?'On':'Off'); }
+function toggleGrade(){ fxOn=!fxOn; GRADE = fxOn ? buildGrade(Z&&Z._grade) : null;
+  const b=$('pausegrade'); if(b) b.textContent='Effects: '+(fxOn?'On':'Off'); }
 function quitToTitle(){ pauseOpen=invOpen=debugOpen=shopOpen=false;
   ['pause','inv','debug','shop'].forEach(id=>{ const el=$(id); if(el)el.classList.remove('show'); });
   state='title'; setPlaying(false); document.exitPointerLock&&document.exitPointerLock();
