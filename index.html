@@ -185,6 +185,45 @@
   #act{position:absolute; left:50%; bottom:7%; transform:translateX(-50%); gap:8px; padding:0 16px;
     min-width:min(36vw,150px); height:min(13vw,54px); font-size:clamp(8px,1.4vw,11px); letter-spacing:1px;}
   #act .ic{font-size:1.5em;line-height:1}
+  /* ---- map painter ---- */
+  #editor{position:absolute; inset:0; z-index:60; display:none; flex-direction:column;
+    background:#0d0b09; color:var(--ink); font-family:'VT323',monospace;}
+  #editor.on{display:flex;}
+  #edbar{display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:8px 12px;
+    background:var(--panel); border-bottom:1px solid var(--line); font-size:15px;}
+  .edgrp{display:flex; align-items:center; gap:6px;}
+  .edlbl{font-size:12px; letter-spacing:.5px; color:var(--ink-dim); text-transform:uppercase;}
+  .edlbl b{color:var(--warm); font-size:14px;}
+  .edsw{display:flex; gap:4px; flex-wrap:wrap;}
+  .edsw button{display:flex; align-items:center; gap:5px; height:26px; padding:0 7px 0 4px;
+    background:#1a140d; border:1px solid #00000077; border-radius:5px; cursor:pointer;
+    color:var(--ink); font-family:'VT323',monospace; font-size:14px; line-height:1;
+    outline:2px solid transparent; transition:outline-color .1s, border-color .1s;}
+  .edsw button:hover{border-color:#6a5a40;}
+  .edsw button.sel{outline-color:var(--warm); border-color:var(--warm);}
+  .edsw button i{width:16px; height:16px; border-radius:3px; border:1px solid #0006; display:flex;
+    align-items:center; justify-content:center; font-style:normal; font-size:12px; color:#fff; text-shadow:0 1px 1px #000; flex:0 0 auto;}
+  #edbar input[type=range]{width:96px; accent-color:var(--warm);}
+  #edhelp{padding:5px 12px; background:#15110b; border-bottom:1px solid var(--line);
+    font-family:'VT323',monospace; font-size:15px; color:var(--ink-dim);}
+  #edhelp b{color:var(--warm);}
+  #edPortalTo{background:#1a140d; color:var(--ink); border:1px solid var(--line); border-radius:4px; font-family:inherit; font-size:14px; padding:2px 4px;}
+  .edact{margin-left:auto; gap:6px;}
+  #edbar button[data-ed]{background:#1a140d; color:var(--ink); border:1px solid var(--line); border-radius:5px;
+    font-family:inherit; font-size:14px; padding:4px 10px; cursor:pointer;}
+  #edbar button[data-ed]:hover{border-color:var(--warm); color:#fff;}
+  #edbar button.edgo{background:#2a4a2a; border-color:#3a6a3a;}
+  #edcv{flex:1; width:100%; min-height:0; display:block; cursor:crosshair; background:#13110d; touch-action:none;}
+  #edhint{position:absolute; left:50%; bottom:8px; transform:translateX(-50%); font-size:13px;
+    color:var(--ink-dim); background:rgba(10,8,6,.7); padding:3px 12px; border-radius:20px; pointer-events:none;}
+  #edio{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(560px,86vw);
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; z-index:62;}
+  #ediotext{width:100%; height:230px; resize:vertical; background:#0a0807; color:var(--ink);
+    border:1px solid var(--line); border-radius:5px; font-family:monospace; font-size:12px; padding:8px;}
+  .ediobtns{display:flex; gap:8px; margin-top:8px; justify-content:flex-end;}
+  .ediobtns button{background:#1a140d; color:var(--ink); border:1px solid var(--line); border-radius:5px;
+    font-family:'VT323',monospace; font-size:15px; padding:4px 12px; cursor:pointer;}
+  .ediobtns button:hover{border-color:var(--warm);}
   </style>
 </head>
 <body>
@@ -209,6 +248,38 @@
   <div id="flash"></div>
   <div id="fade"></div>
   <div id="toast"></div>
+
+  <div id="editor">
+    <div id="edbar">
+      <div class="edgrp"><span class="edlbl">Walls</span><div id="edWalls" class="edsw"></div></div>
+      <div class="edgrp"><span class="edlbl">Floors / paths</span><div id="edFloors" class="edsw"></div></div>
+      <div class="edgrp"><span class="edlbl">Roof</span><div id="edRoofs" class="edsw"></div></div>
+      <div class="edgrp"><span class="edlbl">Place</span><div id="edMarks" class="edsw"></div></div>
+      <div class="edgrp"><span class="edlbl">Wall height&nbsp;<b id="edHval">1.7</b></span><input type="range" id="edH" min="0.4" max="3" step="0.1" value="1.7"></div>
+      <div class="edgrp"><span class="edlbl">Brush&nbsp;<b id="edBval">1</b></span><input type="range" id="edB" min="1" max="4" step="1" value="1"></div>
+      <div class="edgrp" id="edPortalGrp" style="display:none"><span class="edlbl">Portal leads to</span><select id="edPortalTo"></select></div>
+      <div class="edgrp" id="edEnemyGrp" style="display:none"><span class="edlbl">Enemy kind</span><select id="edEnemyTo"></select></div>
+      <div class="edgrp" id="edDoorGrp" style="display:none"><span class="edlbl">Door opening&nbsp;<b id="edDoorVal">1.05</b></span><input type="range" id="edDoorOpen" min="0.4" max="2" step="0.05" value="1.05"></div>
+      <div class="edgrp edact">
+        <button data-ed="light" id="edLightBtn" title="Toggle preview lighting">&#9728; Daylight</button>
+        <button data-ed="play" class="edgo" title="Test this map now (Esc returns here)">&#9654; Play</button>
+        <button data-ed="link" title="Save as a real zone with a portal in the village">&#10010; Add to Village</button>
+        <button data-ed="export" title="Copy this map as JSON">Export</button>
+        <button data-ed="import" title="Paste a map JSON">Import</button>
+        <button data-ed="new" title="Blank map of a chosen size">New</button>
+        <button data-ed="clear" title="Reset to a blank map">Clear</button>
+        <button data-ed="exit">Exit</button>
+      </div>
+    </div>
+    <div id="edhelp">Pick a tool above, then drag on the grid to paint.</div>
+    <canvas id="edcv"></canvas>
+    <div id="edhint">Left-drag: paint &middot; Right-drag: erase &middot; Space / Middle-drag: pan &middot; Wheel: zoom
+      &nbsp;|&nbsp; <b style="color:#7fffa0">P</b>&nbsp;spawn <b style="color:#7fdfff">&#9670;</b>&nbsp;portal <b style="color:#ff8a6a">e</b>&nbsp;enemy <b style="color:#ffcf6a">*</b>&nbsp;torch</div>
+    <div id="edio" style="display:none">
+      <textarea id="ediotext" spellcheck="false" placeholder="Map JSON appears here on Export. Paste a map here and hit Load."></textarea>
+      <div class="ediobtns"><button data-ed="ioload">Load pasted map</button><button data-ed="iocopy">Copy</button><button data-ed="ioclose">Close</button></div>
+    </div>
+  </div>
 
   <!-- inventory & character panel (toggle: I) -->
   <div id="inv"><div class="ipanel">
@@ -272,6 +343,7 @@
     <h1>ALDERMOOR</h1>
     <p>A raycaster RPG framework &mdash; a daylight village above, torchlit catacombs below, and the restless dead between you and the gold.</p>
     <button class="btn" id="startBtn">Enter the Realm</button>
+    <button class="btn" id="editorBtn" style="margin-top:10px;background:rgba(20,15,10,.6)">Open Map Painter</button>
     <div class="legend kb">
       <span><b>W A S D</b> move / strafe</span><span><b>Drag / &larr; &rarr;</b> look</span>
       <span><b>Click / Ctrl</b> attack</span><span><b>E</b> talk &middot; open &middot; use</span>
@@ -325,6 +397,60 @@ const WHITE=rgb(255,255,255);
 
 /* ───────────────────────── 1 · TILES (map legend) ────────────────────── */
 const CHAR_TO_TILE={'#':1,'B':2,'W':3,'M':4,'S':5,'D':6,'L':7,'o':8,'.':0,' ':0};
+
+/* ===== LAYERMAP MATERIAL REGISTRIES =====
+   The world is a per-cell layermap: each cell has a wall material (+height),
+   a floor material, a roof material, and an optional marker (spawn/portal/etc).
+   The map painter edits this directly; the renderer reads it every frame.
+   These tables decouple "what's painted" from the legacy character maps. */
+const MAT_WALL=[
+  null,                                                                        // 0 = no wall (open)
+  {key:'stone',     tex:'stone',     h:1.1, name:'Stone',     col:'#6b625a'},  // 1 low town wall
+  {key:'brick',     tex:'brick',     h:1.7, name:'Brick',     col:'#8a4636'},  // 2 building
+  {key:'wood',      tex:'wood',      h:1.7, name:'Timber',    col:'#7a5530'},  // 3
+  {key:'mossy',     tex:'mossy',     h:1.7, name:'Mossy',     col:'#4a5a3a'},  // 4
+  {key:'sandstone', tex:'sandstone', h:1.7, name:'Sandstone', col:'#b0894f'},  // 5
+  {key:'door',      tex:'door',   h:1.7, door:true, name:'Door',   col:'#caa05a'}, // 6
+  {key:'locked',    tex:'locked', h:1.7, door:true, locked:'rusty_key', name:'Locked', col:'#5a76b0'}, // 7
+];
+const MAT_FLOOR=[
+  null,                                                       // 0 = zone default ground
+  {key:'cobble',    tex:'cobble',    name:'Cobble',    col:'#6a5f54'}, // 1 road/path
+  {key:'flagstone', tex:'flagstone', name:'Flagstone', col:'#6b6670'}, // 2 dungeon
+  {key:'planks',    tex:'planks',    name:'Planks',    col:'#9a6a36'}, // 3 interior
+  {key:'grass',     tex:'grass',     name:'Grass',     col:'#4a6a40'}, // 4 ground
+  {key:'dirt',      tex:'dirt',      name:'Dirt path', col:'#8a6a44'}, // 5 path
+];
+const MAT_ROOF=[
+  null,                                                  // 0 = open to sky / zone ceiling
+  {key:'timber',    tex:'timber',    name:'Timber roof', col:'#5a3f26'}, // 1 building interior
+  {key:'flagstone', tex:'flagstone', name:'Stone ceil',  col:'#55505a'}, // 2
+];
+const MARK=['none','portal','spawn','enemy','torch'];      // mrk codes 0..4
+
+/* char -> layermap cell mapping, so the existing zones still load */
+const CHAR_LAYER={
+  '#':{wall:1}, 'B':{wall:2}, 'W':{wall:3}, 'M':{wall:4}, 'S':{wall:5},
+  'D':{wall:6}, 'L':{wall:7},
+  'o':{wall:0, flr:3, rof:1},          // roofed interior: plank floor + timber roof
+  '.':{wall:0}, ' ':{wall:0},
+};
+function newLayer(w,h){ return {w,h,wall:new Uint8Array(w*h),hgt:new Float32Array(w*h),
+  flr:new Uint8Array(w*h),rof:new Uint8Array(w*h),mrk:new Uint8Array(w*h),meta:{}}; }
+function layerFromChars(rows){
+  const w=Math.max(...rows.map(r=>r.length)), h=rows.length, lm=newLayer(w,h);
+  for(let y=0;y<h;y++){ const s=rows[y];
+    for(let x=0;x<w;x++){ const ch=x<s.length?s[x]:'#', d=CHAR_LAYER[ch]||{wall:1}, i=y*w+x;
+      lm.wall[i]=d.wall||0; if(d.wall) lm.hgt[i]=MAT_WALL[d.wall].h;
+      lm.flr[i]=d.flr||0; lm.rof[i]=d.rof||0; } }
+  return lm;
+}
+function serialLayer(lm){ return JSON.stringify({w:lm.w,h:lm.h,
+  wall:Array.from(lm.wall), hgt:Array.from(lm.hgt,v=>+v.toFixed(2)),
+  flr:Array.from(lm.flr), rof:Array.from(lm.rof), mrk:Array.from(lm.mrk), meta:lm.meta}); }
+function deserialLayer(o){ if(typeof o==='string') o=JSON.parse(o); const lm=newLayer(o.w,o.h);
+  lm.wall.set(o.wall); lm.hgt.set(o.hgt); lm.flr.set(o.flr); lm.rof.set(o.rof);
+  if(o.mrk) lm.mrk.set(o.mrk); lm.meta=o.meta||{}; return lm; }
 const TILES={
   0:{solid:false},
   1:{solid:true, tex:'stone',    h:1.1},                   // low town wall (open to sky, no roof)
@@ -401,6 +527,14 @@ function buildTextures(){
     let c=rgb(74,50,30); c=mix(c,0,noise(x,y,16)*0.18);
     if((x%22)<4) c=rgb(46,30,16); if((y%32)<3) c=rgb(40,26,14);
     c=mix(c,0,0.16); px(b,x,y,c);}});
+  TEXTURES.grass=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){
+    let g=70+((Math.floor(x/6)+Math.floor(y/6))%3)*8; let c=rgb(40,g,38);
+    c=mix(c,0,noise(x,y,17)*0.3); const bl=noise(x*0.6,y*0.6,18); if(bl>0.7) c=mix(c,rgb(96,120,52),(bl-0.7)*2);
+    if(noise(x,y,19)>0.88) c=mix(c,rgb(150,140,70),0.3); px(b,x,y,c);}});
+  TEXTURES.dirt=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){
+    let c=rgb(108,84,56); c=mix(c,0,noise(x,y,21)*0.32); const r=noise(x*0.7,y*0.7,22);
+    if(r>0.72) c=mix(c,rgb(140,116,84),(r-0.72)*2.2); if(noise(x,y,23)>0.9) c=mix(c,rgb(70,54,36),0.5);
+    px(b,x,y,c);}});
 }
 
 /* ───────────────────────── 3 · SPRITES (billboards) ─────────────────────
@@ -800,6 +934,8 @@ const view=document.getElementById('view');
 const ctx=view.getContext('2d',{alpha:false}); ctx.imageSmoothingEnabled=false;
 let RW=480, RH=270, HW=240, HH=135;          // internal render resolution (set by resize)
 let img, buf, zbuf, floorRow, ceilRow, sTop, eBot, skyX, vignette=null;
+let doorD, doorTX, doorWHa, doorOHa, doorHT=[];   // per-column lintel overdraw (open doorways)
+let DOOR_OPEN=1.05;                                // height of a door opening; wall above it is the lintel
 // match the render resolution to the on-screen aspect, so nothing is letterboxed
 function resize(){
   const r=view.getBoundingClientRect(); if(!r.width||!r.height) return;
@@ -814,6 +950,7 @@ function resize(){
   img=ctx.createImageData(RW,RH); buf=new Uint32Array(img.data.buffer);
   zbuf=new Float32Array(RW); floorRow=new Uint32Array(RH); ceilRow=new Uint32Array(RH);
   sTop=new Int16Array(RW); eBot=new Int16Array(RW); skyX=new Int32Array(RW);
+  doorD=new Float32Array(RW); doorTX=new Float32Array(RW); doorWHa=new Float32Array(RW); doorOHa=new Float32Array(RW); doorHT=new Array(RW);
   buildVignette();
 }
 function buildVignette(){   // soft warm-dark edge (no scanlines), used in torchlit zones
@@ -825,7 +962,7 @@ const mini=document.getElementById('minimap'); const mctx=mini.getContext('2d');
 const $=id=>document.getElementById(id);
 
 // per-zone globals set by loadZone
-let Z=null, ZID=null, GRID=null, ENTS=[], DOORS=new Set();
+let Z=null, ZID=null, LM=null, ENTS=[], DOORS=new Set();
 let FOG=0, FLOOR=0, CEIL=0, ISKY=false;
 let torchList=[];           // wall torches in the current zone (used as point lights)
 const glowQ=[];             // additive torch glows queued during the current frame
@@ -897,25 +1034,30 @@ function buildWeapon(){
 }
 
 /* ---- map parsing + solidity ---- */
-function parseMap(rows){
-  const w=Math.max(...rows.map(r=>r.length)), h=rows.length, grid=[];
-  for(let y=0;y<h;y++){const row=[]; const s=rows[y];
-    if(s.length!==w) console.warn(`map row ${y} is ${s.length}, padded to ${w}`);
-    for(let x=0;x<w;x++){const ch=x<s.length?s[x]:'#'; row.push(CHAR_TO_TILE[ch]??1);} grid.push(row);}
-  return {grid,w,h};
-}
-function cell(mx,my){ if(my<0||my>=GRID.h||mx<0||mx>=GRID.w) return 1; return GRID.grid[my][mx]; }
-function solidCell(mx,my){ const t=TILES[cell(mx,my)]; if(!t||!t.solid) return false;
-  if((t.door||t.locked)&&DOORS.has(mx+','+my)) return false; return true; }
-function texAt(mx,my){ const t=TILES[cell(mx,my)]; return (t&&t.tex)||'stone'; }
+function parseMap(rows){ return layerFromChars(rows); }
+function inLM(x,y){ return x>=0&&y>=0&&x<LM.w&&y<LM.h; }
+function wMat(x,y){ return inLM(x,y) ? LM.wall[y*LM.w+x] : 1; }      // OOB -> stone boundary
+function wallMatAt(x,y){ return MAT_WALL[wMat(x,y)]||null; }
+function wHgt(x,y){ if(!inLM(x,y)) return MAT_WALL[1].h; const i=y*LM.w+x, m=LM.wall[i];
+  return m ? (LM.hgt[i]||MAT_WALL[m].h||1) : 0; }
+function fMat(x,y){ return inLM(x,y) ? LM.flr[y*LM.w+x] : 0; }
+function rMat(x,y){ return inLM(x,y) ? LM.rof[y*LM.w+x] : 0; }
+function cell(mx,my){ return wMat(mx,my); }                          // back-compat: "cell" == wall material id
+function solidCell(mx,my){ const mat=wallMatAt(mx,my); if(!mat) return false;
+  if(mat.door&&DOORS.has(mx+','+my)) return false; return true; }
+function texAt(mx,my){ return (wallMatAt(mx,my)||{}).tex||'stone'; }
+function headerTex(mx,my){   // a neighbouring non-door wall's texture, so a door lintel matches its building
+  const nb=[[1,0],[-1,0],[0,1],[0,-1]];
+  for(const d of nb){ const m=wallMatAt(mx+d[0],my+d[1]); if(m&&!m.door) return TEXTURES[m.tex]||TEXTURES.stone; }
+  return TEXTURES.stone; }
 function blocked(x,y){ const r=0.18, fx=Math.floor(x), fy=Math.floor(y);
   return solidCell(fx,fy)||solidCell(Math.floor(x-r),fy)||solidCell(Math.floor(x+r),fy)||solidCell(fx,Math.floor(y-r))||solidCell(fx,Math.floor(y+r)); }
 
 /* ---- load a zone (clones entities on first visit; state persists after) ---- */
 function loadZone(id, spawn){
   Z=ZONES[id]; ZID=id;
-  if(!Z._map) Z._map=parseMap(Z.map);
-  GRID=Z._map;
+  if(!Z._lm) Z._lm = Z.layer ? deserialLayer(Z.layer) : layerFromChars(Z.map);
+  LM=Z._lm;
   if(!zoneRuntime[id]){
     const ents=JSON.parse(JSON.stringify(Z.entities));
     for(const e of ents){ if(e.type==='enemy'){ const t=ENEMY_TYPES[e.enemy];
@@ -983,16 +1125,24 @@ function castFrame(){
     if(rdx<0){stepX=-1;sdx=(P.x-mapX)*ddx;}else{stepX=1;sdx=(mapX+1-P.x)*ddx;}
     if(rdy<0){stepY=-1;sdy=(P.y-mapY)*ddy;}else{stepY=1;sdy=(mapY+1-P.y)*ddy;}
     let side=0, guard=0;
+    doorD[x]=0;                                              // reset lintel record for this column
+    let odSide=0, odMX=0, odMY=0, odPerp=0, odSeen=false;
     while(guard++<128){ if(sdx<sdy){sdx+=ddx;mapX+=stepX;side=0;}else{sdy+=ddy;mapY+=stepY;side=1;}
+      if(!odSeen){ const dm=wallMatAt(mapX,mapY);            // remember the first OPEN doorway the ray crosses
+        if(dm&&dm.door&&DOORS.has(mapX+','+mapY)){ odSeen=true; odSide=side; odMX=mapX; odMY=mapY; odPerp=(side===0)?(sdx-ddx):(sdy-ddy); } }
       if(solidCell(mapX,mapY)) break; }
     let perp=(side===0)?(sdx-ddx):(sdy-ddy); if(perp<0.0001)perp=0.0001;
     const lineHf=RH/perp;
-    const hitId=cell(mapX,mapY), hitTile=TILES[hitId];
-    let wh = enclosed ? roomH : ((hitTile&&hitTile.h)||1);
-    // doors render as a single full-height panel (building == door height), so the door never tiles
-    // and the interior + its ceiling are visible through an open doorway
-    let opening=0, isDoor=!!(hitTile&&hitTile.door);
-    if(isDoor){ wh = enclosed ? roomH : ((hitTile.h)||1.7); opening=wh; }
+    const hmat=wallMatAt(mapX,mapY);
+    let wh = enclosed ? roomH : wHgt(mapX,mapY);             // per-cell wall height (variety restored)
+    // a door = a short leaf [0,openH] with a solid wall lintel [openH,wh] above it
+    let isDoor=!!(hmat&&hmat.door), openH=0, opening=0, htex=null;
+    if(isDoor){ wh = enclosed ? roomH : (wHgt(mapX,mapY)||1.7); openH=Math.min(DOOR_OPEN,wh); opening=openH; htex=headerTex(mapX,mapY); }
+    if(odSeen && odPerp>0.0001){                             // an open doorway: stash its lintel band to overdraw later
+      const owh = enclosed ? roomH : (wHgt(odMX,odMY)||1.7), ooh=Math.min(DOOR_OPEN,owh);
+      if(owh>ooh){ doorD[x]=odPerp; doorWHa[x]=owh; doorOHa[x]=ooh; doorHT[x]=headerTex(odMX,odMY);
+        let owx=(odSide===0)?(P.y+odPerp*rdy):(P.x+odPerp*rdx); owx-=Math.floor(owx);
+        let otx=(owx*TEX)|0; if((odSide===0&&rdx>0)||(odSide===1&&rdy<0)) otx=TEX-otx-1; doorTX[x]=otx; } }
     const floorY=lineHf/2+HH, topY=floorY-lineHf*wh;
     let s=Math.floor(topY); let e=Math.floor(floorY); if(s<0)s=0; if(e>RH)e=RH;
     zbuf[x]=perp; sTop[x]=s; eBot[x]=e;
@@ -1007,7 +1157,9 @@ function castFrame(){
       const hx=P.x+rdx*perp, hy=P.y+rdy*perp; aw=torchWarm(hx,hy)*0.55; if(aw>0.7)aw=0.7; }
     else { fogT=perp*Z.fog; if(fogT>0.92)fogT=0.92; }
     for(let y=s;y<e;y++){ let texel;
-      if(isDoor){ const worldH=(floorY-y)/lineHf; let vt=(((opening-worldH)/opening)*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=tex.data[vt*TEX+base]; }
+      if(isDoor){ const worldH=(floorY-y)/lineHf;
+        if(worldH<=openH){ let vt=(((openH-worldH)/openH)*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=tex.data[vt*TEX+base]; }
+        else { let vt=(((wh-worldH)/(wh-openH))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=htex.data[vt*TEX+base]; } }
       else { const ty=(texPos)&(TEX-1); texel=tex.data[ty*TEX+base]; }
       texPos+=stepT;
       buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,sf,fogT); }
@@ -1023,8 +1175,8 @@ function castFrame(){
     let fogT=0, fa=0; if(lit){ const br=playerBright(dist); fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93; }
     else { fogT=dist*Z.fog; if(fogT>0.92)fogT=0.92; }
     for(let x=0;x<RW;x++){
-      if(y>=eBot[x]){ const i=fx|0,j=fy|0,tile=TILES[cell(i,j)],indoor=tile&&tile.indoor;
-        const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); const ft=indoor?PLK:fZone;
+      if(y>=eBot[x]){ const i=fx|0,j=fy|0,fm=fMat(i,j);
+        const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); const ft=fm?TEXTURES[MAT_FLOOR[fm].tex]:fZone;
         let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.5; if(aw>0.7)aw=0.7; }
         buf[y*RW+x]= ft ? (lit?shadeTorch(ft.data[v*TEX+u],fa,aw):shadeWall(ft.data[v*TEX+u],1.0,fogT)) : floorRow[y]; }
       fx+=sFX; fy+=sFY;
@@ -1041,16 +1193,30 @@ function castFrame(){
     else { fogT=dist*Z.fog; if(fogT>0.92)fogT=0.92; }
     const skyV = useSky ? Math.min(SKYTEX.h-1,(cy/HH*SKYTEX.h)|0) : 0;
     for(let x=0;x<RW;x++){
-      if(cy<sTop[x]){ const i=fx|0,j=fy|0,tile=TILES[cell(i,j)],indoor=tile&&tile.indoor;
+      if(cy<sTop[x]){ const i=fx|0,j=fy|0,rm=rMat(i,j);
         if(enclosed){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.5; if(aw>0.7)aw=0.7; }
           buf[cy*RW+x]= cZone ? (lit?shadeTorch(cZone.data[v*TEX+u],fa,aw):shadeWall(cZone.data[v*TEX+u],1.0,fogT)) : ceilRow[cy]; }
-        else if(indoor){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1);
-          buf[cy*RW+x]= TMB ? shadeWall(TMB.data[v*TEX+u],1.0,fogT) : ceilRow[cy]; }       // timber roof seen through doors / from inside
+        else if(rm){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); const ct=TEXTURES[MAT_ROOF[rm].tex];
+          buf[cy*RW+x]= ct ? shadeWall(ct.data[v*TEX+u],1.0,fogT) : ceilRow[cy]; }     // roofed cell (e.g. timber over interiors)
         else if(useSky){ buf[cy*RW+x]=SKYTEX.data[skyV*SKYTEX.w+skyX[x]]; }
         else buf[cy*RW+x]=ceilRow[cy];
       }
       fx+=sFX; fy+=sFY;
     }
+  }
+  // ---------- DOOR LINTELS (solid wall above an open doorway; the gap below still shows the room beyond) ----------
+  for(let x=0;x<RW;x++){ const dp=doorD[x]; if(dp<=0.0001) continue;
+    const lh=RH/dp, fY=lh/2+HH, owh=doorWHa[x], ooh=doorOHa[x], ht=doorHT[x]; if(!ht||owh<=ooh) continue;
+    let tb=Math.floor(fY-lh*owh), bb=Math.floor(fY-lh*ooh); if(tb<0)tb=0; if(bb>RH)bb=RH; if(tb>=bb) continue;
+    const bx=doorTX[x]|0; let fa=0, aw=0, fogT=0;
+    if(lit){ const camX=2*x/RW-1, rdx=dirX+planeX*camX, rdy=dirY+planeY*camX;
+      let br=playerBright(dp); fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93;
+      aw=torchWarm(P.x+rdx*dp,P.y+rdy*dp)*0.55; if(aw>0.7)aw=0.7; }
+    else { fogT=dp*Z.fog; if(fogT>0.92)fogT=0.92; }
+    for(let y=tb;y<bb;y++){ const worldH=(fY-y)/lh;
+      let vt=(((owh-worldH)/(owh-ooh))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1;
+      const texel=ht.data[vt*TEX+bx];
+      buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,0.9,fogT); }
   }
   drawSprites(dirX,dirY,planeX,planeY);
   ctx.putImageData(img,0,0);
@@ -1141,17 +1307,16 @@ function drawTorchVM(bobX,bobY){
 /* ---- minimap (also handy for checking level layouts while you build) ---- */
 function drawMinimap(){
   const W=mini.width, H=mini.height; mctx.clearRect(0,0,W,H);
-  const cs=Math.min(W/GRID.w, H/GRID.h);
-  const ox=(W-cs*GRID.w)/2, oy=(H-cs*GRID.h)/2;
-  const WALLCOL={1:'#6b625a',2:'#8a4636',3:'#6b4a2a',4:'#4a5a3a',5:'#b0894f'}; // by material
-  for(let y=0;y<GRID.h;y++)for(let x=0;x<GRID.w;x++){
-    const id=GRID.grid[y][x], t=TILES[id], px=ox+x*cs, py=oy+y*cs;
-    if(t&&t.solid){
-      const open=(t.door||t.locked)&&DOORS.has(x+','+y);
+  const cs=Math.min(W/LM.w, H/LM.h);
+  const ox=(W-cs*LM.w)/2, oy=(H-cs*LM.h)/2;
+  for(let y=0;y<LM.h;y++)for(let x=0;x<LM.w;x++){
+    const m=wMat(x,y), mat=MAT_WALL[m], px=ox+x*cs, py=oy+y*cs;
+    if(mat){
+      const open=mat.door&&DOORS.has(x+','+y);
       mctx.fillStyle= open ? 'rgba(255,200,120,0.10)'
-        : t.locked ? '#3f4d68' : t.door ? '#7a5a2a' : (WALLCOL[id]||'#5a5048');
+        : mat.locked ? '#3f4d68' : mat.door ? '#7a5a2a' : mat.col;
       mctx.fillRect(px,py,cs+0.6,cs+0.6);
-    } else { mctx.fillStyle='rgba(255,210,160,0.06)'; mctx.fillRect(px,py,cs+0.6,cs+0.6); } // walkable
+    } else { const fm=fMat(x,y); mctx.fillStyle = fm ? MAT_FLOOR[fm].col+'66' : 'rgba(255,210,160,0.06)'; mctx.fillRect(px,py,cs+0.6,cs+0.6); }
   }
   // facing cone
   const pcx=ox+P.x*cs, pcy=oy+P.y*cs, half=Math.atan(FOV), reach=cs*3.4;
@@ -1235,7 +1400,7 @@ function currentAction(){
     if(best.type==='sign') return {kind:'interact',ic:'\uD83D\uDCDC',label:'Read'};
     if(best.type==='save') return {kind:'interact',ic:'\uD83D\uDCBE',label:'Save'};
     return {kind:'interact',ic:'\uD83E\uDDF0',label:'Open'}; }
-  const mx=Math.floor(P.x+dirX*0.7), my=Math.floor(P.y+dirY*0.7), t=TILES[cell(mx,my)];
+  const mx=Math.floor(P.x+dirX*0.7), my=Math.floor(P.y+dirY*0.7), t=wallMatAt(mx,my);
   if(t&&(t.door||t.locked)) return {kind:'interact',ic:'\uD83D\uDEAA',label:DOORS.has(mx+','+my)?'Shut':'Open'};
   return {kind:'attack',ic:'\u2694\uFE0F',label:'Attack'};
 }
@@ -1341,7 +1506,7 @@ function interact(){ if(state!=='play'||transitioning)return;
     else { ITEMS[best.item].onOpen(best); updateHUD(); }
     return;
   }
-  const fx=P.x+dirX*0.7, fy=P.y+dirY*0.7, mx=Math.floor(fx), my=Math.floor(fy), key=mx+','+my, t=TILES[cell(mx,my)];
+  const fx=P.x+dirX*0.7, fy=P.y+dirY*0.7, mx=Math.floor(fx), my=Math.floor(fy), key=mx+','+my, t=wallMatAt(mx,my);
   if(t&&(t.door||t.locked)){
     if(DOORS.has(key)){ DOORS.delete(key); msg("The door swings shut."); sfx('door'); }
     else if(t.locked){ if(hasItem(t.locked)){ DOORS.add(key); msg("The rusty key turns. The iron door grinds open."); sfx('door'); }
@@ -1407,7 +1572,7 @@ function loop(ts){ requestAnimationFrame(loop);
   if(!last)last=ts; let dt=(ts-last)/1000; last=ts; if(dt>0.05)dt=0.05; time+=dt;
   _fAcc+=dt; _fCnt++; if(_fAcc>=0.5){ fps=Math.round(_fCnt/_fAcc); _fAcc=0; _fCnt=0; if(debugOpen) updateDebugStats(); }
   if(state==='play' && !anyPanel()){ update(dt); refreshHUDDynamic(); }
-  if(ZID && buf){ castFrame(); drawMinimap(); }
+  if(ZID && buf && state!=='editor'){ castFrame(); drawMinimap(); }
 }
 
 /* ---- input + lifecycle ---- */
@@ -1420,22 +1585,25 @@ function wireEvents(){
   if(TOUCH){ mouseLook=false; document.body.classList.add('touch'); }
 
   window.addEventListener('keydown',e=>{ const k=e.key.toLowerCase();
+    if(state==='editor'){ if(k==='escape'){ e.preventDefault(); exitEditor(); } else if(k===' '){ ED.spacePan=true; } return; }
     if(state==='dialogue'){ if(/^[1-9]$/.test(e.key)&&curNode){ const o=(curNode._visible||curNode.options||[])[parseInt(e.key)-1]; if(o)chooseOption(o); }
       if(k==='escape') closeDialogue(); return; }
     if(k==='escape'){ e.preventDefault();
+      if(ED.preview){ exitPreview(); return; }
       if(shopOpen){ closeShop(); } else if(invOpen){ toggleInv(); } else if(debugOpen){ toggleDebug(); }
       else if(pauseOpen){ togglePause(); } else if(state==='play'){ togglePause(); }
       return; }
     if(anyPanel()) return;                    // a panel is open → swallow everything but Esc
     if(k==='`'||e.code==='Backquote'){ e.preventDefault(); toggleDebug(); return; }
     if(k==='i'){ e.preventDefault(); toggleInv(); return; }
+    if(k==='m'){ e.preventDefault(); openEditor(); return; }
     if(e.key==='F5'){ e.preventDefault(); quickSave(); return; }
     if(e.key==='F9'){ e.preventDefault(); quickLoad(); return; }
     keys.add(k);
     if(k==='e'||k==='f'){ e.preventDefault(); interact(); }
     if(k===' '||k==='control'){ e.preventDefault(); playerAttack(); }
   });
-  window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+  window.addEventListener('keyup',e=>{ const k=e.key.toLowerCase(); if(k===' ') ED.spacePan=false; keys.delete(k); });
 
   // desktop mouse: use pointer-lock when the browser allows it; otherwise click-drag to look.
   // a click that doesn't drag counts as an attack — works both locked and unlocked (e.g. in sandboxed iframes).
@@ -1648,10 +1816,215 @@ function wireShop(){ const s=$('shop'); if(!s||s._wired)return; s._wired=true;
     else if(b.dataset.act==='close') closeShop(); }); }
 
 /* ---- boot ---- */
+/* ============================================================
+   MAP PAINTER — edits a layermap directly, previews it in the
+   raycaster, and exports it back into the game as zone JSON.
+   ============================================================ */
+const ED={ open:false, lm:null, tool:'wall', wallMat:1, floorMat:4, roofMat:1, markCode:2,
+  height:1.7, brush:1, cam:{x:0,y:0,scale:0}, dragPaint:false, dragErase:false, panning:false,
+  spacePan:false, lastpx:0, lastpy:0, hover:null, preview:false, portalTarget:'village',
+  enemyType:'goblin', lit:false, customCount:0, return:null, ctx:null, cw:0, ch:0 };
+
+function edBlank(w,h){ const m=newLayer(w,h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ const i=y*w+x; m.flr[i]=4;            // grass ground
+    if(x===0||y===0||x===w-1||y===h-1){ m.wall[i]=1; m.hgt[i]=MAT_WALL[1].h; } }   // stone perimeter
+  const si=(h-2)*w+(w>>1); m.mrk[si]=2; m.wall[si]=0;                              // one player spawn
+  return m; }
+
+function edSwatch(group,val,col,glyph,label){ const b=document.createElement('button');
+  b.dataset.g=group; b.dataset.v=val; b.title=label||'';
+  const i=document.createElement('i'); i.style.background=col||'#222'; if(glyph) i.textContent=glyph; b.appendChild(i);
+  const s=document.createElement('span'); s.textContent=label||''; b.appendChild(s);
+  b.addEventListener('click',()=>edSelect(group,val,b)); return b; }
+function edBuildPalette(){
+  const W=$('edWalls'); MAT_WALL.forEach((m,i)=>{ if(m) W.appendChild(edSwatch('wall',i,m.col, m.door?(m.locked?'L':'D'):'', m.name)); });
+  const F=$('edFloors'); MAT_FLOOR.forEach((m,i)=>{ if(m) F.appendChild(edSwatch('floor',i,m.col,'',m.name)); });
+  const R=$('edRoofs'); R.appendChild(edSwatch('roof',0,'#1a2233','\u25CB','Open sky')); MAT_ROOF.forEach((m,i)=>{ if(m) R.appendChild(edSwatch('roof',i,m.col,'',m.name)); });
+  const M=$('edMarks');
+  M.appendChild(edSwatch('mark',2,'#3a6a3a','P','Spawn'));
+  M.appendChild(edSwatch('mark',1,'#2a6a8a','\u25C6','Portal'));
+  M.appendChild(edSwatch('mark',3,'#8a3a2a','e','Enemy'));
+  M.appendChild(edSwatch('mark',4,'#8a6a2a','*','Torch'));
+  M.appendChild(edSwatch('erase',0,'#2a2a2a','\u2716','Erase'));
+}
+const ED_HELP={
+  wall:()=>{ const m=MAT_WALL[ED.wallMat];
+    return m.door ? `Placing a <b>${m.name}</b> \u2014 it renders as a short opening with a wall lintel above (opening height <b>${DOOR_OPEN.toFixed(2)}</b>; visible in 3D).`
+                  : `Drawing <b>${m.name}</b> wall at height <b>${ED.height.toFixed(1)}</b> \u2014 drag on the grid to build walls.`; },
+  floor:()=>`Laying <b>${MAT_FLOOR[ED.floorMat].name}</b> \u2014 drag to paint walkable ground and paths (this also clears any wall).`,
+  roof:()=>`Roof: <b>${ED.roofMat?MAT_ROOF[ED.roofMat].name:'Open sky'}</b> \u2014 drag over indoor floor to add a ceiling, or pick "Open sky" to remove it.`,
+  mark:()=>({2:'Placing the <b>player start</b> \u2014 only one exists, so it moves wherever you click.',
+            1:`Placing a <b>portal</b> to <b>${ED.portalTarget}</b> \u2014 walk into it in-game to travel there.`,
+            3:`Placing a <b>${ED.enemyType}</b> \u2014 it will be waiting when you play the map.`,
+            4:'Placing a <b>torch</b> \u2014 decorative in Daylight, an actual light source in Torchlit mode.'}[ED.markCode]||''),
+  erase:()=>'<b>Eraser</b> \u2014 drag to clear walls, floors, roofs and markers back to empty ground.'
+};
+function edHelp(){ const f=ED_HELP[ED.tool]; $('edhelp').innerHTML=f?f():'Pick a tool above, then drag on the grid to paint.'; }
+function edSelect(group,val,btn){ document.querySelectorAll('#editor .edsw button').forEach(b=>b.classList.remove('sel'));
+  if(btn) btn.classList.add('sel'); ED.tool=group;
+  if(group==='wall') ED.wallMat=val; else if(group==='floor') ED.floorMat=val;
+  else if(group==='roof') ED.roofMat=val; else if(group==='mark') ED.markCode=val;
+  $('edPortalGrp').style.display=(group==='mark'&&val===1)?'flex':'none';
+  $('edEnemyGrp').style.display=(group==='mark'&&val===3)?'flex':'none';
+  $('edDoorGrp').style.display=(group==='wall'&&MAT_WALL[val]&&MAT_WALL[val].door)?'flex':'none';
+  edHelp(); }
+function edFillPortals(){ const sel=$('edPortalTo'); sel.innerHTML='';
+  Object.keys(ZONES).filter(z=>z!=='__edit__').forEach(z=>{ const o=document.createElement('option'); o.value=z; o.textContent=ZONES[z].name||z; sel.appendChild(o); });
+  sel.onchange=()=>{ ED.portalTarget=sel.value; edHelp(); }; ED.portalTarget=sel.value||'village'; }
+function edFillEnemies(){ const sel=$('edEnemyTo'); sel.innerHTML='';
+  Object.keys(ENEMY_TYPES).forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=k; sel.appendChild(o); });
+  sel.value='goblin'; sel.onchange=()=>{ ED.enemyType=sel.value; edHelp(); }; ED.enemyType='goblin'; }
+
+function edResize(){ const cv=$('edcv'), dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=cv.clientWidth||window.innerWidth, h=cv.clientHeight||(window.innerHeight-56);
+  cv.width=Math.max(1,w*dpr); cv.height=Math.max(1,h*dpr);
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); ED.ctx=c; ED.cw=w; ED.ch=h; }
+function edFit(){ const m=ED.lm; const s=Math.max(6,Math.min((ED.cw-20)/m.w,(ED.ch-20)/m.h));
+  ED.cam.scale=s; ED.cam.x=(ED.cw-s*m.w)/2; ED.cam.y=(ED.ch-s*m.h)/2; }
+function edGlyph(c,mk,px,py,s){ c.textAlign='center'; c.textBaseline='middle'; c.font='bold '+Math.floor(s*0.62)+'px VT323';
+  const cx=px+s/2, cy=py+s/2;
+  if(mk===2){ c.fillStyle='#7fffa0'; c.fillText('P',cx,cy+1); }
+  else if(mk===1){ c.fillStyle='#7fdfff'; c.fillText('\u25C6',cx,cy+1); }
+  else if(mk===3){ c.fillStyle='#ff8a6a'; c.fillText('e',cx,cy+1); }
+  else if(mk===4){ c.fillStyle='#ffcf6a'; c.fillText('*',cx,cy+2); } }
+function edDraw(){ const c=ED.ctx; if(!c) return; const m=ED.lm, s=ED.cam.scale, ox=ED.cam.x, oy=ED.cam.y;
+  c.clearRect(0,0,ED.cw,ED.ch); c.fillStyle='#13110d'; c.fillRect(0,0,ED.cw,ED.ch);
+  for(let y=0;y<m.h;y++)for(let x=0;x<m.w;x++){ const i=y*m.w+x, px=ox+x*s, py=oy+y*s;
+    if(px>ED.cw||py>ED.ch||px+s<0||py+s<0) continue;
+    const fm=m.flr[i]; c.fillStyle=fm?MAT_FLOOR[fm].col:'#2c2820'; c.fillRect(px,py,s+0.6,s+0.6);
+    const rm=m.rof[i]; if(rm){ c.fillStyle=MAT_ROOF[rm].col+'88'; c.beginPath(); c.moveTo(px,py); c.lineTo(px+s*0.5,py); c.lineTo(px,py+s*0.5); c.closePath(); c.fill(); }
+    const wm=m.wall[i]; if(wm){ const mat=MAT_WALL[wm]; c.fillStyle=mat.col; c.fillRect(px+1,py+1,s-2,s-2);
+      const hh=Math.min(1,(m.hgt[i]||mat.h)/3); c.fillStyle='rgba(255,255,255,'+(0.05+hh*0.22).toFixed(3)+')'; c.fillRect(px+1,py+1,s-2,Math.max(2,(s-2)*0.28));
+      if(mat.door){ c.fillStyle='#1a1208'; c.font='bold '+Math.floor(s*0.58)+'px VT323'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(mat.locked?'L':'D',px+s/2,py+s/2+1); } }
+    const mk=m.mrk[i]; if(mk) edGlyph(c,mk,px,py,s);
+  }
+  if(s>=11){ c.strokeStyle='rgba(255,255,255,0.05)'; c.lineWidth=1; c.beginPath();
+    for(let x=0;x<=m.w;x++){ c.moveTo(ox+x*s,oy); c.lineTo(ox+x*s,oy+m.h*s); }
+    for(let y=0;y<=m.h;y++){ c.moveTo(ox,oy+y*s); c.lineTo(ox+m.w*s,oy+y*s); } c.stroke(); }
+  if(ED.hover){ c.strokeStyle='rgba(255,157,60,0.9)'; c.lineWidth=2; c.strokeRect(ox+ED.hover[0]*s+1,oy+ED.hover[1]*s+1,s-2,s-2); }
+}
+function edCellAt(ev){ const r=$('edcv').getBoundingClientRect(), px=ev.clientX-r.left, py=ev.clientY-r.top;
+  const cx=Math.floor((px-ED.cam.x)/ED.cam.scale), cy=Math.floor((py-ED.cam.y)/ED.cam.scale);
+  if(cx<0||cy<0||cx>=ED.lm.w||cy>=ED.lm.h) return null; return [cx,cy]; }
+function edApply(cx,cy){ const m=ED.lm, tool=ED.tool;
+  const b=(tool==='mark')?1:ED.brush, lo=-Math.floor((b-1)/2), hi=Math.floor(b/2);
+  for(let dy=lo;dy<=hi;dy++)for(let dx=lo;dx<=hi;dx++){ const x=cx+dx,y=cy+dy; if(x<0||y<0||x>=m.w||y>=m.h) continue; const i=y*m.w+x;
+    if(tool==='wall'){ m.wall[i]=ED.wallMat; m.hgt[i]=ED.height; }
+    else if(tool==='floor'){ m.wall[i]=0; m.hgt[i]=0; m.flr[i]=ED.floorMat; }
+    else if(tool==='roof'){ m.rof[i]=ED.roofMat; }
+    else if(tool==='mark'){ if(ED.markCode===2){ for(let k=0;k<m.mrk.length;k++) if(m.mrk[k]===2) m.mrk[k]=0; }
+      m.wall[i]=0; m.mrk[i]=ED.markCode;
+      if(ED.markCode===1) m.meta[i]={to:ED.portalTarget};
+      else if(ED.markCode===3) m.meta[i]={enemy:ED.enemyType};
+      else delete m.meta[i]; }
+    else if(tool==='erase'){ m.wall[i]=0; m.hgt[i]=0; m.flr[i]=0; m.rof[i]=0; m.mrk[i]=0; delete m.meta[i]; }
+  }
+}
+function edWireCanvas(){ const cv=$('edcv');
+  cv.addEventListener('contextmenu',e=>e.preventDefault());
+  cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId);
+    if(ED.spacePan||e.button===1){ ED.panning=true; ED.lastpx=e.clientX; ED.lastpy=e.clientY; return; }
+    const c=edCellAt(e); if(!c) return;
+    if(e.button===2){ ED.dragErase=true; const t=ED.tool; ED.tool='erase'; edApply(c[0],c[1]); ED.tool=t; }
+    else { ED.dragPaint=true; edApply(c[0],c[1]); }
+    edDraw(); });
+  cv.addEventListener('pointermove',e=>{ if(ED.panning){ ED.cam.x+=e.clientX-ED.lastpx; ED.cam.y+=e.clientY-ED.lastpy; ED.lastpx=e.clientX; ED.lastpy=e.clientY; edDraw(); return; }
+    const c=edCellAt(e); ED.hover=c;
+    if(c){ if(ED.dragPaint) edApply(c[0],c[1]); else if(ED.dragErase){ const t=ED.tool; ED.tool='erase'; edApply(c[0],c[1]); ED.tool=t; } }
+    edDraw(); });
+  const up=()=>{ ED.dragPaint=false; ED.dragErase=false; ED.panning=false; };
+  cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up); cv.addEventListener('pointerleave',()=>{ ED.hover=null; edDraw(); });
+  cv.addEventListener('wheel',e=>{ e.preventDefault(); const r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+    const old=ED.cam.scale; let ns=old*(e.deltaY<0?1.12:0.89); ns=Math.max(5,Math.min(64,ns));
+    ED.cam.x=mx-(mx-ED.cam.x)*(ns/old); ED.cam.y=my-(my-ED.cam.y)*(ns/old); ED.cam.scale=ns; edDraw(); },{passive:false});
+}
+function openEditor(){ ED.return=(state==='play')?{zone:ZID,x:P.x,y:P.y,angle:P.angle}:null;
+  if(!ED.lm) ED.lm=edBlank(28,22);
+  $('title').style.display='none'; $('pause')&&$('pause').classList.remove('on');
+  ED.open=true; state='editor'; setPlaying(false); document.exitPointerLock&&document.exitPointerLock();
+  $('editor').classList.add('on'); edResize(); edFit(); edDraw(); }
+function exitEditor(){ $('editor').classList.remove('on'); ED.open=false; ED.preview=false; delete zoneRuntime.__edit__;
+  if(ED.return){ state='play'; loadZone(ED.return.zone); P.x=ED.return.x; P.y=ED.return.y; P.angle=ED.return.angle; setPlaying(true); requestLock&&requestLock(); ED.return=null; }
+  else { state='title'; setPlaying(false); $('title').style.display='flex'; } }
+function edNew(){ const s=prompt('New map size (WxH):','28x22'); if(!s) return; const p=s.toLowerCase().split('x');
+  let w=parseInt(p[0])||28, h=parseInt(p[1])||22; w=Math.max(6,Math.min(80,w)); h=Math.max(6,Math.min(80,h));
+  ED.lm=edBlank(w,h); edFit(); edDraw(); }
+function edClear(){ ED.lm=edBlank(ED.lm.w,ED.lm.h); edDraw(); }
+function edExport(){ $('ediotext').value=serialLayer(ED.lm); $('edio').style.display='block'; }
+function edImport(){ try{ const lm=deserialLayer($('ediotext').value.trim()); ED.lm=lm; $('edio').style.display='none'; edFit(); edDraw(); }catch(err){ alert('Could not parse that map JSON.'); } }
+function edSpawn(){ const m=ED.lm; for(let i=0;i<m.mrk.length;i++) if(m.mrk[i]===2){ return {x:(i%m.w)+0.5,y:((i/m.w)|0)+0.5,angle:-Math.PI/2}; }
+  for(let i=0;i<m.wall.length;i++) if(!m.wall[i]){ return {x:(i%m.w)+0.5,y:((i/m.w)|0)+0.5,angle:0}; } return {x:1.5,y:1.5,angle:0}; }
+function edEntities(){ const m=ED.lm, ents=[];
+  for(let i=0;i<m.mrk.length;i++){ const mk=m.mrk[i]; if(!mk||mk===2) continue; const x=(i%m.w)+0.5, y=((i/m.w)|0)+0.5;
+    if(mk===4) ents.push({type:'decoration',sprite:'torch',x,y});
+    else if(mk===3){ const ek=(m.meta[i]&&m.meta[i].enemy)||'goblin'; ents.push({type:'enemy',enemy:ENEMY_TYPES[ek]?ek:'goblin',x,y}); }
+    else if(mk===1){ const to=m.meta[i]&&m.meta[i].to;
+      if(to&&ZONES[to]&&to!=='__edit__') ents.push({type:'portal',sprite:'portal',x,y,target:to,spawn:ZONES[to].start||{x,y,angle:0}});
+      else ents.push({type:'decoration',sprite:'portal',x,y}); } }
+  return ents; }
+function edBuildZone(name){ const v=ZONES.village;
+  const z={ name:name||'Editor Preview', layer:serialLayer(ED.lm), start:edSpawn(), entities:edEntities() };
+  if(ED.lit){ Object.assign(z,{ ceiling:rgb(16,11,8), roomHeight:1.7, ceilTex:'flagstone', floorTex:'flagstone',
+      light:true, floorColor:rgb(40,30,22), ceilingColor:rgb(20,15,10), roofColor:rgb(30,22,14), fogColor:rgb(12,10,8), fog:0.05 }); }
+  else { Object.assign(z,{ ceiling:'sky', sky:'realm', roofHeight:1.7, floorTex:'grass', light:false,
+      fogColor:v.fogColor, fog:v.fog, floorColor:v.floorColor, ceilingColor:v.ceilingColor, roofColor:v.roofColor }); }
+  return z; }
+function edToggleLight(){ ED.lit=!ED.lit; $('edLightBtn').innerHTML=ED.lit?'\u263E Torchlit':'\u2600 Daylight'; }
+function edPlay(){ delete zoneRuntime.__edit__; ZONES.__edit__=edBuildZone('Editor Preview'); delete ZONES.__edit__._lm;
+  ED.preview=true; $('edio').style.display='none'; $('editor').classList.remove('on');
+  state='play'; setPlaying(true); loadZone('__edit__', ZONES.__edit__.start); requestLock&&requestLock();
+  toast&&toast('Preview \u2014 press Esc to return to the painter'); }
+function findOpenCell(lm, near, avoidEnts){            // BFS for an open cell (wall==0), dist>=2, not on an entity
+  const occ=new Set((avoidEnts||[]).map(e=>Math.floor(e.x)+','+Math.floor(e.y)));
+  const seen=new Set([near[0]+','+near[1]]); const q=[[near[0],near[1],0]];
+  while(q.length){ const [x,y,d]=q.shift();
+    if(d>=2 && lm.wall[y*lm.w+x]===0 && !occ.has(x+','+y)) return [x,y];
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=x+dx,ny=y+dy,k=nx+','+ny;
+      if(nx>=0&&ny>=0&&nx<lm.w&&ny<lm.h&&!seen.has(k)&&lm.wall[ny*lm.w+nx]===0){ seen.add(k); q.push([nx,ny,d+1]); } } }
+  return near; }
+function edAddToVillage(){ const v=ZONES.village;
+  if(!v._lm) v._lm = v.layer?deserialLayer(v.layer):layerFromChars(v.map);
+  const name=(prompt('Name this place (a portal to it will appear in the village):','My Map')||'My Map').slice(0,28);
+  const id='custom'+(++ED.customCount);
+  const z=edBuildZone(name); z.subtitle='A PLACE YOU MADE';
+  const newSpawn=z.start, vs=v.start;
+  // a return portal inside the new map (open cell that isn't the spawn)
+  const tmp=deserialLayer(z.layer);
+  const rc=findOpenCell(tmp,[Math.floor(newSpawn.x),Math.floor(newSpawn.y)], z.entities);
+  z.entities.push({type:'portal',sprite:'portal',x:rc[0]+0.5,y:rc[1]+0.5,target:'village',spawn:{x:vs.x,y:vs.y,angle:vs.angle}});
+  ZONES[id]=z; delete ZONES[id]._lm; delete zoneRuntime[id];
+  // the entry portal placed on an open street cell near the village start
+  const live=(zoneRuntime.village&&zoneRuntime.village.entities)||v.entities;
+  const pc=findOpenCell(v._lm,[Math.floor(vs.x),Math.floor(vs.y)], live);
+  const entry={type:'portal',sprite:'portal',x:pc[0]+0.5,y:pc[1]+0.5,target:id,spawn:{x:newSpawn.x,y:newSpawn.y,angle:newSpawn.angle}};
+  v.entities.push(entry);                                                       // future loads / resets
+  if(zoneRuntime.village) zoneRuntime.village.entities.push(JSON.parse(JSON.stringify(entry)));  // appears live
+  edFillPortals();                                                              // make the new zone targetable too
+  alert('"'+name+'" is now part of the game. A glowing portal stands near the village entrance \u2014 Exit the painter and walk into it.'); }
+function exitPreview(){ ED.preview=false; delete zoneRuntime.__edit__; state='editor'; setPlaying(false);
+  document.exitPointerLock&&document.exitPointerLock(); $('editor').classList.add('on'); edResize(); edFit(); edDraw(); }
+function edInit(){ edBuildPalette(); edFillPortals(); edFillEnemies();
+  edSelect('wall',1,$('edWalls').querySelector('button'));
+  $('edLightBtn').innerHTML=ED.lit?'\u263E Torchlit':'\u2600 Daylight';
+  $('edbar').addEventListener('click',e=>{ const b=e.target.closest('button[data-ed]'); if(!b) return; const a=b.dataset.ed;
+    if(a==='play') edPlay(); else if(a==='light') edToggleLight(); else if(a==='link') edAddToVillage();
+    else if(a==='export') edExport(); else if(a==='import'){ $('ediotext').value=''; $('edio').style.display='block'; }
+    else if(a==='new') edNew(); else if(a==='clear') edClear(); else if(a==='exit') exitEditor(); });
+  $('edio').addEventListener('click',e=>{ const b=e.target.closest('button[data-ed]'); if(!b) return; const a=b.dataset.ed;
+    if(a==='ioload') edImport(); else if(a==='iocopy'){ const t=$('ediotext'); t.select(); try{document.execCommand('copy');}catch(_){} }
+    else if(a==='ioclose') $('edio').style.display='none'; });
+  $('edH').addEventListener('input',()=>{ ED.height=+$('edH').value; $('edHval').textContent=ED.height.toFixed(1); edHelp(); });
+  $('edB').addEventListener('input',()=>{ ED.brush=+$('edB').value|0; $('edBval').textContent=ED.brush; });
+  $('edDoorOpen').addEventListener('input',()=>{ DOOR_OPEN=+$('edDoorOpen').value; $('edDoorVal').textContent=DOOR_OPEN.toFixed(2); edHelp(); });
+  $('editorBtn')&&$('editorBtn').addEventListener('click',openEditor);
+  edWireCanvas(); edHelp();
+  window.addEventListener('resize',()=>{ if($('editor').classList.contains('on')){ edResize(); edFit(); edDraw(); } });
+}
+
 function init(){ buildTextures(); buildSprites(); buildProcSky(); loadSkybox('realm', SKYBOX_PANO); buildWeapon();
   resize(); addEventListener('resize',resize); addEventListener('load',resize);
   if(window.ResizeObserver) new ResizeObserver(resize).observe(view);
-  wireEvents(); wireInv(); wirePause(); wireShop(); buildDebug(); updateHUD(); requestAnimationFrame(loop); }
+  wireEvents(); wireInv(); wirePause(); wireShop(); buildDebug(); edInit(); updateHUD(); requestAnimationFrame(loop); }
 init();
 </script>
 </body>
