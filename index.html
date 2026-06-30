@@ -979,6 +979,7 @@ function resize(){
   doorD=new Float32Array(RW); doorTX=new Float32Array(RW); doorWHa=new Float32Array(RW); doorOHa=new Float32Array(RW); doorHT=new Array(RW);
   bloomCv=document.createElement('canvas'); bloomCv.width=Math.max(1,RW>>1); bloomCv.height=Math.max(1,RH>>1);
   bloomCtx=bloomCv.getContext('2d',{alpha:true});
+  coarseW=Math.max(1,Math.ceil(RW/COARSE_F)); coarseH=Math.max(1,Math.ceil(RH/COARSE_F)); coarseBuf=new Uint32Array(coarseW*coarseH);
   buildVignette();
 }
 function buildVignette(){   // soft warm-dark edge (no scanlines)
@@ -1003,6 +1004,8 @@ let adaptLum=0.42, lastPostT=0;   // the luminance the eye is currently adapted 
 let postDark=0, postFlick=1, postExp=1;   // per frame: scotopic amount 0..1, torch-flicker shimmer, exposure multiplier
 const ADAPT_DARK_TAU=5.0;         // dark adaptation is SLOW (seconds of rising sensitivity)
 const ADAPT_LIGHT_TAU=0.45;       // light adaptation is FAST (a brief wash-out, then recovery)
+let coarseBuf=null, coarseW=0, coarseH=0, nightSeed=0;   // rod-pooled low-frequency copy (detail loss) + noise seed
+const COARSE_F=4;                 // detail-loss pooling factor (bigger = coarser masses)
 let torchList=[];           // wall torches in the current zone (used as point lights)
 const glowQ=[];             // additive torch glows queued during the current frame
 const zoneRuntime={};                 // persistent per-zone state (deaths, pickups, doors)
@@ -1193,48 +1196,87 @@ function updateAdapt(){
   // blinded (image darkens, recovers over ~DARK_TAU); too dark-adapted for a bright
   // place and it washes out (recovers fast). Steady state -> ~1, no artificial dark.
   const mismatch = adaptLum - target;
-  const transient = (mismatch>0) ? (1 - Math.min(0.80, mismatch*2.6))     // entered the dark -> briefly blinded (near-black)
+  const transient = (mismatch>0) ? (1 - Math.min(0.82, mismatch*2.6))     // entered the dark -> briefly blinded (near-black)
                                  : (1 + Math.min(5, -mismatch*4.5));      // entered the light -> wash-out
-  // a dark place stays a little dim even once adapted, but the eye CLEARLY
-  // brightens from the blinded entry to the adapted state (eyes adjusting).
-  postExp = (1 - postDark*0.26) * transient;
+  // The dark place stays UNMISTAKABLY DARK even once adapted — adaptation trades
+  // detail for spatial awareness, it does not crank exposure. Only a small lift
+  // from the blinded entry so large shapes emerge from the black.
+  postExp = (1 - postDark*0.42) * transient;
   postFlick = litZone ? (0.985 + 0.016*Math.sin(time*15.0) + 0.012*Math.sin(time*6.3) + 0.009*Math.sin(time*27.7)) : 1;
 }
-/* Build the per-frame channel LUTs: the zone's mood grade folded together with
-   the eye's current adaptation. Exposure maps the adapted level to mid-grey (so
-   a brightness mismatch washes out or crushes); in low light contrast and
-   saturation fall and blacks lift, so EDGES blend into the dark rather than the
-   scene merely dimming. */
-function buildAdaptLUT(){
+/* Build the per-frame TONE LUT: the zone mood grade + a dark, dim exposure with
+   only a whisper of black-lift (so big masses separate from the void) and a
+   gentle global contrast softening. It deliberately does NOT brighten the scene
+   to daylight; the "night vision" is mostly the per-pixel detail loss below. */
+function buildToneLUT(){
   const g=(typeof Z==='object'&&Z&&Z._grade)||{};
-  const zCon=g.con??1, zBright=g.bright??1, zGamma=g.gamma??1, zLift=g.lift??0, zSat=g.sat??1, zTint=g.tint||[1,1,1];
-  let exposure=postExp; if(exposure<0.12)exposure=0.12; else if(exposure>6)exposure=6;
+  const zBright=g.bright??1, zGamma=g.gamma??1, zLift=g.lift??0, zTint=g.tint||[1,1,1], zCon=g.con??1;
+  let exposure=postExp; if(exposure<0.1)exposure=0.1; else if(exposure>6)exposure=6;
   const dark=postDark, flick=postFlick;
-  const con = zCon*(1-dark*0.10);                 // a slight contrast softening in deep dark
-  const pivot = 0.5 - dark*0.05;
-  const lift = zLift;                             // keep shadows honest (no haze)
-  const sat = zSat*(1-dark*0.20);                 // a hint of desaturation in deep shadow, not gray mush
+  const lift = zLift + dark*0.015;                // a whisper of lift so large shapes separate from pure black
+  const con  = zCon*(1 - dark*0.16);              // gentle softening (corners fade into shadow)
   const mk=ch=>{ const lut=new Uint8Array(256), tn=zTint[ch];
-    for(let i=0;i<256;i++){ let v=(i/255)*exposure*flick;   // adaptation exposure (with flicker shimmer)
-      v=(v-pivot)*con+pivot;                      // contrast compressed toward the dark pivot (edges blend into shadow)
-      v=v*zBright*tn+lift;                         // brightness, per-channel tint, lifted blacks
-      if(v>0.82){ const e=v-0.82; v=0.82+(1-Math.exp(-e*2.2))*0.18; }   // soft shoulder: highlights wash to white
+    for(let i=0;i<256;i++){ let v=(i/255)*exposure*flick;
+      v=(v-0.5)*con+0.5;
+      v=v*zBright*tn+lift;
+      if(v>0.82){ const e=v-0.82; v=0.82+(1-Math.exp(-e*2.2))*0.18; }   // soft shoulder so torches wash to white
       if(v<0)v=0; else if(v>1)v=1;
       if(zGamma!==1) v=Math.pow(v,1/zGamma);
       lut[i]=(v*255+0.5)|0; }
     return lut; };
-  GRADE={lutR:mk(0), lutG:mk(1), lutB:mk(2), sat};
+  GRADE={lutR:mk(0), lutG:mk(1), lutB:mk(2)};
 }
-function applyGrade(){
-  if(!GRADE) return; const {lutR,lutG,lutB,sat}=GRADE, n=RW*RH;
-  if(sat===1){ for(let i=0;i<n;i++){ const p=buf[i];
-    buf[i]=(p&0xff000000)|(lutB[(p>>16)&255]<<16)|(lutG[(p>>8)&255]<<8)|lutR[p&255]; } }
-  else { for(let i=0;i<n;i++){ const p=buf[i];
-    let r=lutR[p&255], gg=lutG[(p>>8)&255], b=lutB[(p>>16)&255];
-    const l=(r*77+gg*150+b*29)>>8;                 // luma (0.30/0.59/0.11 in 8.8 fixed point)
-    r=l+(((r-l)*sat)|0); gg=l+(((gg-l)*sat)|0); b=l+(((b-l)*sat)|0);
-    r=r<0?0:r>255?255:r; gg=gg<0?0:gg>255?255:gg; b=b<0?0:b>255?255:b;
-    buf[i]=(p&0xff000000)|(b<<16)|(gg<<8)|r; } }
+/* Rod-pooled, low-frequency copy of the raw frame (block average). Detail-loss
+   blends toward this so dark surfaces read as large flat masses, not bricks. */
+function buildCoarse(){
+  const F=COARSE_F, cw=coarseW, ch=coarseH;
+  for(let cy=0;cy<ch;cy++){ const y0=cy*F, y1=Math.min(y0+F,RH);
+    for(let cx=0;cx<cw;cx++){ const x0=cx*F, x1=Math.min(x0+F,RW);
+      let r=0,g=0,b=0,n=0;
+      for(let y=y0;y<y1;y++){ let i=y*RW+x0;
+        for(let x=x0;x<x1;x++,i++){ const p=buf[i]; r+=p&255; g+=(p>>8)&255; b+=(p>>16)&255; n++; } }
+      coarseBuf[cy*cw+cx]= ((r/n)|0) | (((g/n)|0)<<8) | (((b/n)|0)<<16);
+    }
+  }
+}
+/* NIGHT VISION — the heart of it. Per pixel, a `night` weight is high where the
+   pixel is dark and ~0 where it is torch-bright, so lit areas stay sharp and
+   colourful (local detail) while the dark loses information:
+     · detail loss  -> blend toward the coarse rod-pooled value (bricks -> masses)
+     · muted colour -> partial desaturation (warm stays warm, never flat grey)
+     · shimmer noise-> faint, only in the darkest regions (the eye searching)
+   The tone LUT keeps the whole thing genuinely dark. */
+function applyNightVision(){
+  if(!GRADE) return; const {lutR,lutG,lutB}=GRADE, n=RW*RH, dark=postDark;
+  if(dark<0.03){ for(let i=0;i<n;i++){ const p=buf[i];   // photopic fast path: tone only
+    buf[i]=(p&0xff000000)|(lutB[(p>>16)&255]<<16)|(lutG[(p>>8)&255]<<8)|lutR[p&255]; } return; }
+  buildCoarse();
+  // night weight: ~full below mid-luma (most surfaces lose detail), ramping to 0
+  // only for genuinely BRIGHT pixels (torch flames) which stay sharp & detailed.
+  const cw=coarseW, F=COARSE_F, HI=0.86, MID=0.58, RANGE=1/(HI-MID);
+  nightSeed=(nightSeed+24007)&0x7fffffff;
+  let i=0;
+  for(let y=0;y<RH;y++){ const crow=((y/F)|0)*cw, yh=y*92837111;
+    for(let x=0;x<RW;x++,i++){ const p=buf[i];
+      let r=p&255, g=(p>>8)&255, b=(p>>16)&255;
+      const Ls=(r*77+g*150+b*29)>>8;                          // 0..255 luma of this pixel
+      let nv=(HI - Ls/255)*RANGE; nv=nv<0?0:nv>1?1:nv; nv*=dark; // 1 across the dark, 0 only where torch-lit
+      if(nv>0.02){                                            // detail loss: pull toward the pooled mass
+        const cp=coarseBuf[crow+((x/F)|0)], m=nv*0.92;
+        r+=(((cp&255)-r)*m); g+=((((cp>>8)&255)-g)*m); b+=((((cp>>16)&255)-b)*m);
+      }
+      r=lutR[r&255|0]; g=lutG[g&255|0]; b=lutB[b&255|0];      // tone (keeps it dark)
+      if(nv>0.02){
+        const sat=1-nv*0.5, L=(r*77+g*150+b*29)>>8;           // mute colour (not grey)
+        r=L+(r-L)*sat; g=L+(g-L)*sat; b=L+(b-L)*sat;
+        let h=(x*1597334677)^(yh)^nightSeed; h^=h>>>13; h=(h*0x85ebca6b)>>>24;   // faint temporal shimmer
+        const nz=(h-128)*nv*nv*0.045; r+=nz; g+=nz; b+=nz;    // nv^2 -> only the darkest regions shimmer
+
+      }
+      r=r<0?0:r>255?255:r|0; g=g<0?0:g>255?255:g|0; b=b<0?0:b>255?255:b|0;
+      buf[i]=(p&0xff000000)|(b<<16)|(g<<8)|r;
+    }
+  }
 }
 
 /* ---- THE RAYCASTER: one column per screen x ---- */
@@ -1479,7 +1521,7 @@ function castFrame(){
   }
   drawSprites(dirX,dirY,planeX,planeY);
   // post FX: measure the raw frame, advance eye adaptation, then grade+adapt it
-  if(fxOn){ updateAdapt(); buildAdaptLUT(); applyGrade(); } else { GRADE=null; postDark=0; postFlick=1; }
+  if(fxOn){ updateAdapt(); buildToneLUT(); applyNightVision(); } else { GRADE=null; postDark=0; postFlick=1; }
   ctx.putImageData(img,0,0);
   if(lit) drawTorchGlows();
   if(fxOn) drawBloom();         // bloom/glare — wider & stronger when dark-adapted (pupil open)
