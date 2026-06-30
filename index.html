@@ -1266,6 +1266,7 @@ function castFrame(){
   }
   // ---------- DOOR LINTELS (solid wall above an open doorway; the gap below still shows the room beyond) ----------
   for(let x=0;x<RW;x++){ const dp=doorD[x]; if(dp<=0.0001) continue;
+    if(dp>zbuf[x]+1e-4) continue;                 // door is behind a nearer wall -> its lintel is occluded (no through-wall draw)
     const lh=RH/dp, fY=lh/2+HH, owh=doorWHa[x], ooh=doorOHa[x], ht=doorHT[x]; if(!ht||owh<=ooh) continue;
     let tb=Math.floor(fY-lh*owh), bb=Math.floor(fY-lh*ooh); if(tb<0)tb=0; if(bb>RH)bb=RH; if(tb>=bb) continue;
     const bx=doorTX[x]|0; let fa=0, aw=0, fogT=0;
@@ -1339,9 +1340,10 @@ function drawViewmodels(){
     if(P.swing>0){ const ph=1-P.swing/SWING_DUR, k=Math.sin(ph*Math.PI); ang=0.6*k; lift=26*k; }
     const spr=equippedSprite();
     if(spr){ // image weapon (diagonal art): hilt anchored low-right, blade sweeping up-left
-      const dh=RH*0.82, dw=dh*spr.width/spr.height;
-      ctx.save(); ctx.translate(RW*0.74+bobX, RH+18+bobY-lift); ctx.rotate(ang); ctx.scale(-1,1);
-      ctx.drawImage(spr, -dw*0.12, -dh*0.92, dw, dh); ctx.restore();
+      // bound by BOTH dims so it never overflows a tall (portrait) screen; tuck into the corner
+      const ar=spr.width/spr.height, dh=Math.min(RH*0.66, RW*0.74/ar), dw=dh*ar;
+      ctx.save(); ctx.translate(RW*0.82+bobX, RH+8+bobY-lift); ctx.rotate(ang*0.85); ctx.scale(-1,1);
+      ctx.drawImage(spr, -dw*0.30, -dh*0.88, dw, dh); ctx.restore();
     } else { // default procedural blade (mirrored, drawn from the hilt up)
       const dh=RH*0.58, dw=dh*(WEAP.width/WEAP.height);
       ctx.save(); ctx.translate(RW*0.30+bobX, RH+bobY-lift); ctx.scale(-1,1); ctx.rotate(ang);
