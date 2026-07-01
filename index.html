@@ -1020,8 +1020,9 @@ const ZONES={
   },
   forest:{
     name:"The Blackwood", subtitle:"MOUNTAIN FOREST · GLOOM", type:"terrain",
-    map:FOREST_MAP, ceiling:"sky", sky:'realm',
-    heightmap:{ gw:120, gh:104, cell:0.25, hmax:7, seed:7 },   // procedural mountains (uploadable)
+    map:FOREST_MAP, ceiling:"sky", sky:'dusk', skyDim:0.82,
+    heightmap:{ src:'assets/terrain1.png', world:30, hmax:7,   // baked-in DEM (ridged valley + river network)
+                gw:120, gh:104, cell:0.25, seed:7 },           // procedural fallback if the image is unavailable
     scatter:true,                                              // fill the slopes with a dense wood on load
     floorColor:rgb(40,50,32), ceilingColor:rgb(120,150,190),
     fogColor:rgb(60,72,82), fog:0.03,
@@ -1227,6 +1228,22 @@ function buildProcSky(){
     c.beginPath();c.ellipse(cx,cy,r,r*0.5,0,0,7);c.fill();}
   SKYBOXES.proc={data:new Uint32Array(c.getImageData(0,0,w,h).data.buffer).slice(),w,h};
 }
+// Cold dusk-mountain sky for the terrain zones: deep-navy zenith -> dusty horizon, with soft
+// horizontal cloud streaks. Streaks are drawn wrapped (x, x±w) so the panorama tiles seamlessly
+// with no vertical spire/seam like the castle-vista realm panorama has.
+function buildDuskSky(){
+  const w=1024,h=256, cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const c=cv.getContext('2d',{willReadFrequently:true});
+  const g=c.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'#0e1526'); g.addColorStop(0.5,'#243a58');
+  g.addColorStop(0.82,'#46607d'); g.addColorStop(1,'#5f7690');
+  c.fillStyle=g; c.fillRect(0,0,w,h);
+  const streak=(cx,cy,rx,ry,a)=>{ for(const ox of [-w,0,w]){ c.beginPath();
+    c.ellipse(cx+ox,cy,rx,ry,0,0,7); c.fillStyle='rgba(150,168,192,'+a+')'; c.fill(); } };
+  for(let i=0;i<9;i++){ const cx=(i*137)%w, cy=44+((i*57)%150), rx=90+((i*71)%120), ry=7+((i*5)%10);
+    streak(cx,cy,rx,ry,0.05+((i*7)%9)/140); }               // pale, low-contrast cloud bands
+  SKYBOXES.dusk={data:new Uint32Array(c.getImageData(0,0,w,h).data.buffer).slice(),w,h};
+}
 // load a panorama image (data URI or URL) into SKYBOXES[name]
 function loadSkybox(name, src){
   const im=new Image();
@@ -1348,7 +1365,13 @@ function loadZone(id, spawn){
   Z.terrain = (Z.type==='terrain');                     // voxel heightmap zone?
   if(Z.terrain){
     if(!Z._hf){ const hm=Z.heightmap||{};                // build + cache the height field once
-      Z._hf = genMountains(hm.gw||113, hm.gh||97, hm.cell||0.25, hm.hmax||9, hm.seed||1); }
+      if(hm.src && HFCACHE[hm.src]){ Z._hf = HFCACHE[hm.src]; }   // baked DEM already decoded
+      else {
+        Z._hf = genMountains(hm.gw||113, hm.gh||97, hm.cell||0.25, hm.hmax||9, hm.seed||1);  // fallback
+        if(hm.src){ const zref=Z; loadHeightmapURL(hm.src, hm.hmax||7, hm.world||28, hf=>{   // swap in when ready
+          if(!hf) return; zref._hf=hf; if(Z===zref){ HFIELD=hf; P.z=sampleH(HFIELD,P.x,P.y)+EYE; } }); }
+      }
+    }
     HFIELD=Z._hf;
   } else HFIELD=null;
   const sp=spawn||Z.start; P.x=sp.x; P.y=sp.y; P.angle=sp.angle;
@@ -1694,16 +1717,36 @@ function genMountains(gw,gh,cell,hmax,seed){
   const inv=hmax/((mx-mn)||1); for(let k=0;k<d.length;k++) d[k]=(d[k]-mn)*inv;
   return { d, gw, gh, cell, hmax };
 }
-// grayscale image -> height field spanning the same world extent as the default
-function loadHeightmapFile(file, hmax, done){
-  const im=new Image(); im.onload=()=>{ const gw=im.width, gh=im.height;
-    const cv=document.createElement('canvas'); cv.width=gw; cv.height=gh;
-    const c=cv.getContext('2d',{willReadFrequently:true}); c.drawImage(im,0,0);
-    let px; try{ px=c.getImageData(0,0,gw,gh).data; }catch(e){ return; }
-    const d=new Float32Array(gw*gh), WX=28, cell=WX/(gw-1);
-    for(let k=0,p=0;k<gw*gh;k++,p+=4) d[k]=((px[p]*0.299+px[p+1]*0.587+px[p+2]*0.114)/255)*hmax;
-    done({ d, gw, gh, cell, hmax });
-  }; im.src=URL.createObjectURL(file);
+// grayscale image (HTMLImage) -> height field. `world` = world-unit span of the widest edge;
+// the field keeps square cells and is renormalized so darkest px -> 0, brightest -> hmax.
+function imgToHeightfield(im, hmax, world){
+  const gw=im.width, gh=im.height;
+  const cv=document.createElement('canvas'); cv.width=gw; cv.height=gh;
+  const c=cv.getContext('2d',{willReadFrequently:true}); c.drawImage(im,0,0);
+  let px; try{ px=c.getImageData(0,0,gw,gh).data; }catch(e){ return null; }
+  const d=new Float32Array(gw*gh); let mn=1e9,mx=-1e9;
+  for(let k=0,p=0;k<gw*gh;k++,p+=4){ const l=px[p]*0.299+px[p+1]*0.587+px[p+2]*0.114;
+    d[k]=l; if(l<mn)mn=l; if(l>mx)mx=l; }
+  const inv=hmax/((mx-mn)||1); for(let k=0;k<d.length;k++) d[k]=(d[k]-mn)*inv;   // full dynamic range
+  const cell=(world||28)/(Math.max(gw,gh)-1);
+  return { d, gw, gh, cell, hmax };
+}
+// grayscale image -> height field, from an uploaded File
+function loadHeightmapFile(file, hmax, done, world){
+  const im=new Image(); im.onload=()=>{ const hf=imgToHeightfield(im, hmax, world); if(hf) done(hf); };
+  im.src=URL.createObjectURL(file);
+}
+// grayscale image -> height field, from a URL (baked-in default terrain maps). Cached by src.
+const HFCACHE={};
+function loadHeightmapURL(src, hmax, world, done){
+  const im=new Image(); im.onload=()=>{ const hf=imgToHeightfield(im, hmax, world);
+    if(hf){ HFCACHE[src]=hf; if(done) done(hf); } };
+  im.onerror=()=>{ if(done) done(null); }; im.src=src;
+}
+// warm the cache for the built-in terrain maps so a zone can grab its field synchronously
+function preloadHeightmaps(){
+  for(const id in ZONES){ const hm=ZONES[id].heightmap; if(hm&&hm.src&&!HFCACHE[hm.src])
+    loadHeightmapURL(hm.src, hm.hmax||7, hm.world||28); }
 }
 // Hot-swap the current terrain zone's height field from an uploaded grayscale image (press H,
 // or window.HM.upload()). White = high, black = low; the image is stretched over the play area.
@@ -3019,7 +3062,7 @@ function edInit(){ edBuildPalette(); edFillPortals(); edFillEnemies();
   window.addEventListener('resize',()=>{ if($('editor').classList.contains('on')){ edResize(); edFit(); edDraw(); } });
 }
 
-function init(){ buildTextures(); buildSprites(); loadArtSprites(); buildProcSky(); loadSkybox('realm', SKYBOX_PANO); buildWeapon(); loadWeaponSprites();
+function init(){ buildTextures(); buildSprites(); loadArtSprites(); preloadHeightmaps(); buildProcSky(); buildDuskSky(); loadSkybox('realm', SKYBOX_PANO); buildWeapon(); loadWeaponSprites();
   resize(); addEventListener('resize',resize); addEventListener('load',resize);
   if(window.ResizeObserver) new ResizeObserver(resize).observe(view);
   wireEvents(); wireInv(); wirePause(); wireShop(); buildDebug(); edInit(); updateHUD(); requestAnimationFrame(loop); }
