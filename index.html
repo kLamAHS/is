@@ -712,7 +712,7 @@ const ITEMS={
                   stats:{def:18, maxhp:40}, desc:"+18 defense, +40 max vigour."},
   // light source (offhand)
   torch:         {name:"Torch", type:'gear', slot:'offhand', stack:false, icon:'\uD83D\uDD25', value:12,
-                  sprite:'assets/torch.png', light:true, desc:"A pitch-soaked brand. Held in the off hand; casts a flickering light."},
+                  sprite:'assets/torch.png', light:true, keyBg:true, desc:"A pitch-soaked brand. Held in the off hand; casts a flickering light."},
   // keys / quest
   rusty_key:     {name:"Rusty Key", type:'key', icon:'\uD83D\uDD11', value:0,
                   desc:"Opens the iron door in the lowest vault."},
@@ -1017,7 +1017,7 @@ let bloomCv=null, bloomCtx=null, bloomImg=null, bloomBuf=null;  // offscreen bri
 let vignetteSoft=null;            // gentle cinematic vignette for unlit (daylight) zones
 // ---- human visual adaptation state ----
 let adaptLum=0.42, lastPostT=0;   // the luminance the eye is currently adapted to (lags the scene), + last post timestamp
-let postDark=0, postFlick=1, postExp=1, postMurk=0, postSee=0;   // scotopic amount, flicker, exposure, murk (poor visibility), + see-in-dark (shadow-lift) amount
+let postDark=0, postFlick=1, postExp=1, postMurk=0, postSee=0, postCrush=0;   // scotopic amount, flicker, exposure, murk (poor visibility), see-in-dark (shadow-lift), + photopic crush (dark beyond a nearby light)
 const ADAPT_DARK_TAU=5.0;         // dark adaptation is SLOW (seconds of rising sensitivity)
 const ADAPT_LIGHT_TAU=0.45;       // light adaptation is FAST (a brief wash-out, then recovery)
 let coarseBuf=null, coarseW=0, coarseH=0, nightSeed=0;   // rod-pooled low-frequency copy (detail loss) + noise seed
@@ -1103,9 +1103,36 @@ function buildWeapon(){
   WEAP=cv;
 }
 function loadWeaponSprites(){ for(const id in ITEMS){ const d=ITEMS[id];
-  if(d.sprite){ const im=new Image(); im.src=d.sprite; WEAP_IMG[id]=im; } }
+  if(d.sprite){ const im=new Image();
+    if(d.keyBg) im.onload=()=>{ WEAP_IMG[id]=keyOutBackground(im); };   // strip an opaque background to transparent
+    im.src=d.sprite; WEAP_IMG[id]=im; } }
   defaultWeapImg=new Image(); defaultWeapImg.src='assets/weapons/steel_sword.png'; }
-const ready=im=>im && im.complete && im.naturalWidth>0;
+// If an art asset ships with a solid (e.g. floor) background, flood-fill it out from
+// the borders so only the subject remains. Interior pixels that happen to match the
+// background colour but aren't connected to an edge are kept, so the torch survives.
+function keyOutBackground(img){
+  const w=img.naturalWidth||img.width, h=img.naturalHeight||img.height; if(!w||!h) return img;
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const g=c.getContext('2d'); g.drawImage(img,0,0);
+  let id; try{ id=g.getImageData(0,0,w,h); }catch(e){ return img; }
+  const d=id.data, ix=(x,y)=>(y*w+x)<<2;
+  const cs=[[0,0],[w-1,0],[0,h-1],[w-1,h-1]];
+  let a=0; for(const [x,y] of cs) a+=d[ix(x,y)+3];
+  if(a/4 < 24) return img;                       // corners already transparent -> nothing to do
+  let br=0,bg=0,bb=0; for(const [x,y] of cs){ const i=ix(x,y); br+=d[i]; bg+=d[i+1]; bb+=d[i+2]; }
+  br/=4; bg/=4; bb/=4;
+  const TH=52*52;                                 // squared colour distance: only pixels close to the bg go
+  const near=i=>{ const dr=d[i]-br,dg=d[i+1]-bg,db=d[i+2]-bb; return (dr*dr+dg*dg+db*db) < TH; };
+  const seen=new Uint8Array(w*h), st=[];
+  for(let x=0;x<w;x++){ st.push(x,0,x,h-1); }
+  for(let y=0;y<h;y++){ st.push(0,y,w-1,y); }
+  while(st.length){ const y=st.pop(), x=st.pop();
+    if(x<0||y<0||x>=w||y>=h) continue; const p=y*w+x; if(seen[p]) continue; seen[p]=1;
+    const i=p<<2; if(!near(i)) continue; d[i+3]=0;
+    st.push(x+1,y,x-1,y,x,y+1,x,y-1); }
+  g.putImageData(id,0,0); return c;
+}
+const ready=im=>!!im && (im.tagName==='CANVAS' ? im.width>0 : (im.complete && im.naturalWidth>0));
 function equippedSprite(){ const id=equip.weapon, im=id&&WEAP_IMG[id];
   if(ready(im)) return im;                 // weapon's own art
   if(ready(defaultWeapImg)) return defaultWeapImg;   // base sword fallback
@@ -1248,16 +1275,24 @@ function measureLum(){
 function updateAdapt(){
   const dt = Math.min(0.1, Math.max(0, time-lastPostT)); lastPostT=time;
   const litZone = !!(Z&&Z.light);
+  // Daylight / open zones: the eye is fully light-adapted. No night vision, no slow
+  // "eyes adjusting" — stepping out of the catacombs into the village reads bright at
+  // once (teleport / death / portal). adaptLum still eases up so re-entering the dark
+  // starts you photopic (briefly blinded, then adapting), which is the correct arc.
+  if(!litZone){
+    adaptLum += (1-adaptLum)*(1-Math.exp(-dt/ADAPT_LIGHT_TAU));
+    postDark=0; postMurk=0; postSee=0; postExp=1; postCrush=0; postFlick=1; return;
+  }
   // The eye adapts to the ENVIRONMENT's light level (dark dungeon vs daylight),
   // not the headlamp pool. Bright sources actually IN view (a torch, the portal,
   // the sky) raise the target and constrict the pupil, so staring at a flame
   // ruins your night vision; look away and you slowly dark-adapt again.
-  const amb = (Z&&Z.ambient!=null) ? Z.ambient : (litZone?0.12:0.42);
+  const amb = (Z&&Z.ambient!=null) ? Z.ambient : 0.12;
   const fovea = measureLum();
   // Standing in torchlight bleaches your night vision: the light hitting you
   // (torchWarm at your position, shadow-occluded) raises the adaptation target,
   // so the surrounding dark goes black until you step off and slowly re-adapt.
-  const localLight = litZone ? torchWarm(P.x,P.y) : 0;
+  const localLight = torchWarm(P.x,P.y);
   const target = amb + localLight*1.15 + Math.max(0, fovea-0.55)*0.9;
   const tau = (target<adaptLum) ? ADAPT_DARK_TAU : ADAPT_LIGHT_TAU;
   adaptLum += (target-adaptLum) * (1-Math.exp(-dt/tau));
@@ -1282,7 +1317,12 @@ function updateAdapt(){
   // pupil constricted by nearby light (low postDark). This is the whole "adapt a
   // little, lose it near a torch" behaviour.
   postSee = Math.max(0, postDark - postMurk*1.3);
-  postFlick = litZone ? (0.985 + 0.016*Math.sin(time*15.0) + 0.012*Math.sin(time*6.3) + 0.009*Math.sin(time*27.7)) : 1;
+  // Photopic crush: when your eye is adapted to a bright nearby light (your own torch
+  // or a wall brazier you're standing in), the pupil constricts and the dim reaches
+  // beyond the pool drop below your sensitivity — the corners of the room go black.
+  // This is the OPPOSITE of dark adaptation: near a torch you see LESS in the dark.
+  postCrush = Math.min(1, Math.max(0, (adaptLum-0.34)/0.5));
+  postFlick = (0.985 + 0.016*Math.sin(time*15.0) + 0.012*Math.sin(time*6.3) + 0.009*Math.sin(time*27.7));
 }
 /* Build the per-frame TONE LUT: the zone mood grade + a dark, dim exposure with
    only a whisper of black-lift (so big masses separate from the void) and a
@@ -1298,10 +1338,14 @@ function buildToneLUT(){
   // dark-adapted shadow lift: gamma<1 pulls the faint ambient up so large shapes
   // read, while torch highlights stay bright. Only when actually seeing-in-dark
   // (postSee): gone while blinded and gone when a nearby torch has constricted you.
-  const nightGamma = 1 - Math.min(0.34, postSee*0.34);   // only a LITTLE lift — dim shapes emerge, the room stays dark
+  // One tone curve, two directions: dark-adapted (postSee) LIFTS the shadows so faint
+  // masses emerge; light-adapted near a torch (postCrush) PULLS the shadows down so the
+  // reaches beyond your circle of light fall into black. They never overlap.
+  const toneGamma = postSee>0 ? (1 - Math.min(0.34, postSee*0.34))
+                   : (1 + postCrush*0.85);
   const mk=ch=>{ const lut=new Uint8Array(256), tn=zTint[ch];
     for(let i=0;i<256;i++){ let v=(i/255)*exposure*flick;
-      if(nightGamma<1) v=Math.pow(v,nightGamma);   // lift the dark so a little emerges
+      if(toneGamma!==1) v=Math.pow(v,toneGamma);   // lift the dark (adapted) or crush it (near a torch)
       v=(v-0.5)*con+0.5;
       v=v*zBright*tn+lift;
       if(v>0.82){ const e=v-0.82; v=0.82+(1-Math.exp(-e*2.2))*0.18; }   // soft shoulder so torches wash to white
@@ -1638,7 +1682,7 @@ function castFrame(){
    contribute, scaled by how far over the threshold they are — so mid-tone walls
    and floor never glow. Sampled at half-res into a small buffer (cheap), then
    the GPU blurs and additively composites it. */
-let BLOOM_STR=0.55, BLOOM_THRESH=205;   // threshold is a 0..255 luma cutoff
+let BLOOM_STR=0.42, BLOOM_THRESH=224;   // threshold is a 0..255 luma cutoff (only true light sources bloom, not lit stone)
 function drawBloom(){
   if(!bloomCv) return; const bw=bloomCv.width, bh=bloomCv.height;
   if(!bloomImg || bloomImg.width!==bw || bloomImg.height!==bh){ bloomImg=bloomCtx.createImageData(bw,bh); bloomBuf=new Uint32Array(bloomImg.data.buffer); }
