@@ -418,6 +418,19 @@ const MAT_WALL=[
   {key:'sandstone', tex:'sandstone', h:1.7, name:'Sandstone', col:'#b0894f'},  // 5
   {key:'door',      tex:'door',   h:1.7, door:true, name:'Door',   col:'#caa05a'}, // 6
   {key:'locked',    tex:'locked', h:1.7, door:true, locked:'rusty_key', name:'Locked', col:'#5a76b0'}, // 7
+  // town-building kit: houses read as gabled because thatch/slate cells step UP behind the walls
+  {key:'plaster',    tex:'plaster',     h:1.6,  name:'Plaster',      col:'#d8cdb4'}, // 8  cottage wall
+  {key:'timberfrm',  tex:'timberframe', h:1.6,  name:'Timber-frame', col:'#c9b795'}, // 9  house/tavern wall
+  {key:'thatch',     tex:'thatch',      h:2.35, name:'Thatch eave',  col:'#a8823c'}, // 10 roof, lower course
+  {key:'thatchHi',   tex:'thatch',      h:3.0,  name:'Thatch ridge', col:'#8a682c'}, // 11 roof ridge
+  {key:'fence',      tex:'fencewood',   h:0.45, name:'Fence',        col:'#8a6a3c'}, // 12 garden rail (short-wall cap)
+  {key:'stall',      tex:'wood',        h:1.05, name:'Market stall', col:'#9a6a36'}, // 13 counter
+  {key:'slate',      tex:'slate',       h:3.2,  name:'Slate eave',   col:'#4a5566'}, // 14 chapel roof
+  {key:'slateHi',    tex:'slate',       h:4.0,  name:'Slate ridge',  col:'#3c4656'}, // 15
+  {key:'well',       tex:'stone',       h:0.7,  name:'Well',         col:'#7a7268'}, // 16
+  {key:'church',     tex:'sandstone',   h:2.3,  name:'Chapel wall',  col:'#b0894f'}, // 17
+  {key:'tower',      tex:'sandstone',   h:4.4,  name:'Chapel tower', col:'#a07c42'}, // 18
+  {key:'gatetower',  tex:'stone',       h:2.2,  name:'Gate tower',   col:'#6b625a'}, // 19
 ];
 const MAT_FLOOR=[
   null,                                                       // 0 = zone default ground
@@ -438,7 +451,13 @@ const MARK=['none','portal','spawn','enemy','torch'];      // mrk codes 0..4
 const CHAR_LAYER={
   '#':{wall:1}, 'B':{wall:2}, 'W':{wall:3}, 'M':{wall:4}, 'S':{wall:5},
   'D':{wall:6}, 'L':{wall:7},
+  'P':{wall:8}, 'F':{wall:9}, 'r':{wall:10}, 'R':{wall:11}, 'f':{wall:12},
+  't':{wall:13}, 'K':{wall:14}, 'k':{wall:15}, 'w':{wall:16}, 'C':{wall:17},
+  'c':{wall:18}, 'G':{wall:19},
   'o':{wall:0, flr:3, rof:1},          // roofed interior: plank floor + timber roof
+  '=':{wall:0, flr:1},                 // cobbled street / square
+  '-':{wall:0, flr:5},                 // dirt path
+  ',':{wall:0, flr:4},                 // grass
   '.':{wall:0}, ' ':{wall:0},
 };
 function newLayer(w,h){ return {w,h,wall:new Uint8Array(w*h),hgt:new Float32Array(w*h),
@@ -514,6 +533,46 @@ function buildTextures(){
   TEXTURES.locked=make(b=>{const d=TEXTURES.door.data; for(let i=0;i<b.length;i++) b[i]=mixA(d[i],rgb(80,110,150),0.18);
     for(let y=26;y<40;y++)for(let x=44;x<56;x++) px(b,x,y,rgb(180,150,40));
     for(let y=30;y<36;y++)for(let x=49;x<51;x++) px(b,x,y,rgb(20,16,8));});
+  // ── medieval town walls ──
+  TEXTURES.plaster=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){   // whitewashed wattle-and-daub, sill beam
+    let c=rgb(206,196,172); c=mix(c,0,noise(x,y,31)*0.14);
+    c=mix(c,rgb(150,134,106),noise(x*0.4,y*0.4,32)*0.30);                   // damp/grime blotches
+    if(y>58) c=rgb(88,62,34);                                               // ground sill beam
+    if(y<4)  c=rgb(96,70,40);                                               // top plate
+    if(noise(x,y,33)>0.94) c=mix(c,rgb(120,110,92),0.5);                    // chipped daub
+    px(b,x,y,c);}});
+  TEXTURES.timberframe=make(b=>{const P=TEXTURES.plaster.data;              // plaster + exposed oak framing
+    for(let i=0;i<b.length;i++) b[i]=P[i];
+    const beam=rgb(74,50,28), beamD=rgb(56,38,20);
+    for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){
+      const g=noise(x,y,34)*0.2;
+      if(x<4||x>=60) px(b,x,y,mix(beam,0,g));                               // corner posts
+      if(y>=29&&y<33) px(b,x,y,mix(beamD,0,g));                             // mid rail
+      const dxx=x-((y*0.55)|0);                                             // diagonal brace
+      if(dxx>=18&&dxx<22) px(b,x,y,mix(beam,0,g));
+      if(y>58||y<4) px(b,x,y,mix(rgb(88,62,34),0,g)); }});
+  TEXTURES.thatch=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){    // combed straw in overlapping courses
+    const course=Math.floor(y/9), sway=Math.sin(x*0.35+course*2.1)*2.2;
+    let t=182-course*9+((x+((course*13)|0))%3)*10;                          // vertical straw striation
+    let c=rgb(t*0.86,t*0.62,t*0.28);
+    const cy2=y%9; if(cy2<2) c=mix(c,0,0.42);                               // course shadow line
+    if(cy2>6&&noise(x,y,35)>0.5) c=mix(c,rgb(96,66,22),0.4);                // ragged course edge
+    c=mix(c,0,noise(x+sway,y,36)*0.22);
+    if(noise(x,y,37)>0.93) c=mix(c,rgb(210,180,110),0.5);                   // loose straws catching light
+    px(b,x,y,c);}});
+  TEXTURES.slate=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){     // church slate: dark courses, cool sheen
+    const row=Math.floor(y/10), off=(row%2)*8, bx=(x+off)%16;
+    let g=64+((row*7+((x+off)>>4)*11)%16); let c=rgb(g-6,g,g+12);
+    if(y%10<2) c=rgb(28,30,38);                                             // course shadow
+    if(bx<1) c=rgb(34,36,44);                                               // tile joints
+    c=mix(c,0,noise(x,y,38)*0.24);
+    if(noise(x,y,39)>0.94) c=mix(c,rgb(150,160,180),0.4);                   // wet sheen
+    px(b,x,y,c);}});
+  TEXTURES.fencewood=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){ // weathered post-and-rail
+    const post=(x%16)<3; let c=post?rgb(96,74,44):rgb(118,94,58);
+    if(!post && !((y>14&&y<26)||(y>40&&y<52))) c=rgb(104,84,52);            // rails read as bands
+    c=mix(c,0,noise(x,y,40)*0.3); if(noise(x*0.5,y*0.5,41)>0.8) c=mix(c,rgb(70,80,60),0.3);  // moss
+    px(b,x,y,c);}});
   // ── floor & ceiling textures (used by floor/ceiling casting) ──
   TEXTURES.flagstone=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){
     const cx=Math.floor(x/21), cyy=Math.floor(y/21); let g=84+((cx*5+cyy*7)%18); let c=rgb(g,g-6,g-12);
@@ -872,6 +931,30 @@ const DIALOGUE={
     text:"Then go, with an old woman's thanks. The square's gate is waiting.",
     options:[{text:"Farewell.", goto:null}]},
 
+  tilda:{ name:"Tilda the Stallkeep",
+    text:"Fresh bread, river trout, and the last of the autumn apples — though between us, traveller, trade's been thin since the wolves came down off the mountain.",
+    options:[
+      {text:"Wolves?", goto:'tilda_wolves'},
+      {text:"Fine stalls you keep.", goto:'tilda_thanks'},
+      {text:"Farewell.", goto:null},
+    ]},
+  tilda_wolves:{ name:"Tilda the Stallkeep",
+    text:"Aye — the Blackwood's gone dark and hungry. Bren watches the postern gate day and night now. If you're headed up that road, carry fire and keep your blade loose.",
+    options:[{text:"(back)", goto:'tilda'}]},
+  tilda_thanks:{ name:"Tilda the Stallkeep",
+    text:"Kind of you! The well water's sweet if you're parched, and Yorin's hall is just north across the square — tell him Tilda sent you and watch him wince.",
+    options:[{text:"(back)", goto:'tilda'}]},
+
+  bren:{ name:"Warden Bren",
+    text:"Hold there. This postern opens on the Blackwood road — mountain forest, black as a cellar under those firs. One got past me this morning. Big one.",
+    options:[
+      {text:"What should I expect up there?", goto:'bren_road'},
+      {text:"I'll be careful.", goto:null},
+    ]},
+  bren_road:{ name:"Warden Bren",
+    text:"Wolves in the treeline, and worse things that used to be men. Moon's your only friend past the ridge — that, or a good torch. Don't trust your eyes till they've settled to the dark.",
+    options:[{text:"(back)", goto:'bren'}]},
+
   // catacombs hermit
   oldman:{ name:"The Hollow Hermit",
     text:"Heh... another lantern in the dark. Sit, if you like — the bones don't mind company. I've wandered these halls longer than I can count. The Hive's men still patrol them, sworn to a house long dead.",
@@ -919,36 +1002,69 @@ const DIALOGUE_ACTIONS={
    light:{} → torchlight: player headlamp falloff + warm pools around torch props
    Each entity is plain data; sprite/enemy/item/dialogue are keys into the
    tables above. Colours are packed with rgb(). start = spawn pose. */
-const VILLAGE_MAP=[
-"##################################",
-"#................................#",
-"#................................#",
-"#....WDW..BBB....SSSSS..MMMM.....#",
-"#....WoW..BoB....SoooS..MooM.....#",
-"#....WoW..BoD....SoooS..MMDM.....#",
-"#....WoW..BBB....DoooS...........#",
-"#....WoW.........SoooS...........#",
-"#....WWW.........SSSSS...........#",
-"#................................#",
-"#................................#",
-"#........................SSSS....#",
-"#..................BBB...SooS....#",
-"#.........WWWWW....BoB...SooS....#",
-"#.........WoooW....BDB...DooS....#",
-"#.........WoooD..........SooS....#",
-"#.........WWWWW..........SSSS....#",
-"#................................#",
-"#................................#",
-"#................................#",
-"#...WWWW...BBDB..SSSSS...........#",
-"#...WooW...BooB..SoooS...........#",
-"#...WooD...BooB..SoooS...........#",
-"#...WooW...BBBB..SoooS...........#",
-"#...WWWW.........SSDSS...........#",
-"#................................#",
-"#................................#",
-"##################################",
-];
+/* Aldermoor: a proper medieval town, generated cell-by-cell.
+   Cottages are solid "scenery" houses whose thatch cells STEP UP behind the
+   plaster walls (eave course, then ridge) so every roofline reads as a gable
+   from the street; their doors open into a one-cell dark vestibule. The
+   tavern, the shop and the chapel are enterable (roofed interiors). */
+const VILLAGE_MAP=(()=>{
+  const W=40, H=30, g=Array.from({length:H},()=>Array(W).fill('.'));
+  const set=(x,y,ch)=>{ if(x>=0&&x<W&&y>=0&&y<H) g[y][x]=ch; };
+  const rect=(x0,y0,x1,y1,ch)=>{ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++) set(x,y,ch); };
+  const frame=(x0,y0,x1,y1,ch)=>{ for(let x=x0;x<=x1;x++){set(x,y0,ch);set(x,y1,ch);}
+                                  for(let y=y0;y<=y1;y++){set(x0,y,ch);set(x1,y,ch);} };
+  const paint=(x0,y0,x1,y1,ch)=>{ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)   // floors: never overwrite buildings
+    if(g[y][x]==='.') g[y][x]=ch; };
+  // solid cottage: walls, then a pitched thatch roof (eave ring 'r' -> ridge 'R' along the long axis),
+  // then a door with a dark roofed vestibule behind it
+  const cottage=(x0,y0,x1,y1,wall,dx,dy,vx,vy)=>{
+    frame(x0,y0,x1,y1,wall);
+    const alongX=(x1-x0)>=(y1-y0);
+    for(let y=y0+1;y<y1;y++)for(let x=x0+1;x<x1;x++){
+      const dS=alongX ? Math.min(y-y0-1,y1-1-y) : Math.min(x-x0-1,x1-1-x);
+      set(x,y, dS===0?'r':'R'); }
+    set(dx,dy,'D'); set(vx,vy,'o');
+  };
+  const hall=(x0,y0,x1,y1,wall,doors)=>{ frame(x0,y0,x1,y1,wall);   // enterable: roofed plank interior
+    rect(x0+1,y0+1,x1-1,y1-1,'o'); for(const [dx,dy] of doors) set(dx,dy,'D'); };
+
+  frame(0,0,W-1,H-1,'#');                       // low town wall, open sky above it
+  set(18,H-1,'G'); set(22,H-1,'G');             // south gatehouse towers flank the road
+  set(33,0,'G'); set(38,0,'G');                 // northeast postern (the Blackwood road)
+  // streets + market square (cobbles), before buildings claim their ground
+  paint(19,1,21,H-2,'=');                       // high street, gate to gate
+  paint(2,14,37,15,'=');                        // cross street
+  paint(13,9,27,19,'=');                        // market square
+  paint(34,1,37,7,',');                         // postern grove (grass)
+  // cottages (scenery, gabled)
+  cottage(2,2,8,7,   'P', 5,7, 5,6);            // NW cottage, door to the cross lane
+  cottage(10,2,16,6, 'F', 13,6, 13,5);          // north row timber house
+  cottage(30,9,37,13,'P', 30,11, 31,11);        // east cottage, door to the square
+  cottage(2,9,8,13,  'P', 8,11, 7,11);          // west cottage
+  cottage(24,21,31,26,'P', 27,21, 27,22);       // SE cottage on the south lane
+  cottage(33,17,38,22,'F', 33,19, 34,19);       // far-east timber house
+  // enterable buildings
+  hall(23,2,28,7, 'F', [[25,7]]);               // Yorin's trade hall, door on the square's north edge
+  hall(3,17,10,24,'F', [[6,17]]);               // the tavern, door to the cross street
+  // the chapel: sandstone, a 2x2 tower at the west front, walkable nave, and a slate
+  // roof mass stepping up over the chancel so it towers over the square's south side
+  frame(11,20,18,26,'C'); rect(12,21,17,25,'o');
+  rect(11,20,12,21,'c');                        // bell tower corner
+  rect(12,24,17,24,'K'); rect(12,25,17,25,'k'); // chancel: slate courses climbing to the ridge
+  set(15,20,'D');                               // chapel door onto the square
+  // market furniture
+  set(20,12,'w');                               // the town well, mid-square
+  rect(14,10,16,10,'t'); rect(23,10,25,10,'t'); // stall counters, north row
+  rect(14,18,16,18,'t'); rect(23,18,25,18,'t'); // south row
+  // garden pens (short rails get real top caps; bushes dress them)
+  frame(33,24,38,28,'f'); set(35,24,'.');       // SE paddock with a gap
+  frame(3,26,10,28,'f'); set(6,26,'.');         // tavern garden
+  // dirt paths from each door to the streets
+  paint(5,8,5,13,'-'); paint(13,7,13,8,'-'); paint(9,11,12,11,'-'); paint(28,11,29,11,'-');
+  paint(25,8,25,8,'-'); paint(6,16,6,16,'-'); paint(11,16,18,16,'-');
+  paint(27,20,27,20,'-'); paint(32,19,32,19,'-');
+  return g.map(r=>r.join(''));
+})();
 const DUNGEON_MAP=[
 "SSSSSSSSSSSSSSSSSSSS",
 "S........S.........S",
@@ -988,37 +1104,54 @@ const FOREST_MAP=(()=>{ const W=30,H=26,rows=[]; for(let y=0;y<H;y++){
   rows.push((y===0||y===H-1) ? 'M'.repeat(W) : 'M'+'.'.repeat(W-2)+'M'); } return rows; })();
 const ZONES={
   village:{
-    name:"Aldermoor Village", subtitle:"OPEN GROUND · DAYLIGHT", type:"open",
+    name:"Aldermoor", subtitle:"MARKET TOWN · DAYLIGHT", type:"open",
     map:VILLAGE_MAP, ceiling:"sky", sky:'realm',          // embedded cubemap skybox
-    floorTex:'cobble', roofHeight:1.7,                    // cobble ground; roofs over interiors at 1.7
-    floorColor:rgb(120,114,106), ceilingColor:rgb(120,150,190),
+    floorTex:'grass', roofHeight:1.7,                     // grass ground; streets/square painted cobble
+    floorColor:rgb(76,96,60), ceilingColor:rgb(120,150,190),
     fogColor:rgb(156,176,202), fog:0.012,
     grade:{ sat:1.10, con:1.05, bright:1.03, tint:[1.06,1.0,0.90] },   // warm sunlit daylight
     ambient:0.46,                                       // open daylight -> photopic
 
     roofColor:rgb(48,34,22), indoorFloor:rgb(74,54,34),   // building interiors: timber roof + plank floor
-    start:{x:17.5, y:26.5, angle:-1.5708},
+    start:{x:20.5, y:27.5, angle:-1.5708},                // inside the south gate, looking up the high street
     entities:[
-      {type:'portal', sprite:'portal', x:11.5, y:4.5,
+      // the crypt door is under the chapel; the Blackwood road leaves by the northeast postern
+      {type:'portal', sprite:'portal', x:15.5, y:22.5,
        target:'dungeon', spawn:{x:2.5,y:2.5,angle:0}, prompt:"Descend into the Catacombs"},
-      {type:'decoration', sprite:'torch', x:11.5, y:4.5},
-      {type:'portal', sprite:'portal', x:30.5, y:2.5,
+      {type:'portal', sprite:'portal', x:35.5, y:3.5,
        target:'forest', spawn:{x:14.5,y:19.5,angle:-1.5708}, prompt:"Walk into the Blackwood"},
-      {type:'decoration', sprite:'tree', x:29.5, y:1.5},
-      {type:'decoration', sprite:'tree2', x:31.5, y:4.5},
-      {type:'decoration', sprite:'bush', x:29.5, y:3.5},
-      {type:'npc', sprite:'merchant', name:"Yorin the Merchant", x:19.5, y:5.5, dialogue:'yorin'},
-      {type:'npc', sprite:'villager', name:"Old Mara", x:24.5, y:14.5, dialogue:'mara'},
-      {type:'npc', sprite:'guard', name:"Captain Aldric", x:18.5, y:25.5, dialogue:'aldric'},
-      {type:'enemy', sprite:'wolf', enemy:'wolf', x:1.5, y:5.5},
-      {type:'decoration', sprite:'torch', x:6.5, y:2.5},
-      {type:'decoration', sprite:'torch', x:13.5, y:5.5},
-      {type:'decoration', sprite:'torch', x:16.5, y:6.5},
-      {type:'decoration', sprite:'torch', x:26.5, y:6.5},
-      {type:'decoration', sprite:'torch', x:15.5, y:15.5},
-      {type:'decoration', sprite:'torch', x:20.5, y:15.5},
-      {type:'decoration', sprite:'torch', x:24.5, y:14.5},
-      {type:'decoration', sprite:'torch', x:8.5, y:22.5},
+      // the postern grove
+      {type:'decoration', sprite:'tree',  x:34.5, y:2.5},
+      {type:'decoration', sprite:'tree2', x:37.5, y:5.5},
+      {type:'decoration', sprite:'bush',  x:34.5, y:5.5},
+      {type:'decoration', sprite:'bush2', x:37.5, y:2.5},
+      // townsfolk
+      {type:'npc', sprite:'merchant', name:"Yorin the Merchant", x:25.5, y:4.5,  dialogue:'yorin'},   // in his hall
+      {type:'npc', sprite:'villager', name:"Old Mara",           x:18.5, y:12.5, dialogue:'mara'},    // by the well
+      {type:'npc', sprite:'guard',    name:"Captain Aldric",     x:20.5, y:25.5, dialogue:'aldric'},  // south gate
+      {type:'npc', sprite:'villager', name:"Tilda the Stallkeep",x:15.5, y:11.5, dialogue:'tilda'},   // market row
+      {type:'npc', sprite:'guard',    name:"Warden Bren",        x:35.5, y:7.5,  dialogue:'bren'},    // postern watch
+      {type:'enemy', sprite:'wolf', enemy:'wolf', x:36.5, y:6.3},    // slipped in off the Blackwood road
+      // a little treasure in the tavern's back corner
+      {type:'item', sprite:'chest', item:'treasure', x:4.5, y:23.2},
+      // street torches: gate, square corners, chapel + tavern + shop doors
+      {type:'decoration', sprite:'torch', x:18.6, y:27.5},
+      {type:'decoration', sprite:'torch', x:22.4, y:27.5},
+      {type:'decoration', sprite:'torch', x:13.5, y:9.6},
+      {type:'decoration', sprite:'torch', x:26.5, y:9.6},
+      {type:'decoration', sprite:'torch', x:13.5, y:19.4},
+      {type:'decoration', sprite:'torch', x:26.5, y:19.4},
+      {type:'decoration', sprite:'torch', x:14.4, y:19.6},
+      {type:'decoration', sprite:'torch', x:7.5,  y:16.4},
+      {type:'decoration', sprite:'torch', x:26.4, y:8.5},
+      // garden dressing
+      {type:'decoration', sprite:'bush',  x:35.5, y:26.5},
+      {type:'decoration', sprite:'bush2', x:37.2, y:25.5},
+      {type:'decoration', sprite:'rock',  x:34.4, y:27.3},
+      {type:'decoration', sprite:'bush',  x:4.5,  y:27.4},
+      {type:'decoration', sprite:'bush2', x:8.6,  y:27.2},
+      {type:'decoration', sprite:'tree',  x:11.5, y:8.3},
+      {type:'decoration', sprite:'tree2', x:2.6,  y:16.6},
     ],
   },
   forest:{
@@ -1271,11 +1404,26 @@ function buildDuskSky(){
   SKYBOXES.dusk={data:new Uint32Array(c.getImageData(0,0,w,h).data.buffer).slice(),w,h};
 }
 // load a panorama image (data URI or URL) into SKYBOXES[name]
+// Heal 1-2px full-height dark slots (stitching seams) in a loaded panorama: any column whose
+// mean luma sits far below its ±3 neighbours gets rebuilt from the columns either side. Wide
+// features (real towers, trees) span many columns and are untouched.
+function healSkySeams(s){
+  const w=s.w, h=s.h, d=s.data, colLum=new Float32Array(w);
+  for(let x=0;x<w;x++){ let t=0; for(let y=0;y<h;y++){ const c=d[y*w+x];
+    t+=((c&255)*77+((c>>8)&255)*150+((c>>16)&255)*29)>>8; } colLum[x]=t/h; }
+  for(let x=0;x<w;x++){
+    const nb=(colLum[(x+3)%w]+colLum[(x-3+w)%w])*0.5;
+    if(colLum[x]<nb-16){ const a=(x-2+w)%w, b2=(x+2)%w;
+      for(let y=0;y<h;y++) d[y*w+x]=mix(d[y*w+a],d[y*w+b2],0.5);
+      colLum[x]=nb; }
+  }
+}
 function loadSkybox(name, src){
   const im=new Image();
   im.onload=()=>{ const cv=document.createElement('canvas'); cv.width=im.width; cv.height=im.height;
     const c=cv.getContext('2d',{willReadFrequently:true}); c.drawImage(im,0,0);
     SKYBOXES[name]={data:new Uint32Array(c.getImageData(0,0,im.width,im.height).data.buffer).slice(), w:im.width, h:im.height};
+    healSkySeams(SKYBOXES[name]);
     if(Z && Z.sky===name) SKYTEX=SKYBOXES[name];   // hot-swap into the active zone
   };
   im.src=src;
