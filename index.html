@@ -1095,10 +1095,19 @@ let GRADE=null, fxOn=true;        // post-process effects: per-zone grade + bloo
 let bloomCv=null, bloomCtx=null, bloomImg=null, bloomBuf=null;  // offscreen bright-pass buffer for the bloom pass
 let vignetteSoft=null;            // gentle cinematic vignette for unlit (daylight) zones
 // ---- human visual adaptation state ----
-let adaptLum=0.42, lastPostT=0;   // the luminance the eye is currently adapted to (lags the scene), + last post timestamp
+let adaptLum=0.42, adaptTgt=0.42, postExpS=1, murkSmooth=0, lastPostT=0;   // eye-adapted luma (lags scene), de-flickered/low-passed target, slewed exposure (never snaps), smoothed murk, last post timestamp
 let postDark=0, postFlick=1, postExp=1, postMurk=0, postSee=0, postCrush=0;   // scotopic amount, flicker, exposure, murk (poor visibility), see-in-dark (shadow-lift), + photopic crush (dark beyond a nearby light)
 const ADAPT_DARK_TAU=5.0;         // dark adaptation is SLOW (seconds of rising sensitivity)
 const ADAPT_LIGHT_TAU=0.45;       // light adaptation is FAST (a brief wash-out, then recovery)
+// Exposure stabilisation (kills the "reverse flash bang"): the global exposure is derived
+// only from smoothed, de-flickered, deadbanded signals so small moves/turns/flicker never
+// darken the frame; a real plunge into dark dims GENTLY (floored) and eases in.
+const TGT_TAU=0.6;                // low-pass on the adaptation target (filters flicker, turns, small steps)
+const EXP_DEAD=0.06;              // deadband: mismatch below this reads EXACTLY neutral (postExp=1)
+const DIP_FLOOR=0.60;             // shallowest the bright->dark transient may dim the frame (never "absurdly dark")
+const DIP_KNEE=0.28;             // soft-knee: mismatch at which the dip reaches ~63% of its (floored) depth
+const EXP_TAU=0.9;                // slew on postExp itself so even a real plunge ramps over a few frames
+const MURK_TAU=0.45;              // smoothing on the murk (noise/detail-loss) so it fades in, never pops
 let coarseBuf=null, coarseW=0, coarseH=0, nightSeed=0;   // rod-pooled low-frequency copy (detail loss) + noise seed
 const COARSE_F=4;                 // detail-loss pooling factor (bigger = coarser masses)
 let torchList=[];           // wall torches in the current zone (used as point lights)
@@ -1307,6 +1316,25 @@ function torchWarm(wx,wy){ let s=0;
     s+=vis*tf*1.15/(1+(dx*dx+dy*dy)*0.5); }
   if(hasTorch()){ const dx=wx-P.x, dy=wy-P.y; s+=PB_FLICK*0.7/(1+(dx*dx+dy*dy)*0.5); }  // the light you carry
   return s<1.6?s:1.6; }
+// De-flickered, area-averaged local light for ADAPTATION ONLY. Drops PB_FLICK/torchFlick
+// (steady 1.0) so flame shimmer never reaches the eye's target, and averages a 5-tap cross
+// (r=0.6) so a small step across a torch's steep 1/(1+d^2) falloff can't jump the target.
+function adaptLocalLight(wx,wy){
+  const soft=!!(cellTorchVis&&LM);
+  const sample=(sx,sy)=>{ let s=0, x0=0,y0=0,tx=0,ty=0;
+    if(soft){ const fx=sx-0.5, fy=sy-0.5; x0=Math.floor(fx); y0=Math.floor(fy); tx=fx-x0; ty=fy-y0; }
+    for(let i=0;i<torchList.length;i++){ let vis=1;
+      if(soft&&i<32){ const bit=1<<i;
+        const v0=tvBit(x0,y0,bit)*(1-tx)+tvBit(x0+1,y0,bit)*tx;
+        const v1=tvBit(x0,y0+1,bit)*(1-tx)+tvBit(x0+1,y0+1,bit)*tx;
+        vis=v0*(1-ty)+v1*ty; if(vis<=0) continue; }
+      const t=torchList[i]; const dx=sx-t.x, dy=sy-t.y;
+      s+=vis*1.15/(1+(dx*dx+dy*dy)*0.5); }              // steady: no torchFlick[i]
+    if(hasTorch()){ const dx=sx-P.x, dy=sy-P.y; s+=0.7/(1+(dx*dx+dy*dy)*0.5); }  // steady: no PB_FLICK
+    return s<1.6?s:1.6; };
+  const r=0.6;
+  return sample(wx,wy)*0.5 + (sample(wx+r,wy)+sample(wx-r,wy)+sample(wx,wy+r)+sample(wx,wy-r))*0.125;
+}
 /* Precompute, per cell, which torches can actually reach it (line-of-sight), so a
    wall blocks torchlight and the cells behind it fall into shadow. Torches are
    static, so this is built once per zone load — per-pixel cost is one mask test. */
@@ -1368,7 +1396,9 @@ function updateAdapt(){
   // once (teleport / death / portal). adaptLum still eases up so re-entering the dark
   // starts you photopic (briefly blinded, then adapting), which is the correct arc.
   if(!litZone){
-    adaptLum += (1-adaptLum)*(1-Math.exp(-dt/ADAPT_LIGHT_TAU));
+    const k=1-Math.exp(-dt/ADAPT_LIGHT_TAU);
+    adaptLum += (1-adaptLum)*k; adaptTgt += (1-adaptTgt)*k;   // keep the smoothed target coherent (fully bright-adapted)
+    postExpS=1; murkSmooth=0;                                  // so re-entering the dark starts clean, no stale-state glitch
     postDark=0; postMurk=0; postSee=0; postExp=1; postCrush=0; postFlick=1; return;
   }
   // The eye adapts to the ENVIRONMENT's light level (dark dungeon vs daylight),
@@ -1380,30 +1410,42 @@ function updateAdapt(){
   // Standing in torchlight bleaches your night vision: the light hitting you
   // (torchWarm at your position, shadow-occluded) raises the adaptation target,
   // so the surrounding dark goes black until you step off and slowly re-adapt.
-  const localLight = torchWarm(P.x,P.y);
-  // Clamp to 1 (adaptLum's ceiling): standing in bright torchlight the target could
-  // exceed 1, and since the eye can never adapt UP to an impossible target it would
-  // sit in a permanent wash-out (exposure pinned ~2x) — that was the additive blowout.
-  let target = amb + localLight*1.15 + Math.max(0, fovea-0.55)*0.9;
-  if(target>1) target=1;
+  const localLight = adaptLocalLight(P.x,P.y);        // de-flickered, area-averaged (no twitch)
+  // Foveal term damped: an on-screen flame (or the additive glow, which feeds back into
+  // measureLum) no longer yanks the target. Only a broadly bright central field nudges it.
+  const foveaTerm = Math.max(0, fovea-0.62)*0.45;
+  let targetRaw = amb + localLight*1.15 + foveaTerm;
+  if(targetRaw>1) targetRaw=1;                         // KEEP: adaptLum's ceiling (prevents the additive wash-out blowout)
+  // Low-pass the target (~0.6s) BEFORE anything downstream sees it. This de-flickered,
+  // smoothed signal drives BOTH the slow rod state (adaptLum) AND the exposure mismatch,
+  // so torch flicker, a quick turn, or a small step move NEITHER the spatial grade NOR the
+  // global exposure. Only a real, sustained light change reaches them.
+  adaptTgt += (targetRaw-adaptTgt) * (1-Math.exp(-dt/TGT_TAU));
+  const target = adaptTgt;
+  // Slow rod/pupil state — unchanged asymmetric physics, now fed the STABLE target.
   const tau = (target<adaptLum) ? ADAPT_DARK_TAU : ADAPT_LIGHT_TAU;
   adaptLum += (target-adaptLum) * (1-Math.exp(-dt/tau));
   if(adaptLum<0.012) adaptLum=0.012; else if(adaptLum>1) adaptLum=1;
-  let d=(0.42-adaptLum)/(0.42-0.07); postDark = d<0?0:d>1?1:d;   // 0 = photopic, 1 = deep scotopic
-  // exposure = a mild steady sensitivity gain when dark-adapted, times a TRANSIENT
-  // term: if the eye is still too bright-adapted for this dark place it's briefly
-  // blinded (image darkens, recovers over ~DARK_TAU); too dark-adapted for a bright
-  // place and it washes out (recovers fast). Steady state -> ~1, no artificial dark.
-  const mismatch = adaptLum - target;
-  const transient = (mismatch>0) ? (1 - Math.min(0.82, mismatch*2.6))     // entered the dark -> briefly blinded (near-black)
-                                 : (1 + Math.min(5, -mismatch*4.5));      // entered the light -> wash-out
-  // The scene is genuinely dark by default (faint headlamp) — exposure is just
-  // the transient (blinded on plunge into dark, wash-out on stepping into light).
-  postExp = transient;
-  // "murk": how poorly you can currently see — high right after plunging into the
-  // dark (or whenever the eye hasn't caught up to a darker spot), fading to ~0 as
-  // it adapts. The noise & heavy detail loss ride on THIS, not on the steady level.
-  postMurk = mismatch>0 ? Math.min(1, mismatch*3.2) : 0;
+  let d=(0.42-adaptLum)/(0.42-0.07); postDark = d<0?0:d>1?1:d;   // 0 = photopic, 1 = deep scotopic (UNCHANGED mapping)
+  // ---- global exposure: deadbanded, floored, slewed (the whole flash-bang fix) ----
+  // mismatch>0 = eye still too bright-adapted for this now-darker spot. A DEADBAND makes
+  // tiny mismatches read EXACTLY neutral (small move/turn/residual flicker -> postExp=1).
+  // Beyond it, a gentle soft-knee dip FLOORED at DIP_FLOOR (never "absurdly dark"); the
+  // dark->light side keeps the fast wash-out (light adaptation is genuinely fast).
+  const rawMis = adaptLum - target;
+  const mis = rawMis>EXP_DEAD ? rawMis-EXP_DEAD : rawMis<-EXP_DEAD ? rawMis+EXP_DEAD : 0;
+  let expTarget;
+  if(mis>0){ const dip = 1-Math.exp(-mis/DIP_KNEE);                 // 0..1 soft knee (no steep linear crash)
+    expTarget = 1 - (1-DIP_FLOOR)*dip; }                            // floored: at most a ~(1-DIP_FLOOR) dim
+  else { expTarget = 1 + Math.min(2.5, -mis*3.5); }                 // wash-out on stepping into light
+  // Slew postExp itself so even a real plunge ramps in over a few frames — never snaps.
+  postExpS += (expTarget-postExpS) * (1-Math.exp(-dt/EXP_TAU));
+  postExp = postExpS;
+  // murk (noise + heavy detail loss) rides the SAME deadbanded mismatch, smoothed and
+  // capped low, so it fades in/out as a gentle "eyes adjusting" haze, never a spike.
+  const rawMurk = mis>0 ? Math.min(0.5, mis*1.6) : 0;
+  murkSmooth += (rawMurk-murkSmooth) * (1-Math.exp(-dt/MURK_TAU));
+  postMurk = murkSmooth;
   // "see-in-dark": how much the dark-adapted eye lifts the shadows so large shapes
   // emerge — you get it once ADAPTED, but not while blinded (murk) and not with a
   // pupil constricted by nearby light (low postDark). This is the whole "adapt a
@@ -1423,7 +1465,7 @@ function updateAdapt(){
 function buildToneLUT(){
   const g=(typeof Z==='object'&&Z&&Z._grade)||{};
   const zBright=g.bright??1, zGamma=g.gamma??1, zLift=g.lift??0, zTint=g.tint||[1,1,1], zCon=g.con??1;
-  let exposure=postExp; if(exposure<0.1)exposure=0.1; else if(exposure>6)exposure=6;
+  let exposure=postExp; if(exposure<0.55)exposure=0.55; else if(exposure>1.4)exposure=1.4;   // postExp now lives ~0.60..1.12; defensive rails
   const dark=postDark, flick=postFlick;
   const lift = zLift;                             // keep blacks honest; the gamma below does the night lift
   const con  = zCon*(1 - dark*0.14);              // gentle softening (corners fade into shadow)
