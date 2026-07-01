@@ -1150,14 +1150,14 @@ function torchWarm(wx,wy){ let s=0;
   let vis=0xffffffff;                                   // default: all visible (until the shadow map is built)
   if(cellTorchVis && LM){ const cx=wx|0, cy=wy|0; if(cx>=0&&cy>=0&&cx<LM.w&&cy<LM.h) vis=cellTorchVis[cy*LM.w+cx]; }
   for(let i=0;i<torchList.length;i++){ if(i<32 && !(vis&(1<<i))) continue;   // torch is in shadow here -> no light
-    const t=torchList[i]; const dx=wx-t.x, dy=wy-t.y; s+=0.95/(1+(dx*dx+dy*dy)*1.7); } return s<1.15?s:1.15; }
+    const t=torchList[i]; const dx=wx-t.x, dy=wy-t.y; s+=1.15/(1+(dx*dx+dy*dy)*0.5); } return s<1.6?s:1.6; }
 /* Precompute, per cell, which torches can actually reach it (line-of-sight), so a
    wall blocks torchlight and the cells behind it fall into shadow. Torches are
    static, so this is built once per zone load — per-pixel cost is one mask test. */
 function buildTorchVis(){
   if(!LM){ cellTorchVis=null; return; }
   const W=LM.w, H=LM.h; cellTorchVis=new Uint32Array(W*H);
-  const R=5.5, R2=R*R;
+  const R=6.5, R2=R*R;
   for(let ti=0; ti<torchList.length && ti<32; ti++){ const t=torchList[ti], bit=1<<ti;
     const x0=Math.max(0,(t.x-R)|0), x1=Math.min(W-1,(t.x+R)|0), y0=Math.max(0,(t.y-R)|0), y1=Math.min(H-1,(t.y+R)|0);
     for(let cy=y0;cy<=y1;cy++)for(let cx=x0;cx<=x1;cx++){
@@ -1399,7 +1399,7 @@ function castFrame(){
         const sf=side===1?0.7:1.0;
         let fa=0, aw=0, fogT=0;
         if(lit){ let br=playerBright(perp); if(side===1)br*=0.74; fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93;
-          const hx=P.x+rdx*perp, hy=P.y+rdy*perp; aw=torchWarm(hx,hy)*0.55; if(aw>0.7)aw=0.7; }
+          const hx=P.x+rdx*perp, hy=P.y+rdy*perp; aw=torchWarm(hx,hy)*0.62; if(aw>0.82)aw=0.82; }
         else { fogT=perp*Z.fog; if(fogT>0.92)fogT=0.92; }
         for(let y=s;y<drawBot;y++){ let texel;
           if(isDoor){ const worldH=(floorY-y)/lineHf;
@@ -1471,7 +1471,7 @@ function castFrame(){
           if((enclosed?roomH:wHgt(ci,cj))>=wh-1e-3 && solidCell(ci,cj)){   // still over the near wall body: TOP cap
             let dfogT=0, dfa=0, daw=0;
             if(lit){ const br=playerBright(dist); dfa=1-br; if(dfa<0)dfa=0; else if(dfa>0.93)dfa=0.93;
-              daw=torchWarm(wx,wy)*0.5; if(daw>0.7)daw=0.7; }
+              daw=torchWarm(wx,wy)*0.58; if(daw>0.82)daw=0.82; }
             else { dfogT=dist*Z.fog; if(dfogT>0.92)dfogT=0.92; }
             const u=((wx-ci)*TEX)&(TEX-1), v=((wy-cj)*TEX)&(TEX-1);
             const texel=capTex.data[v*TEX+u];
@@ -1481,7 +1481,7 @@ function castFrame(){
             const fu=((fwx-ffi)*TEX)&(TEX-1), fv=((fwy-ffj)*TEX)&(TEX-1);
             let ffogT=0, ffa=0, faw=0;
             if(lit){ const br=playerBright(fdist); ffa=1-br; if(ffa<0)ffa=0; else if(ffa>0.93)ffa=0.93;
-              faw=torchWarm(fwx,fwy)*0.5; if(faw>0.7)faw=0.7; }
+              faw=torchWarm(fwx,fwy)*0.58; if(faw>0.82)faw=0.82; }
             else { ffogT=fdist*Z.fog; if(ffogT>0.92)ffogT=0.92; }
             col= fft ? (lit?shadeTorch(fft.data[fv*TEX+fu],ffa,faw):shadeWall(fft.data[fv*TEX+fu],1.0,ffogT)) : floorRow[y];
             buf[y*RW+x]=col;                                       // paint the floor texel...
@@ -1523,7 +1523,7 @@ function castFrame(){
     for(let x=0;x<RW;x++){
       if(y>=eBot[x]){ const i=fx|0,j=fy|0,fm=fMat(i,j);
         const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); const ft=fm?TEXTURES[MAT_FLOOR[fm].tex]:fZone;
-        let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.5; if(aw>0.7)aw=0.7; }
+        let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.58; if(aw>0.82)aw=0.82; }
         buf[y*RW+x]= ft ? (lit?shadeTorch(ft.data[v*TEX+u],fa,aw):shadeWall(ft.data[v*TEX+u],1.0,fogT)) : floorRow[y]; }
       fx+=sFX; fy+=sFY;
     }
@@ -1540,7 +1540,7 @@ function castFrame(){
     const skyV = useSky ? Math.min(SKYTEX.h-1,(cy/HH*SKYTEX.h)|0) : 0;
     for(let x=0;x<RW;x++){
       if(cy<sTop[x]){ const i=fx|0,j=fy|0,rm=rMat(i,j);
-        if(enclosed){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.5; if(aw>0.7)aw=0.7; }
+        if(enclosed){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.58; if(aw>0.82)aw=0.82; }
           buf[cy*RW+x]= cZone ? (lit?shadeTorch(cZone.data[v*TEX+u],fa,aw):shadeWall(cZone.data[v*TEX+u],1.0,fogT)) : ceilRow[cy]; }
         else if(rm){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); const ct=TEXTURES[MAT_ROOF[rm].tex];
           buf[cy*RW+x]= ct ? shadeWall(ct.data[v*TEX+u],1.0,fogT) : ceilRow[cy]; }     // roofed cell (e.g. timber over interiors)
@@ -1558,7 +1558,7 @@ function castFrame(){
     const bx=doorTX[x]|0; let fa=0, aw=0, fogT=0;
     if(lit){ const camX=2*x/RW-1, rdx=dirX+planeX*camX, rdy=dirY+planeY*camX;
       let br=playerBright(dp); fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93;
-      aw=torchWarm(P.x+rdx*dp,P.y+rdy*dp)*0.55; if(aw>0.7)aw=0.7; }
+      aw=torchWarm(P.x+rdx*dp,P.y+rdy*dp)*0.62; if(aw>0.82)aw=0.82; }
     else { fogT=dp*Z.fog; if(fogT>0.92)fogT=0.92; }
     for(let y=tb;y<bb;y++){ const worldH=(fY-y)/lh;
       let vt=(((owh-worldH)/(owh-ooh))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1;
