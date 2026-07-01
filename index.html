@@ -1166,7 +1166,14 @@ function shadeWall(c,sf,t){ let r=(c&255)*sf,g=((c>>8)&255)*sf,b=((c>>16)&255)*s
 // torches are the light); with effects OFF it falls back to a normal bright
 // headlamp so the game stays playable without the adaptation lift.
 let LGT=0.4, LA=0.7, LB=0.5; const DARKC=rgb(8,5,3);
-function setLightMode(on){ if(on){ LGT=0.4; LA=0.7; LB=0.5; } else { LGT=3.5; LA=0.10; LB=0.16; } }
+// Personal light: with effects OFF, a bright practical headlamp. With effects ON,
+// a held torch throws a real warm pool a few cells wide; without one you are nearly
+// blind in the dark and must rely on the wall torches.
+function setLightMode(on){
+  if(!on){ LGT=3.5; LA=0.10; LB=0.16; }
+  else if(hasTorch()){ LGT=1.3; LA=0.35; LB=0.35; }
+  else { LGT=0.30; LA=0.70; LB=0.50; }
+}
 function playerBright(d){ const v=LGT*PB_FLICK/(d*d*LA + d*LB + 1); return v<1?v:1; }
 function tvBit(cx,cy,bit){ return (cx>=0&&cy>=0&&cx<LM.w&&cy<LM.h && (cellTorchVis[cy*LM.w+cx]&bit))?1:0; }
 function torchWarm(wx,wy){ let s=0;
@@ -1186,6 +1193,7 @@ function torchWarm(wx,wy){ let s=0;
     }
     const t=torchList[i]; const dx=wx-t.x, dy=wy-t.y; const tf=torchFlick[i]||1;
     s+=vis*tf*1.15/(1+(dx*dx+dy*dy)*0.5); }
+  if(hasTorch()){ const dx=wx-P.x, dy=wy-P.y; s+=PB_FLICK*0.7/(1+(dx*dx+dy*dy)*0.5); }  // the light you carry
   return s<1.6?s:1.6; }
 /* Precompute, per cell, which torches can actually reach it (line-of-sight), so a
    wall blocks torchlight and the cells behind it fall into shadow. Torches are
@@ -1369,8 +1377,7 @@ function castFrame(){
   const lit=Z.light;
   // per-frame torch flicker (cheap): carried-torch personal light + each ground torch.
   // Without a torch in the dark you fall back to the wall torches only.
-  if(hasTorch()) PB_FLICK = fxOn ? torchFlicker(time,0) : 1;
-  else           PB_FLICK = fxOn ? 0.16 : 1;
+  PB_FLICK = (fxOn && hasTorch()) ? torchFlicker(time,0) : 1;
   torchFlick.length=torchList.length;
   for(let i=0;i<torchList.length;i++) torchFlick[i]= lit ? torchFlicker(time, i+1) : 1;
   const enclosed = !!Z.roomHeight;                   // dungeons: a sealed box (ceiling everywhere, no sky)
@@ -1724,7 +1731,7 @@ function drawViewmodels(){
 }
 function drawTorchVM(bobX,bobY){
   const fl=torchFlicker(time,0);                          // same flicker curve as the carried light
-  const bx=RW*0.80+bobX, by=RH+bobY;
+  const bx=RW*0.17+bobX, by=RH+bobY;                      // held in the LEFT hand (sword is on the right)
   const sway=Math.sin(time*1.7)*0.02 + (fl-0.9)*0.05;     // subtle handheld wobble, tied to the flicker
   ctx.save(); ctx.globalCompositeOperation='lighter';     // warm bloom over the scene
   const ga=0.13*fl, gr=ctx.createRadialGradient(bx,RH*0.58,10,bx,RH*0.58,RH*1.0);
