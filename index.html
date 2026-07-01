@@ -1429,9 +1429,13 @@ function updateAdapt(){
   // looking toward a flame — or carrying a torch, which lights your forward view — bleaches it.
   const posLight = adaptLocalLight(P.x,P.y);          // peripheral glare (any direction)
   const fwdLight = forwardLight();                    // light where you're actually looking
-  const adaptLight = fwdLight*0.7 + posLight*0.3;     // mostly gaze, some peripheral
-  // A small foveal term still catches broadly-bright non-torch views (a portal, sky through a door).
-  let targetRaw = amb + adaptLight*1.15 + Math.max(0, fovea-0.35)*0.4;
+  const adaptLight = fwdLight*0.9 + posLight*0.1;     // dominated by where you look; peripheral only a faint glare
+  // Carrying a torch is a bright flame in your hand filling your near view — it PINS you
+  // photopic (crisp detail, no night vision) wherever you look. Without one, adaptation
+  // follows what you look at, so facing away from a wall torch into the dark lets your eyes
+  // adjust (goblin night vision) even with a torch behind you. A small foveal term also
+  // catches broadly-bright non-torch views (a portal, sky through a door).
+  let targetRaw = amb + adaptLight*0.9 + (hasTorch()?0.4:0) + Math.max(0, fovea-0.35)*0.4;
   if(targetRaw>1) targetRaw=1;                         // KEEP: adaptLum's ceiling (prevents the additive wash-out blowout)
   // Low-pass the target (~0.6s) BEFORE anything downstream sees it. This de-flickered,
   // smoothed signal drives BOTH the slow rod state (adaptLum) AND the exposure mismatch,
@@ -1490,10 +1494,12 @@ function buildToneLUT(){
   // read, while torch highlights stay bright. Only when actually seeing-in-dark
   // (postSee): gone while blinded and gone when a nearby torch has constricted you.
   // One tone curve, two directions: dark-adapted (postSee) LIFTS the shadows so faint
-  // masses emerge; light-adapted near a torch (postCrush) PULLS the shadows down so the
-  // reaches beyond your circle of light fall into black. They never overlap.
+  // masses emerge; light-adapted near a torch (postCrush) pulls them down a touch. The
+  // crush is GENTLE — spatial falloff (torchWarm fading + the dim personal light) already
+  // makes the reaches beyond a torch dark, so a strong gamma here just blacked out the
+  // dim-but-lit floor right in front of you when you faced away from a nearby torch.
   const toneGamma = postSee>0 ? (1 - Math.min(0.34, postSee*0.34))
-                   : (1 + postCrush*0.85);
+                   : (1 + postCrush*0.28);
   const mk=ch=>{ const lut=new Uint8Array(256), tn=zTint[ch];
     for(let i=0;i<256;i++){ let v=(i/255)*exposure*flick;
       if(toneGamma!==1) v=Math.pow(v,toneGamma);   // lift the dark (adapted) or crush it (near a torch)
