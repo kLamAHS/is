@@ -1335,6 +1335,19 @@ function adaptLocalLight(wx,wy){
   const r=0.6;
   return sample(wx,wy)*0.5 + (sample(wx+r,wy)+sample(wx-r,wy)+sample(wx,wy+r)+sample(wx,wy-r))*0.125;
 }
+// Light in the direction the player is LOOKING: probe a few points down the view ray
+// (stopping at the first wall). This is what makes adaptation directional — face away from
+// a torch into the dark and your eyes adjust; look toward a flame (or carry a torch, which
+// lights your forward view) and they don't.
+function forwardLight(){
+  const fx=Math.cos(P.angle), fy=Math.sin(P.angle);
+  const D=[0.8,1.7,2.7,3.8], W=[1.0,1.0,0.7,0.45];
+  let s=0, w=0;
+  for(let i=0;i<4;i++){ const sx=P.x+fx*D[i], sy=P.y+fy*D[i];
+    if(!inLM(sx|0,sy|0) || solidCell(sx|0,sy|0)) break;
+    s+=adaptLocalLight(sx,sy)*W[i]; w+=W[i]; }
+  return w>0 ? s/w : adaptLocalLight(P.x,P.y);
+}
 /* Precompute, per cell, which torches can actually reach it (line-of-sight), so a
    wall blocks torchlight and the cells behind it fall into shadow. Torches are
    static, so this is built once per zone load — per-pixel cost is one mask test. */
@@ -1410,11 +1423,15 @@ function updateAdapt(){
   // Standing in torchlight bleaches your night vision: the light hitting you
   // (torchWarm at your position, shadow-occluded) raises the adaptation target,
   // so the surrounding dark goes black until you step off and slowly re-adapt.
-  const localLight = adaptLocalLight(P.x,P.y);        // de-flickered, area-averaged (no twitch)
-  // Foveal term damped: an on-screen flame (or the additive glow, which feeds back into
-  // measureLum) no longer yanks the target. Only a broadly bright central field nudges it.
-  const foveaTerm = Math.max(0, fovea-0.62)*0.45;
-  let targetRaw = amb + localLight*1.15 + foveaTerm;
+  // Adaptation follows the light in the DIRECTION YOU LOOK (forwardLight) plus a smaller
+  // peripheral-glare floor from light hitting you off-axis (posLight). So facing away from a
+  // wall torch into the dark lets your eyes dark-adapt and your night vision return, while
+  // looking toward a flame — or carrying a torch, which lights your forward view — bleaches it.
+  const posLight = adaptLocalLight(P.x,P.y);          // peripheral glare (any direction)
+  const fwdLight = forwardLight();                    // light where you're actually looking
+  const adaptLight = fwdLight*0.7 + posLight*0.3;     // mostly gaze, some peripheral
+  // A small foveal term still catches broadly-bright non-torch views (a portal, sky through a door).
+  let targetRaw = amb + adaptLight*1.15 + Math.max(0, fovea-0.35)*0.4;
   if(targetRaw>1) targetRaw=1;                         // KEEP: adaptLum's ceiling (prevents the additive wash-out blowout)
   // Low-pass the target (~0.6s) BEFORE anything downstream sees it. This de-flickered,
   // smoothed signal drives BOTH the slow rod state (adaptLum) AND the exposure mismatch,
