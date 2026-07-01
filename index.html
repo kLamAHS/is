@@ -1027,7 +1027,9 @@ const ZONES={
     floorColor:rgb(40,50,32), ceilingColor:rgb(120,150,190),
     fogColor:rgb(46,60,92), fog:0.05,   // dusk-blue aerial haze: distant ridges recede into the sky
     grade:{ sat:0.86, con:1.06, bright:0.82, tint:[0.96,1.0,1.08] },   // cold, overcast mountains
-    ambient:0.4,
+    light:{}, moonAmb:0.12,             // dusk is a LIT zone: the eye adapts here like in the catacombs.
+    ambient:0.12,                       // no-torch settles PARTIALLY scotopic (night vision + moon bloom);
+                                        // a carried torch pins it photopic (warm pool, far dark crushes)
     start:{x:15.0, y:23.0, angle:-1.5708},
     entities:[
       {type:'portal', sprite:'portal', x:11.0, y:23.5,
@@ -1229,8 +1231,9 @@ function buildProcSky(){
   SKYBOXES.proc={data:new Uint32Array(c.getImageData(0,0,w,h).data.buffer).slice(),w,h};
 }
 // Cold dusk-mountain sky for the terrain zones: deep-navy zenith -> dusty horizon, with soft
-// horizontal cloud streaks. Streaks are drawn wrapped (x, x±w) so the panorama tiles seamlessly
-// with no vertical spire/seam like the castle-vista realm panorama has.
+// horizontal cloud streaks, faint stars, and a MOON whose panorama azimuth matches the terrain
+// key light (MOON_AZ), so the hillshade has a visible source. Streaks/stars are drawn wrapped
+// (x, x±w) so the panorama tiles seamlessly.
 function buildDuskSky(){
   const w=1024,h=256, cv=document.createElement('canvas');cv.width=w;cv.height=h;
   const c=cv.getContext('2d',{willReadFrequently:true});
@@ -1238,10 +1241,26 @@ function buildDuskSky(){
   g.addColorStop(0,'#0e1526'); g.addColorStop(0.5,'#243a58');
   g.addColorStop(0.82,'#46607d'); g.addColorStop(1,'#5f7690');
   c.fillStyle=g; c.fillRect(0,0,w,h);
+  for(let i=0;i<150;i++){ const sx=(i*211+((i*i*97)%53))%w, sy=((i*89)%150), m=(i%11===0)?0.9:0.45;   // stars: upper band only
+    c.fillStyle='rgba(190,205,235,'+(m*(0.25+((i*13)%40)/100)).toFixed(2)+')';
+    c.fillRect(sx,sy,1,1); if(i%17===0) c.fillRect(sx,sy-1,1,1); }
   const streak=(cx,cy,rx,ry,a)=>{ for(const ox of [-w,0,w]){ c.beginPath();
     c.ellipse(cx+ox,cy,rx,ry,0,0,7); c.fillStyle='rgba(150,168,192,'+a+')'; c.fill(); } };
   for(let i=0;i<9;i++){ const cx=(i*137)%w, cy=44+((i*57)%150), rx=90+((i*71)%120), ry=7+((i*5)%10);
     streak(cx,cy,rx,ry,0.05+((i*7)%9)/140); }               // pale, low-contrast cloud bands
+  // the moon: disc + halo at the SAME azimuth the terrain hillshade uses (one shared constant,
+  // so light and source can never drift apart). Bright enough to survive skyDim and trip bloom
+  // once the eye is dark-adapted — it halos like a dungeon torch.
+  const mu=(((MOON_AZ/(Math.PI*2))%1+1)%1*w)|0, mv=(h*0.16)|0;
+  const px2=c.getImageData(0,0,w,h), dd=px2.data;
+  for(let dy=-22;dy<=22;dy++)for(let dx=-22;dx<=22;dx++){
+    const q=Math.sqrt(dx*dx+dy*dy), yy=mv+dy; if(yy<0||yy>=h) continue;
+    const i=(yy*w+((mu+dx+w)%w))*4;
+    if(q<5.5){ dd[i]=255; dd[i+1]=255; dd[i+2]=255; }                    // disc: full white — survives skyDim
+                                                                          // and clears the dark-adapted bloom gate
+    else { const gl=Math.exp(-(q-5.5)*0.22);                             // soft halo
+      dd[i]=Math.min(255,dd[i]+150*gl); dd[i+1]=Math.min(255,dd[i+1]+158*gl); dd[i+2]=Math.min(255,dd[i+2]+185*gl); } }
+  c.putImageData(px2,0,0);
   SKYBOXES.dusk={data:new Uint32Array(c.getImageData(0,0,w,h).data.buffer).slice(),w,h};
 }
 // load a panorama image (data URI or URL) into SKYBOXES[name]
@@ -1439,6 +1458,7 @@ function adaptLocalLight(wx,wy){
       const t=torchList[i]; const dx=sx-t.x, dy=sy-t.y;
       s+=vis*1.15/(1+(dx*dx+dy*dy)*0.5); }              // steady: no torchFlick[i]
     if(hasTorch()){ const dx=sx-P.x, dy=sy-P.y; s+=0.7/(1+(dx*dx+dy*dy)*0.5); }  // steady: no PB_FLICK
+    if(Z&&Z.terrain) s+=(Z.moonAmb||0.32);           // open dusk sky: steady moonlight floor, eye never slams scotopic
     return s<1.6?s:1.6; };
   const r=0.6;
   return sample(wx,wy)*0.5 + (sample(wx+r,wy)+sample(wx-r,wy)+sample(wx,wy+r)+sample(wx,wy-r))*0.125;
@@ -1764,7 +1784,8 @@ function openHeightmapUpload(){
 window.HM={ upload:openHeightmapUpload,
   regen:(seed)=>{ if(!Z||!Z.terrain)return; const hm=Z.heightmap||{}; Z._hf=genMountains(hm.gw||120,hm.gh||104,hm.cell||0.25,hm.hmax||7,seed||((Math.random()*1e9)|0)); HFIELD=Z._hf; P.z=sampleH(HFIELD,P.x,P.y)+EYE; },
   field:()=>HFIELD };
-// dark mountain palette: deep forest green -> rock -> snow; steep faces bare rock
+// dark mountain palette: deep forest green -> rock -> snow (hue/tint source for the terrain;
+// form now comes from the moon hillshade, so the old slope-darkening branch is gone)
 const T_GRASS_LO=rgb(34,48,26), T_GRASS_HI=rgb(56,74,40), T_ROCK=rgb(66,62,54), T_ROCK_HI=rgb(92,86,78), T_SNOW=rgb(200,206,216);
 function terrainColor(t, slope){
   let base;
@@ -1775,67 +1796,292 @@ function terrainColor(t, slope){
   if(slope>0.9)   base=mix(base,T_ROCK,Math.min(1,(slope-0.9)*0.7));
   return base;
 }
-const T_NEAR=0.35, T_FAR=58, T_DSTEP0=0.05, T_LODK=0.008;   // finer far steps + closer far clamp (aerial haze hides it)
+/* ---- terrain light rig ----------------------------------------------------
+   ONE shared moon direction drives everything: the hillshade key, the baked
+   ridge shadows, AND where the moon is painted in the dusk panorama — so the
+   light always has a visible source and can never drift from it. Low
+   elevation (~29°) = grazing light = strong relief, the classic voxel-space
+   look. */
+const MOON_AZ=3.9, MOON_EL=0.5;
+const MLx=Math.cos(MOON_AZ)*Math.cos(MOON_EL), MLy=Math.sin(MOON_AZ)*Math.cos(MOON_EL), MLz=Math.sin(MOON_EL);
+const ss3=(a,b,x)=>{ x=(x-a)/(b-a); return x<0?0:x>1?1:x*x*(3-2*x); };   // smoothstep
+// clamped bilinear over an auxiliary per-cell field (shadow / AO), same grid as HF.d
+function sampleF(HF,A,wx,wy){
+  let gx=wx/HF.cell, gy=wy/HF.cell;
+  if(gx<0)gx=0; else if(gx>HF.gw-1.001)gx=HF.gw-1.001;
+  if(gy<0)gy=0; else if(gy>HF.gh-1.001)gy=HF.gh-1.001;
+  const x0=gx|0, y0=gy|0, tx=gx-x0, ty=gy-y0, gw=HF.gw, i=y0*gw+x0;
+  const a=A[i], b=A[i+1], c=A[i+gw], e=A[i+gw+1];
+  const top=a+(b-a)*tx, bot=c+(e-c)*tx; return top+(bot-top)*ty;
+}
+/* Bake per-cell moon visibility (long soft ridge shadows — the terrain's
+   line-of-sight torch shadows) and a valley AO term (gullies sit in darker
+   skylight). Static per height field, ~once per zone; cached on HF. */
+function bakeTerrainShade(HF){
+  const gw=HF.gw, gh=HF.gh, cell=HF.cell, n=gw*gh;
+  const sh=new Float32Array(n), sx=MLx*cell, sy=MLy*cell, sz=MLz*cell;
+  const wxMax=(gw-1)*cell, wyMax=(gh-1)*cell;
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){
+    let wx=i*cell, wy=j*cell, hz=HF.d[j*gw+i]+0.04, blk=0;
+    for(let s=0;s<56;s++){ wx+=sx; wy+=sy; hz+=sz;
+      if(hz>=HF.hmax) break;
+      if(wx<0||wy<0||wx>wxMax||wy>wyMax) break;
+      const o=sampleH(HF,wx,wy)-hz;
+      if(o>0){ const p=o*2.5; if(p>blk)blk=p; if(blk>=1) break; } }
+    sh[j*gw+i]=1-(blk>1?1:blk)*0.85;                  // penumbra ramp; floor 0.15 (skylight remains)
+  }
+  const tmp=new Float32Array(n), bl=new Float32Array(n), ao=new Float32Array(n), r=3;
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){ let s=0,c=0;      // separable box blur of the field
+    for(let k=-r;k<=r;k++){ const ii=i+k; if(ii>=0&&ii<gw){ s+=HF.d[j*gw+ii]; c++; } } tmp[j*gw+i]=s/c; }
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){ let s=0,c=0;
+    for(let k=-r;k<=r;k++){ const jj=j+k; if(jj>=0&&jj<gh){ s+=tmp[jj*gw+i]; c++; } } bl[j*gw+i]=s/c; }
+  for(let k=0;k<n;k++){ let a=1-(bl[k]-HF.d[k])*0.55; ao[k]=a<0.55?0.55:a>1?1:a; }   // below local mean = hollow
+  HF.shad=sh; HF.ao=ao;
+}
+const T_NEAR=0.35, T_FAR=58, T_DSTEP0=0.05, T_LODK=0.008;   // march schedule (column phase jitter hides the steps)
+let _ftLUT=null, _ftFog=0;   // per-zone exponential-haze table: ft = 1-exp(-d*fog), indexed by d*8
+/* The terrain pass, rebuilt to the dungeon's per-pixel standard:
+   - moon-key hillshade from central-difference normals, x baked ridge shadow + valley AO,
+     two-tone (shadows go cold blue, never black)
+   - per-pixel texturing WITHIN each span: ground spans reproject world position between
+     successive ray samples; steep spans switch to (along-face, world-height) mapping so
+     cliff faces get real strata instead of smeared streaks
+   - smoothstep+hash-dithered material transitions (snow refuses cliffs), macro variation
+     field breaks the tile repeat, mip pick per span (same ladder as the wall pass)
+   - dual-tone exponential haze (lit slopes fade silver, shadowed fade dusk-blue)
+   - the carried torch throws its flickering warm pool on the ground (dungeon color rules)
+   - crest anti-aliasing: one deferred fractional-coverage blend per silhouette edge */
 function castTerrain(dirX,dirY,planeX,planeY){
   const HF=HFIELD, HMAX=HF.hmax, PZ=P.z;
+  if(!HF.shad) bakeTerrainShade(HF);
   const HORIZON = HH + (P.pitch||0)*RH;              // pitched eye-level row
   const useSky=!!SKYTEX, fog=Z.fog||0.028;
-  const TG=TEXTURES.tgrass.data, TR=TEXTURES.trock.data, TS=TEXTURES.tsnow.data, TSC=5;  // ground textures + tiling
+  if(!_ftLUT||_ftFog!==fog){ _ftLUT=new Float32Array(((T_FAR*8)|0)+2); _ftFog=fog;
+    for(let i=0;i<_ftLUT.length;i++){ let f=1-Math.exp(-(i*0.125)*fog); _ftLUT[i]=f>0.94?0.94:f; } }
+  const ftLUT=_ftLUT;
+  const HD=HF.d, Hgw=HF.gw, Hcell=HF.cell, HgwM=HF.gw-1.001, HghM=HF.gh-1.001;
+  const TSCV=8;                                      // ground texels per world unit
+  const GR=TEXTURES.tgrass.mips, RK=TEXTURES.trock.mips, SN=TEXTURES.tsnow.mips;
+  const MAC=TEXTURES.tgrass.mips[3];                 // pre-blurred grass = free smooth macro field
+  const shadA=HF.shad, aoA=HF.ao;
+  const FR=FOG&255, FGc=(FOG>>8)&255, FB=(FOG>>16)&255;             // shadow haze: dusk blue
+  let LFR=FR*1.5+14, LFG=FGc*1.4+12, LFB=FB*1.22+6;                 // lit haze: brighter, less blue
+  if(LFR>255)LFR=255; if(LFG>255)LFG=255; if(LFB>255)LFB=255;
+  const torchLit = fxOn && hasTorch();
+  const hFoot = 2*FOV/RW*TSCV;                       // horizontal texels per column per unit distance
   if(useSky){ for(let x=0;x<RW;x++){ const camX=2*x/RW-1, rx=dirX+planeX*camX, ry=dirY+planeY*camX;
       let ra=Math.atan2(ry,rx)/(Math.PI*2); ra=((ra%1)+1)%1; skyX[x]=(ra*SKYTEX.w)|0; } }
+  const invCell=1/Hcell, Pgx=P.x*invCell, Pgy=P.y*invCell;
   for(let x=0;x<RW;x++){
     const camX=2*x/RW-1, rdx=dirX+planeX*camX, rdy=dirY+planeY*camX;   // perp-depth ray (not normalized)
-    let ytop=RH; let d=T_NEAR, dstep=T_DSTEP0; let firstHit=true;
+    const rgx=rdx*invCell, rgy=rdy*invCell;          // the march runs in GRID units: inlined bilinear, no calls
+    const phase=((x*0x9E3779B9)>>>24)/256;           // per-column start-phase jitter: decorrelates step terraces
+    let d=T_NEAR+T_DSTEP0*phase*0.35, dstep=T_DSTEP0;   // small amplitude — big values comb the lit slopes
+    let ytop=RH, firstHit=true;
+    let pd=d;                                        // previous MARCH sample distance (reprojection anchor)
+    let pMr=0,pMg=0,pMb=0,pAr=0,pAg=0,pAb=0, havePrev=false;   // previous VISIBLE sample's shading (Gouraud anchor)
+    let pendY=-1, pendCov=0, pendCol=0, pendD=T_FAR; // one deferred crest blend per column
     while(d<T_FAR && ytop>0){
-      const wx=P.x+rdx*d, wy=P.y+rdy*d, hz=sampleH(HF,wx,wy);
-      let sy=(HORIZON + (PZ-hz)*RH/d)|0;
-      if(sy<ytop){                                    // rises above everything nearer -> visible
+      let gq=Pgx+rgx*d, gr=Pgy+rgy*d;
+      if(gq<0)gq=0; else if(gq>HgwM)gq=HgwM;
+      if(gr<0)gr=0; else if(gr>HghM)gr=HghM;
+      const gx0=gq|0, gy0=gr|0, gfx=gq-gx0, gfy=gr-gy0, gi=gy0*Hgw+gx0;
+      const h00=HD[gi], h10=HD[gi+1], h01=HD[gi+Hgw], h11=HD[gi+Hgw+1];
+      const hz=(h00+(h10-h00)*gfx)*(1-gfy)+(h01+(h11-h01)*gfx)*gfy;
+      const syf=HORIZON + (PZ-hz)*RH/d;              // float crest row
+      let sy=Math.ceil(syf);                         // first fully covered row
+      if(sy<ytop){                                   // rises above everything nearer -> visible
         if(sy<0)sy=0;
+        const wx=P.x+rdx*d, wy=P.y+rdy*d;
         if(firstHit){ terrainDepth[x]=d; zbuf[x]=d; eBot[x]=RH; firstHit=false; }
-        const hx=sampleH(HF,wx+0.12,wy), hy=sampleH(HF,wx,wy+0.12);
-        const slope=Math.abs(hx-hz)+Math.abs(hy-hz), t=hz/HMAX;
-        const u=(((wx*TSC)|0)&(TEX-1)), v=(((wy*TSC)|0)&(TEX-1));       // ground texture detail
-        const td = slope>0.9 ? TR : t>=0.8 ? TS : t>=0.5 ? TR : TG;     // cliffs=rock, high=snow, mid=rock, low=forest floor
-        let col=mix(terrainColor(t, slope), td[v*TEX+u], 0.5);         // mood tint + real texture grain
-        let ft=d*fog; if(ft>0.92)ft=0.92; col=shadeWall(col,1.0,ft);
-        for(let y=sy;y<ytop;y++){ buf[y*RW+x]=col; zTerr[y*RW+x]=d; }   // per-pixel depth for sprite occlusion
+        // --- surface normal: wide forward differences (hz is already paid for) ---
+        const gx=(sampleH(HF,wx+0.33,wy)-hz)*3.03;
+        const gy=(sampleH(HF,wx,wy+0.33)-hz)*3.03;
+        const g2=gx*gx+gy*gy, inl=1/Math.sqrt(g2+1), gmag=Math.sqrt(g2);
+        let dif=(MLz-gx*MLx-gy*MLy)*inl; if(dif<0)dif=0;         // Lambert vs the moon
+        // baked ridge-shadow + valley-AO: one shared bilinear (same grid, same weights)
+        let bgx=wx/Hcell, bgy=wy/Hcell;
+        if(bgx<0)bgx=0; else if(bgx>HgwM)bgx=HgwM;
+        if(bgy<0)bgy=0; else if(bgy>HghM)bgy=HghM;
+        const bx0=bgx|0, by0=bgy|0, btx=bgx-bx0, bty=bgy-by0, bi=by0*Hgw+bx0;
+        const w00=(1-btx)*(1-bty), w10=btx*(1-bty), w01=(1-btx)*bty, w11=btx*bty;
+        dif*=shadA[bi]*w00+shadA[bi+1]*w10+shadA[bi+Hgw]*w01+shadA[bi+Hgw+1]*w11;   // ridge blocks the moon
+        const ao=aoA[bi]*w00+aoA[bi+1]*w10+aoA[bi+Hgw]*w01+aoA[bi+Hgw+1]*w11;
+        // two-tone: cool skylight floor (AO-scaled) + silver moon key — shadows go COLD, not black
+        let lr=0.34*ao+0.86*dif, lg=0.37*ao+0.88*dif, lb=0.46*ao+0.94*dif;
+        // --- material: smoothstep weights, world-hash dither, macro variation ---
+        const t=hz/HMAX;
+        let hh=(((wx*TSCV)|0)*374761393 + ((wy*TSCV)|0)*668265263)|0; hh^=hh>>13;
+        const hj=((hh&255)-128)*0.0039;                          // ±0.5, world-anchored (no crawl)
+        const mxf=wx*0.9+4096, myf=wy*0.9+4096;                  // macro field: BILINEAR (nearest = polygon cells)
+        const mx0=mxf|0, my0=myf|0, mfx=mxf-mx0, mfy=myf-my0;
+        const mr0=(my0&63)<<6, mr1=((my0+1)&63)<<6, mc0=mx0&63, mc1=(mx0+1)&63;
+        const mg=((MAC[mr0|mc0]>>8)&255)*(1-mfx)*(1-mfy) + ((MAC[mr0|mc1]>>8)&255)*mfx*(1-mfy)
+               + ((MAC[mr1|mc0]>>8)&255)*(1-mfx)*mfy   + ((MAC[mr1|mc1]>>8)&255)*mfx*mfy;
+        const mvar=0.85+mg*0.00094;                              // 0.85..1.09 ground-cover patches
+        lr*=mvar; lg*=mvar; lb*=mvar;
+        const cliff=ss3(2.4,4.0,gmag+hj*0.10);                   // jitter kept SMALL: the smoothstep+texture
+        const tj=t+hj*0.02;                                      // blend do the smoothing; big jitter reads as
+        const wSnow=ss3(0.66,0.84,tj)*(1-cliff);                 // per-column stripes at distance
+        const wRock=cliff>0.5?cliff:Math.max(cliff, ss3(0.40,0.60,tj+(mg-128)*0.0005));
+        let TAm,TBm,wB;
+        if(wSnow>0.02){ TAm=RK; TBm=SN; wB=wSnow; } else { TAm=GR; TBm=RK; wB=wRock; }
+        // --- haze: exponential (table), dual-tone by moon-facing (in-scattering) ---
+        const ft=ftLUT[(d*8)|0];
+        const fr=FR+(LFR-FR)*dif, fg=FGc+(LFG-FGc)*dif, fb=FB+(LFB-FB)*dif;
+        // --- carried torch: the dungeon's warm pool, fog-suppressed, flicker-synced ---
+        let awR=0, awG=0, awB=0;
+        if(torchLit && d<6.5){ const dx0=wx-P.x, dy0=wy-P.y;
+          let aw=PB_FLICK*0.7/(1+(dx0*dx0+dy0*dy0)*0.5);
+          aw*=0.62*(1-ft); if(aw>0.55)aw=0.55;
+          awR=210*aw; awG=92*aw; awB=26*aw; }                    // addWarm ember ramp
+        // --- fold everything span-constant into an affine per channel: color = texel*M + A ---
+        const tint=terrainColor(t,0), it=1-ft;
+        let Mr=0.65*lr*it, Mg=0.65*lg*it, Mb=0.65*lb*it;         // texture-dominant (65%), tint carries the hue zone
+        let Ar=(tint&255)*0.35*lr*it + fr*ft + awR;
+        let Ag=((tint>>8)&255)*0.35*lg*it + fg*ft + awG;
+        let Ab=((tint>>16)&255)*0.35*lb*it + fb*ft + awB;
+        if(wSnow>0.4){ const sp=dif*dif*40*wSnow*it; Ar+=sp; Ag+=sp; Ab+=sp+6; }   // moonlit snow glint
+        // --- span geometry: reproject prev->curr sample (ground) or (face,height) map (cliff) ---
+        const finv=1/(ytop-syf);
+        const f0=(sy-syf)*finv;
+        const isCliff = gmag>3.0;
+        let iu, iv, du, dv;
+        if(isCliff){                                             // texture by (along-face, world height): real strata
+          const au=Math.abs(gx)>=Math.abs(gy)?wy:wx;
+          iu=au*TSCV+4096; du=0;
+          iv=(PZ-(sy-HORIZON)*d/RH)*TSCV+4096; dv=-(d/RH)*TSCV;  // exact, linear in y
+        } else {                                                 // planar UV, lerped prev->curr sample down the span
+          const dpd=(pd-d)*TSCV*finv;
+          du=rdx*dpd; dv=rdy*dpd;
+          iu=wx*TSCV+4096 + du*f0; iv=wy*TSCV+4096 + dv*f0;
+        }
+        // mip: dominant texel footprint (vertical step down the span vs horizontal across columns)
+        const adu=du<0?-du:du, adv=dv<0?-dv:dv, hstep=d*hFoot;
+        let fp=adu>adv?adu:adv; if(hstep>fp)fp=hstep;
+        let lvl=0; if(fp>=1.6)lvl=1; if(fp>=3.2)lvl=2; if(fp>=6.4)lvl=3;   // same ladder as the wall pass
+        const TA=TAm[lvl], TB=TBm[lvl];
+        const blend=(wB>0.03&&wB<0.97), w8=(wB*256)|0;
+        // contact-range detail octave: a 4x-scale luminance modulation so ground at your feet keeps
+        // dungeon-wall texel density instead of dissolving into big soft blocks
+        const nearDet = d<4.0;
+        let ju=0, jv=0, dju=0, djv=0;
+        if(nearDet){ ju=(iu-4096)*4+4096; jv=(iv-4096)*4+4096; dju=du*4; djv=dv*4; }
+        // Gouraud anchors: shade/fog/torch lerp from this sample (crest) to the previous visible one (span bottom)
+        const dMr=havePrev?(pMr-Mr)*finv:0, dMg=havePrev?(pMg-Mg)*finv:0, dMb=havePrev?(pMb-Mb)*finv:0;
+        const dAr=havePrev?(pAr-Ar)*finv:0, dAg=havePrev?(pAg-Ag)*finv:0, dAb=havePrev?(pAb-Ab)*finv:0;
+        let cMr=Mr+dMr*f0, cMg=Mg+dMg*f0, cMb=Mb+dMb*f0;
+        let cAr=Ar+dAr*f0, cAg=Ag+dAg*f0, cAb=Ab+dAb*f0;
+        let zd=d+(pd-d)*f0; const dzd=(pd-d)*finv;               // continuous depth for sprite occlusion
+        let o=sy*RW+x, crest=0;
+        for(let y=sy;y<ytop;y++,o+=RW){
+          const ui=(iu|0)&63, vi=(iv|0)&63, ti=(vi<<6)|ui;
+          let tr,tg,tb; const cA=TA[ti];
+          if(blend){ const cB=TB[ti];
+            tr=(cA&255)+((((cB&255)-(cA&255))*w8)>>8);
+            tg=((cA>>8)&255)+(((((cB>>8)&255)-((cA>>8)&255))*w8)>>8);
+            tb=((cA>>16)&255)+(((((cB>>16)&255)-((cA>>16)&255))*w8)>>8);
+          } else if(wB>=0.97){ const cB=TB[ti]; tr=cB&255; tg=(cB>>8)&255; tb=(cB>>16)&255; }
+          else { tr=cA&255; tg=(cA>>8)&255; tb=(cA>>16)&255; }
+          if(nearDet){ const dT=TA[(((jv|0)&63)<<6)|((ju|0)&63)], f2=168+((dT&255)>>1);   // 0.66..1.15 grain
+            tr=(tr*f2)>>8; tg=(tg*f2)>>8; tb=(tb*f2)>>8; ju+=dju; jv+=djv; }
+          let r=tr*cMr+cAr, gg2=tg*cMg+cAg, bb2=tb*cMb+cAb;
+          if(r>255)r=255; if(gg2>255)gg2=255; if(bb2>255)bb2=255;
+          const c=(0xff000000|((bb2|0)<<16)|((gg2|0)<<8)|(r|0))>>>0;
+          if(y===sy) crest=c;
+          buf[o]=c; zTerr[o]=zd;
+          iu+=du; iv+=dv; zd+=dzd;
+          cMr+=dMr; cMg+=dMg; cMb+=dMb; cAr+=dAr; cAg+=dAg; cAb+=dAb;
+        }
+        // resolve the previous crest (its partial row was just overwritten by this farther span)
+        if(pendY>=sy){ const i2=pendY*RW+x; buf[i2]=mix(buf[i2],pendCol,pendCov);
+          if(pendCov>0.5) zTerr[i2]=pendD; pendY=-1; }
+        // arm this span's crest: the row just above is partially covered by fractional sy
+        if(sy>0 && syf>0){ pendY=sy-1; pendCov=sy-syf; pendCol=crest; pendD=d; }
+        pMr=Mr; pMg=Mg; pMb=Mb; pAr=Ar; pAg=Ag; pAb=Ab; havePrev=true;
         ytop=sy;
       }
-      d+=dstep; dstep=T_DSTEP0+d*T_LODK;              // LOD: coarser with distance
+      pd=d;                                          // anchor advances EVERY step
+      d+=dstep; dstep=T_DSTEP0+d*T_LODK;             // LOD: coarser with distance
     }
     if(firstHit){ terrainDepth[x]=T_FAR; zbuf[x]=T_FAR; eBot[x]=RH; }
-    if(ytop>0){                                       // sky above the crest (dimmed to a cold overcast dusk)
+    if(ytop>0){                                      // sky above the crest (dimmed to a cold dusk)
       if(useSky){ const sd=Z.skyDim||0.5; for(let y=0;y<ytop;y++){ let sv=(((y-(HORIZON-HH))/RH)*SKYTEX.h)|0;
           if(sv<0)sv=0; else if(sv>SKYTEX.h-1)sv=SKYTEX.h-1; const c=SKYTEX.data[sv*SKYTEX.w+skyX[x]];
           const r=(c&255)*sd, g=((c>>8)&255)*sd*1.02, b=((c>>16)&255)*sd*1.2;    // dim + cool
           buf[y*RW+x]=(0xff000000|((b>255?255:b|0)<<16)|((g|0)<<8)|(r|0))>>>0; zTerr[y*RW+x]=T_FAR; } }
       else { for(let y=0;y<ytop;y++){ buf[y*RW+x]=FOG; zTerr[y*RW+x]=T_FAR; } }
     }
+    if(pendY>=0){ const i2=pendY*RW+x;               // final crest vs the sky: fractional-coverage blend
+      buf[i2]=mix(buf[i2],pendCol,pendCov); if(pendCov>0.5) zTerr[i2]=pendD; }
   }
 }
 function drawSpritesTerrain(dirX,dirY,planeX,planeY){
   const invDet=1/(planeX*dirY-dirX*planeY);
   const HORIZON = HH + (P.pitch||0)*RH;
+  const fog=Z.fog||0.028, torchLit=fxOn&&hasTorch();
   const list=[];
   for(const e of ENTS){ if(!e.sprite||!SPRITES[e.sprite]) continue;
     const dx=e.x-P.x, dy=e.y-P.y; const tz=invDet*(-planeY*dx+planeX*dy);
     if(tz<=0.15) continue; const tx=invDet*(dirY*dx-dirX*dy);
     e._tz=tz; e._tx=tx; e._bz=sampleH(HFIELD,e.x,e.y); list.push(e); }
   list.sort((a,b)=>b._tz-a._tz);
+  // contact shadows FIRST: a soft dark ellipse on the ground at each base, gated by zTerr so it
+  // never bleeds across a ridge — this is what plants the trees IN the terrain instead of on it
+  const SHDW=rgb(8,12,16);
+  for(const e of list){ const tz=e._tz; if(tz>20||e.type==='portal') continue;
+    const m=SPRITES[e.sprite];
+    const footY=HORIZON+(P.z-e._bz)*RH/tz, cx=HW*(1+e._tx/tz);
+    let rx=(RH/tz)*m.hf*(m.w/m.h)*0.34; if(rx>26)rx=26; if(rx<2.5)continue;   // too far to read
+    if(cx+rx<0 || cx-rx>=RW || footY<-8 || footY>RH+8) continue;              // off-screen
+    let ry=rx*0.30; if(ry<1)ry=1;
+    const y0=Math.max(0,(footY-ry)|0), y1=Math.min(RH-1,(footY+ry)|0);
+    for(let y=y0;y<=y1;y++){ const dyq=(y-footY)/ry, hw2=rx*Math.sqrt(Math.max(0,1-dyq*dyq));
+      const x0=Math.max(0,(cx-hw2)|0), x1=Math.min(RW-1,(cx+hw2)|0);
+      for(let px=x0;px<=x1;px++){ const i=y*RW+px;
+        if(Math.abs(zTerr[i]-tz)>0.6+tz*0.12) continue;          // only ground near the sprite's own depth
+        const qx=(px-cx)/rx, q=qx*qx+dyq*dyq;
+        buf[i]=mix(buf[i],SHDW,0.32*(1-q)); } }
+  }
   for(const e of list){ const m=SPRITES[e.sprite]; let hf=m.hf;
     if(e.type==='portal') hf*=1+0.06*Math.sin(time*4);
     const tz=e._tz, lineHf=RH/tz;
     const floorY=HORIZON + (P.z - e._bz)*RH/tz;       // feet planted ON the terrain
-    const sh=lineHf*hf, sw=sh*(m.w/m.h), sx=HW*(1+e._tx/tz);
-    const sX=Math.floor(sx-sw/2), eX=Math.floor(sx+sw/2), sY=Math.floor(floorY-sh), eY=Math.floor(floorY);
-    const hurt=e.hurt>0; let fogT=tz*(Z.fog||0.028); if(fogT>0.92)fogT=0.92;
+    const shh=lineHf*hf, sw=shh*(m.w/m.h), sx=HW*(1+e._tx/tz);
+    const sX=Math.floor(sx-sw/2), eX=Math.floor(sx+sw/2), sY=Math.floor(floorY-shh), eY=Math.floor(floorY);
+    const hurt=e.hurt>0;
+    let fogT=1-Math.exp(-tz*fog); if(fogT>0.94)fogT=0.94;        // same haze curve as the terrain
+    // sprites live under the same moon: distance falloff x baked ridge shadow at their feet
+    // (portal is a light source — leave it full-bright)
+    let sf=1;
+    if(e.type!=='portal' && HFIELD.shad){
+      const shv=sampleF(HFIELD,HFIELD.shad,e.x,e.y);
+      sf=(1-Math.min(0.30,tz*0.007))*(0.70+0.30*shv); }
+    // carried torch warms the nearest trunks/foes, flicker-synced (dungeon ember rules)
+    let aw=0;
+    if(torchLit && e.type!=='portal'){ const dx0=e.x-P.x, dy0=e.y-P.y, D2=dx0*dx0+dy0*dy0;
+      if(D2<20){ aw=PB_FLICK*0.7/(1+D2*0.5)*0.5*(1-fogT); if(aw>0.45)aw=0.45; } }
+    // cold skylight floor (the dungeon's never-pure-black rule): shadowed silhouettes
+    // stay readable blue shapes, not holes in the frame
+    const flR=(e.type==='portal')?0:2.5*(1-fogT), flG=flR*1.7, flB=flR*3.2;
+    if(!m._cT){ const w2=m.w, h2=m.h, cT=new Uint16Array(w2), cB=new Uint16Array(w2);   // per-column opaque extent
+      for(let cxx=0;cxx<w2;cxx++){ let a0=h2, a1=0;                                     // (skips the air around the art)
+        for(let yy=0;yy<h2;yy++){ if(((m.data[yy*w2+cxx]>>>24)&255)>=8){ if(yy<a0)a0=yy; a1=yy+1; } }
+        cT[cxx]=a0; cB[cxx]=a1; }
+      m._cT=cT; m._cB=cB; }
+    const kY=shh/m.h;
     for(let col=sX;col<eX;col++){ if(col<0||col>=RW) continue;
       let tX=((col-sX)/sw*m.w)|0; if(tX<0||tX>=m.w) continue;
-      for(let y=sY;y<eY;y++){ if(y<0||y>=RH) continue;
+      let yA=sY+(m._cT[tX]*kY)|0, yB=sY+Math.ceil(m._cB[tX]*kY);
+      if(yA<0)yA=0; if(yB>RH)yB=RH; if(yB>eY)yB=eY;
+      for(let y=yA;y<yB;y++){
         if(tz>=zTerr[y*RW+col]) continue;              // per-pixel: terrain nearer than this sprite pixel hides it
-        let tY=((y-sY)/sh*m.h)|0; if(tY<0||tY>=m.h) continue;
+        let tY=((y-sY)/shh*m.h)|0; if(tY<0||tY>=m.h) continue;
         let src=m.data[tY*m.w+tX]; const a=(src>>>24)&255; if(a<8) continue;
-        let c=src; if(hurt)c=mixA(c,WHITE,0.55); c=mixA(c,FOG,fogT);
+        let r=((src&255)*sf+210*aw+flR), g=(((src>>8)&255)*sf+92*aw+flG), b=(((src>>16)&255)*sf+26*aw+flB);
+        if(r>255)r=255; if(g>245)g=245; if(b>210&&aw>0)b=210; else if(b>255)b=255;
+        let c=(src&0xff000000)|((b|0)<<16)|((g|0)<<8)|(r|0);
+        if(hurt)c=mixA(c,WHITE,0.55); c=mixA(c,FOG,fogT);
         buf[y*RW+col]= a>=250 ? (c|0xff000000)>>>0 : over(buf[y*RW+col],c,a); }
     }
   }
@@ -1872,6 +2118,7 @@ function castFrame(){
   const planeX=-dirY*FOV, planeY=dirX*FOV;
   if(Z.terrain){                                     // ── voxel heightmap path (outdoor mountain zones) ──
     glowQ.length=0;
+    PB_FLICK = (fxOn && hasTorch()) ? torchFlicker(time,0) : 1;   // the carried flame breathes outdoors too
     castTerrain(dirX,dirY,planeX,planeY);
     drawSprites(dirX,dirY,planeX,planeY);            // forks to drawSpritesTerrain internally
     if(fxOn){ updateAdapt(); buildToneLUT(); applyNightVision(); } else { GRADE=null; postDark=0; postFlick=1; }
