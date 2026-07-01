@@ -1025,7 +1025,7 @@ const ZONES={
                 gw:120, gh:104, cell:0.25, seed:7 },           // procedural fallback if the image is unavailable
     scatter:true,                                              // fill the slopes with a dense wood on load
     floorColor:rgb(40,50,32), ceilingColor:rgb(120,150,190),
-    fogColor:rgb(60,72,82), fog:0.03,
+    fogColor:rgb(46,60,92), fog:0.05,   // dusk-blue aerial haze: distant ridges recede into the sky
     grade:{ sat:0.86, con:1.06, bright:0.82, tint:[0.96,1.0,1.08] },   // cold, overcast mountains
     ambient:0.4,
     start:{x:15.0, y:23.0, angle:-1.5708},
@@ -1775,7 +1775,7 @@ function terrainColor(t, slope){
   if(slope>0.9)   base=mix(base,T_ROCK,Math.min(1,(slope-0.9)*0.7));
   return base;
 }
-const T_NEAR=0.35, T_FAR=90, T_DSTEP0=0.06, T_LODK=0.011;
+const T_NEAR=0.35, T_FAR=58, T_DSTEP0=0.05, T_LODK=0.008;   // finer far steps + closer far clamp (aerial haze hides it)
 function castTerrain(dirX,dirY,planeX,planeY){
   const HF=HFIELD, HMAX=HF.hmax, PZ=P.z;
   const HORIZON = HH + (P.pitch||0)*RH;              // pitched eye-level row
