@@ -1035,8 +1035,8 @@ let equip={weapon:null, armor:null, offhand:null};    // equipped item ids
 // torch flicker: personal (carried) light multiplier + per-ground-torch multipliers,
 // recomputed once per frame so the per-pixel light sampling stays a cheap array read.
 let PB_FLICK=1; const torchFlick=[];
-function torchFlicker(t,seed){ let f=0.86+0.10*Math.sin(t*12.5+seed*1.7)+0.05*Math.sin(t*23.3+seed*3.1)+0.035*Math.sin(t*41.0+seed*0.9);
-  return f<0.72?0.72:(f>1.08?1.08:f); }
+function torchFlicker(t,seed){ let f=0.88+0.085*Math.sin(t*5.2+seed*1.7)+0.045*Math.sin(t*8.9+seed*3.1)+0.022*Math.sin(t*14.5+seed*0.9);
+  return f<0.74?0.74:(f>1.06?1.06:f); }
 function hasTorch(){ return equip.offhand==='torch'; }
 // base character stats; equipment adds on top (see recalcStats)
 const BASE_STATS={maxhp:100, atk:18, def:0, range:1.55, cone:0.5, atkCd:0.45, critChance:0.08, critMult:1.8};
@@ -1130,6 +1130,12 @@ function keyOutBackground(img){
     if(x<0||y<0||x>=w||y>=h) continue; const p=y*w+x; if(seen[p]) continue; seen[p]=1;
     const i=p<<2; if(!near(i)) continue; d[i+3]=0;
     st.push(x+1,y,x-1,y,x,y+1,x,y-1); }
+  // Spill suppression: if the background was green- (or blue-) dominant, a green halo
+  // of anti-aliased edge pixels survives the key. Pull that channel down to the max of
+  // the other two so no coloured fringe remains. Safe for warm subjects (a torch has no
+  // green/blue of its own to lose).
+  if(bg>br+12 && bg>bb+12){ for(let i=0;i<d.length;i+=4){ if(d[i+3]===0) continue; const mx=d[i]>d[i+2]?d[i]:d[i+2]; if(d[i+1]>mx) d[i+1]=mx; } }
+  else if(bb>br+12 && bb>bg+12){ for(let i=0;i<d.length;i+=4){ if(d[i+3]===0) continue; const mx=d[i]>d[i+1]?d[i]:d[i+1]; if(d[i+2]>mx) d[i+2]=mx; } }
   g.putImageData(id,0,0); return c;
 }
 const ready=im=>!!im && (im.tagName==='CANVAS' ? im.width>0 : (im.complete && im.naturalWidth>0));
@@ -1237,12 +1243,15 @@ function buildTorchVis(){
     }
   }
 }
-function addWarm(c,a){ let r=(c&255)+255*a, g=((c>>8)&255)+150*a, b=((c>>16)&255)+60*a;
-  if(r>255)r=255; if(g>255)g=255; if(b>255)b=255; return (0xff000000|((b|0)<<16)|((g|0)<<8)|(r|0))>>>0; }
+// Torch warmth saturates toward a warm ember (low blue) instead of piling all three
+// channels up to white; capped so a surface bathed in torchlight glows orange, not blown.
+function addWarm(c,a){ if(a>0.55)a=0.55; let r=(c&255)+210*a, g=((c>>8)&255)+92*a, b=((c>>16)&255)+26*a;
+  if(r>255)r=255; if(g>245)g=245; if(b>210)b=210; return (0xff000000|((b|0)<<16)|((g|0)<<8)|(r|0))>>>0; }
 function shadeTorch(c,fa,aw){ let r=(c&255),g=((c>>8)&255),b=((c>>16)&255);
   r+=((DARKC&255)-r)*fa; g+=(((DARKC>>8)&255)-g)*fa; b+=(((DARKC>>16)&255)-b)*fa;  // darken by distance
-  r+=255*aw; g+=131*aw; b+=48*aw;                                                    // warm from torches
-  if(r>255)r=255; if(g>255)g=255; if(b>255)b=255;
+  if(aw>0.55)aw=0.55;
+  r+=210*aw; g+=92*aw; b+=26*aw;                                                     // warm from torches (orange, capped)
+  if(r>255)r=255; if(g>245)g=245; if(b>210)b=210;                                    // hold blue/green down -> stays warm
   return (0xff000000|((b|0)<<16)|((g|0)<<8)|(r|0))>>>0; }
 function over(dst,src,a){ const ia=255-a;
   const r=(((src&255)*a+(dst&255)*ia)/255)|0, g=((((src>>8)&255)*a+((dst>>8)&255)*ia)/255)|0, b=((((src>>16)&255)*a+((dst>>16)&255)*ia)/255)|0;
@@ -1293,7 +1302,11 @@ function updateAdapt(){
   // (torchWarm at your position, shadow-occluded) raises the adaptation target,
   // so the surrounding dark goes black until you step off and slowly re-adapt.
   const localLight = torchWarm(P.x,P.y);
-  const target = amb + localLight*1.15 + Math.max(0, fovea-0.55)*0.9;
+  // Clamp to 1 (adaptLum's ceiling): standing in bright torchlight the target could
+  // exceed 1, and since the eye can never adapt UP to an impossible target it would
+  // sit in a permanent wash-out (exposure pinned ~2x) — that was the additive blowout.
+  let target = amb + localLight*1.15 + Math.max(0, fovea-0.55)*0.9;
+  if(target>1) target=1;
   const tau = (target<adaptLum) ? ADAPT_DARK_TAU : ADAPT_LIGHT_TAU;
   adaptLum += (target-adaptLum) * (1-Math.exp(-dt/tau));
   if(adaptLum<0.012) adaptLum=0.012; else if(adaptLum>1) adaptLum=1;
@@ -1682,7 +1695,7 @@ function castFrame(){
    contribute, scaled by how far over the threshold they are — so mid-tone walls
    and floor never glow. Sampled at half-res into a small buffer (cheap), then
    the GPU blurs and additively composites it. */
-let BLOOM_STR=0.42, BLOOM_THRESH=224;   // threshold is a 0..255 luma cutoff (only true light sources bloom, not lit stone)
+let BLOOM_STR=0.30, BLOOM_THRESH=232;   // threshold is a 0..255 luma cutoff (only true light sources bloom, not lit stone)
 function drawBloom(){
   if(!bloomCv) return; const bw=bloomCv.width, bh=bloomCv.height;
   if(!bloomImg || bloomImg.width!==bw || bloomImg.height!==bh){ bloomImg=bloomCtx.createImageData(bw,bh); bloomBuf=new Uint32Array(bloomImg.data.buffer); }
@@ -1707,9 +1720,9 @@ function drawBloom(){
 function drawTorchGlows(){
   for(let i=0;i<glowQ.length;i++){ const q=glowQ[i];
     const g=ctx.createRadialGradient(q.x,q.y,0,q.x,q.y,q.r);
-    g.addColorStop(0,`rgba(255,186,96,${q.a})`);
-    g.addColorStop(0.45,`rgba(245,130,40,${q.a*0.5})`);
-    g.addColorStop(1,'rgba(245,130,40,0)');
+    g.addColorStop(0,`rgba(255,168,80,${q.a})`);
+    g.addColorStop(0.45,`rgba(240,120,36,${q.a*0.45})`);
+    g.addColorStop(1,'rgba(240,120,36,0)');
     ctx.globalCompositeOperation='lighter'; ctx.fillStyle=g; ctx.fillRect(q.x-q.r,q.y-q.r,q.r*2,q.r*2); }
   ctx.globalCompositeOperation='source-over';
 }
@@ -1746,7 +1759,10 @@ function drawSprites(dirX,dirY,planeX,planeY){
     }
     if(lit && e.sprite==='torch'){ const cxi=Math.round(sx);            // additive glow if visible (flickering)
       const fl=torchFlicker(time, (e.x*7+e.y*13)|0);
-      if(cxi>=0&&cxi<RW && tz<zbuf[cxi]) glowQ.push({x:sx, y:sY+sh*0.34, r:Math.max(8,(RH/tz)*1.05)*(0.9+0.14*fl), a:Math.min(0.78,1.25/(tz*0.5+0.6))*fl}); }
+      // a contained halo around the flame — radius capped so standing near a torch
+      // doesn't fill the screen with an additive white disk
+      const rad=Math.min(RH*0.34, Math.max(8,(RH/tz)*0.6))*(0.92+0.1*fl);
+      if(cxi>=0&&cxi<RW && tz<zbuf[cxi]) glowQ.push({x:sx, y:sY+sh*0.34, r:rad, a:Math.min(0.4,0.62/(tz*0.5+0.6))*fl}); }
   }
 }
 
@@ -1777,9 +1793,9 @@ function drawTorchVM(bobX,bobY){
   const fl=torchFlicker(time,0);                          // same flicker curve as the carried light
   const bx=RW*0.17+bobX, by=RH+bobY;                      // held in the LEFT hand (sword is on the right)
   const sway=Math.sin(time*1.7)*0.02 + (fl-0.9)*0.05;     // subtle handheld wobble, tied to the flicker
-  ctx.save(); ctx.globalCompositeOperation='lighter';     // warm bloom over the scene
-  const ga=0.13*fl, gr=ctx.createRadialGradient(bx,RH*0.58,10,bx,RH*0.58,RH*1.0);
-  gr.addColorStop(0,`rgba(255,180,95,${ga})`); gr.addColorStop(0.5,`rgba(255,140,60,${ga*0.5})`); gr.addColorStop(1,'rgba(255,120,40,0)');
+  ctx.save(); ctx.globalCompositeOperation='lighter';     // faint warm cast over the scene (kept low so it doesn't wash)
+  const ga=0.07*fl, gr=ctx.createRadialGradient(bx,RH*0.58,10,bx,RH*0.58,RH*0.95);
+  gr.addColorStop(0,`rgba(255,165,80,${ga})`); gr.addColorStop(0.5,`rgba(250,120,45,${ga*0.5})`); gr.addColorStop(1,'rgba(240,110,35,0)');
   ctx.fillStyle=gr; ctx.fillRect(0,0,RW,RH); ctx.restore();
   const im=WEAP_IMG['torch'];
   if(ready(im)){                                          // image torch (art asset)
