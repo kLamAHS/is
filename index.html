@@ -544,14 +544,17 @@ function buildTextures(){
   // ── terrain surface textures (voxel heightmap ground) ──
   TEXTURES.tgrass=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){    // damp forest floor: mossy green + dirt + leaf litter
     let g=44+((Math.floor(x/5)+Math.floor(y/5))%3)*7; let c=rgb(30,g,24);
-    c=mix(c,0,noise(x,y,51)*0.34); const bl=noise(x*0.7,y*0.7,52);
-    if(bl>0.66) c=mix(c,rgb(58,44,28),(bl-0.66)*1.8);                      // dirt patches
-    if(noise(x,y,53)>0.9) c=mix(c,rgb(96,110,60),0.35);                    // grass flecks
+    c=mix(c,0,noise(x,y,51)*0.46); const bl=noise(x*0.7,y*0.7,52);
+    if(bl>0.62) c=mix(c,rgb(62,46,28),(bl-0.62)*2.0);                      // dirt patches
+    if(noise(x,y,53)>0.84) c=mix(c,rgb(100,116,60),0.42);                  // grass blades
+    if(noise(x*1.3,y*1.3,58)>0.88) c=mix(c,rgb(72,58,34),0.55);            // leaf litter
+    if(noise(x,y,59)>0.93) c=mix(c,rgb(18,26,16),0.6);                     // deep moss pits
     px(b,x,y,c);}});
   TEXTURES.trock=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){    // mountain rock: cool grey, cracks, lichen
     let g=70+((Math.floor(x/9)+Math.floor(y/11))*5)%18; let c=rgb(g,g,g+6);
-    c=mix(c,0,noise(x,y,54)*0.42);
-    if((y%15)<2||(x%19)<2) c=mix(c,rgb(30,30,36),0.55);                    // cracks / strata
+    c=mix(c,0,noise(x,y,54)*0.5);
+    if((y%15)<2||(x%19)<2) c=mix(c,rgb(26,26,32),0.65);                    // cracks / strata
+    if(((x+y)%23)<1) c=mix(c,rgb(120,118,124),0.4);                        // quartz veins / chips
     const m=noise(x*0.6,y*0.6,55); if(m>0.72) c=mix(c,rgb(60,74,44),(m-0.72)*1.3);  // lichen
     px(b,x,y,c);}});
   TEXTURES.tsnow=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){    // wind-packed snow: near-white, faint blue grain
@@ -1123,6 +1126,10 @@ const FOV=0.66;
 const view=document.getElementById('view');
 const ctx=view.getContext('2d',{alpha:false}); ctx.imageSmoothingEnabled=false;
 let RW=480, RH=270, HW=240, HH=135;          // internal render resolution (set by resize)
+let VS=270;   // vertical world scale (px per world-unit at depth 1). Tied to RW, NOT RH: with the
+              // horizontal FOV fixed, keying vertical size to screen height made portrait draw the
+              // world stretched tall (dense) and wide landscape squat (sparse). RW*0.5625 == RH at
+              // 16:9, so desktop looks identical; other aspects now just see more/less sky+ground.
 let img, buf, zbuf, floorRow, ceilRow, sTop, eBot, skyX, vignette=null;
 let doorD, doorTX, doorWHa, doorOHa, doorHT=[];   // per-column lintel overdraw (open doorways)
 let DOOR_OPEN=1.05;                                // height of a door opening; wall above it is the lintel
@@ -1135,7 +1142,7 @@ function resize(){
   if(w<170){ w=170; h=Math.round(w/aspect); }   // very tall/portrait: add vertical res
   if(w>560){ w=560; h=Math.round(w/aspect); }   // very wide: cap columns
   if(h>600){ h=600; w=Math.round(h*aspect); }
-  RW=w; RH=h; HW=RW/2; HH=RH/2;
+  RW=w; RH=h; HW=RW/2; HH=RH/2; VS=RW*0.5625;
   view.width=RW; view.height=RH; ctx.imageSmoothingEnabled=false;
   img=ctx.createImageData(RW,RH); buf=new Uint32Array(img.data.buffer);
   zbuf=new Float32Array(RW); floorRow=new Uint32Array(RH); ceilRow=new Uint32Array(RH);
@@ -1860,7 +1867,7 @@ function castTerrain(dirX,dirY,planeX,planeY){
     for(let i=0;i<_ftLUT.length;i++){ let f=1-Math.exp(-(i*0.125)*fog); _ftLUT[i]=f>0.94?0.94:f; } }
   const ftLUT=_ftLUT;
   const HD=HF.d, Hgw=HF.gw, Hcell=HF.cell, HgwM=HF.gw-1.001, HghM=HF.gh-1.001;
-  const TSCV=8;                                      // ground texels per world unit
+  const TSCV=14;                                     // ground texels per world unit (trees run ~26/wu — keep pace)
   const GR=TEXTURES.tgrass.mips, RK=TEXTURES.trock.mips, SN=TEXTURES.tsnow.mips;
   const MAC=TEXTURES.tgrass.mips[3];                 // pre-blurred grass = free smooth macro field
   const shadA=HF.shad, aoA=HF.ao;
@@ -1888,7 +1895,7 @@ function castTerrain(dirX,dirY,planeX,planeY){
       const gx0=gq|0, gy0=gr|0, gfx=gq-gx0, gfy=gr-gy0, gi=gy0*Hgw+gx0;
       const h00=HD[gi], h10=HD[gi+1], h01=HD[gi+Hgw], h11=HD[gi+Hgw+1];
       const hz=(h00+(h10-h00)*gfx)*(1-gfy)+(h01+(h11-h01)*gfx)*gfy;
-      const syf=HORIZON + (PZ-hz)*RH/d;              // float crest row
+      const syf=HORIZON + (PZ-hz)*VS/d;              // float crest row
       let sy=Math.ceil(syf);                         // first fully covered row
       if(sy<ytop){                                   // rises above everything nearer -> visible
         if(sy<0)sy=0;
@@ -1950,7 +1957,7 @@ function castTerrain(dirX,dirY,planeX,planeY){
         if(isCliff){                                             // texture by (along-face, world height): real strata
           const au=Math.abs(gx)>=Math.abs(gy)?wy:wx;
           iu=au*TSCV+4096; du=0;
-          iv=(PZ-(sy-HORIZON)*d/RH)*TSCV+4096; dv=-(d/RH)*TSCV;  // exact, linear in y
+          iv=(PZ-(sy-HORIZON)*d/VS)*TSCV+4096; dv=-(d/VS)*TSCV;  // exact, linear in y
         } else {                                                 // planar UV, lerped prev->curr sample down the span
           const dpd=(pd-d)*TSCV*finv;
           du=rdx*dpd; dv=rdy*dpd;
@@ -1964,7 +1971,7 @@ function castTerrain(dirX,dirY,planeX,planeY){
         const blend=(wB>0.03&&wB<0.97), w8=(wB*256)|0;
         // contact-range detail octave: a 4x-scale luminance modulation so ground at your feet keeps
         // dungeon-wall texel density instead of dissolving into big soft blocks
-        const nearDet = d<4.0;
+        const nearDet = d<5.5;
         let ju=0, jv=0, dju=0, djv=0;
         if(nearDet){ ju=(iu-4096)*4+4096; jv=(iv-4096)*4+4096; dju=du*4; djv=dv*4; }
         // Gouraud anchors: shade/fog/torch lerp from this sample (crest) to the previous visible one (span bottom)
@@ -2031,8 +2038,8 @@ function drawSpritesTerrain(dirX,dirY,planeX,planeY){
   const SHDW=rgb(8,12,16);
   for(const e of list){ const tz=e._tz; if(tz>20||e.type==='portal') continue;
     const m=SPRITES[e.sprite];
-    const footY=HORIZON+(P.z-e._bz)*RH/tz, cx=HW*(1+e._tx/tz);
-    let rx=(RH/tz)*m.hf*(m.w/m.h)*0.34; if(rx>26)rx=26; if(rx<2.5)continue;   // too far to read
+    const footY=HORIZON+(P.z-e._bz)*VS/tz, cx=HW*(1+e._tx/tz);
+    let rx=(VS/tz)*m.hf*(m.w/m.h)*0.34; if(rx>26)rx=26; if(rx<2.5)continue;   // too far to read
     if(cx+rx<0 || cx-rx>=RW || footY<-8 || footY>RH+8) continue;              // off-screen
     let ry=rx*0.30; if(ry<1)ry=1;
     const y0=Math.max(0,(footY-ry)|0), y1=Math.min(RH-1,(footY+ry)|0);
@@ -2045,8 +2052,8 @@ function drawSpritesTerrain(dirX,dirY,planeX,planeY){
   }
   for(const e of list){ const m=SPRITES[e.sprite]; let hf=m.hf;
     if(e.type==='portal') hf*=1+0.06*Math.sin(time*4);
-    const tz=e._tz, lineHf=RH/tz;
-    const floorY=HORIZON + (P.z - e._bz)*RH/tz;       // feet planted ON the terrain
+    const tz=e._tz, lineHf=VS/tz;
+    const floorY=HORIZON + (P.z - e._bz)*VS/tz;       // feet planted ON the terrain
     const shh=lineHf*hf, sw=shh*(m.w/m.h), sx=HW*(1+e._tx/tz);
     const sX=Math.floor(sx-sw/2), eX=Math.floor(sx+sw/2), sY=Math.floor(floorY-shh), eY=Math.floor(floorY);
     const hurt=e.hurt>0;
@@ -2180,7 +2187,7 @@ function castFrame(){
 
       // --- a solid cell: compute its slice geometry ---
       let perp=(side===0)?(sdx-ddx):(sdy-ddy); if(perp<0.0001)perp=0.0001;
-      const lineHf=RH/perp;
+      const lineHf=VS/perp;
       const hmat=wallMatAt(mapX,mapY);
       let wh = enclosed ? roomH : wHgt(mapX,mapY);           // per-cell wall height (variety preserved)
       // a door = a short leaf [0,openH] with a solid wall lintel [openH,wh] above it
@@ -2242,7 +2249,7 @@ function castFrame(){
         let junction=hcapR+1;
         for(let y=yTop; y>hcapR; y--){                            // stop above the horizon row (ceiling pass owns it)
           const n=y-HH; if(n<=0) break;                           // never cross above the horizon
-          const invR=n/RH;                                        // eye-ray drops invR world-height per unit distance
+          const invR=n/VS;                                        // eye-ray drops invR world-height per unit distance
           const dist=(0.5-wh)/invR;                               // depth of the height-wh (cap) plane at this row
           if(dist<perp){ continue; }                              // numerical guard: stay at/behind the front edge
           // Walk the ray cells from the cap-plane point OUT toward the floor point, in order of
@@ -2326,7 +2333,7 @@ function castFrame(){
   const rd0x=dirX-planeX, rd0y=dirY-planeY, rd1x=dirX+planeX, rd1y=dirY+planeY;
   const PLK=TEXTURES.planks;
   for(let y=Math.floor(HH)+1; y<RH; y++){
-    const n=y-HH; const dist=(0.5*RH)/n;                       // floor distance for this row
+    const n=y-HH; const dist=(0.5*VS)/n;                       // floor distance for this row
     const sFX=(rd1x-rd0x)*dist/RW, sFY=(rd1y-rd0y)*dist/RW;
     let fx=P.x+rd0x*dist, fy=P.y+rd0y*dist;
     let fogT=0, fa=0; if(lit){ const br=playerBright(dist); fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93; }
@@ -2343,7 +2350,7 @@ function castFrame(){
   // ---------- CEILING / ROOF (plane at roof height; sky over open ground) ----------
   const cZone=TEXTURES[Z.ceilTex]||null, TMB=TEXTURES.timber, hcap=Math.floor(HH);
   for(let cy=0; cy<=hcap; cy++){
-    const m=HH-cy; if(m<=0.0001) continue; const dist=(roofH-0.5)*RH/m; if(dist<=0) continue;
+    const m=HH-cy; if(m<=0.0001) continue; const dist=(roofH-0.5)*VS/m; if(dist<=0) continue;
     const sFX=(rd1x-rd0x)*dist/RW, sFY=(rd1y-rd0y)*dist/RW;
     let fx=P.x+rd0x*dist, fy=P.y+rd0y*dist;
     let fogT=0, fa=0; if(lit){ const br=playerBright(dist); fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93; }
@@ -2364,7 +2371,7 @@ function castFrame(){
   // ---------- DOOR LINTELS (solid wall above an open doorway; the gap below still shows the room beyond) ----------
   for(let x=0;x<RW;x++){ const dp=doorD[x]; if(dp<=0.0001) continue;
     if(dp>zbuf[x]+1e-4) continue;                 // door is behind a nearer wall -> its lintel is occluded (no through-wall draw)
-    const lh=RH/dp, fY=lh/2+HH, owh=doorWHa[x], ooh=doorOHa[x], ht=doorHT[x]; if(!ht||owh<=ooh) continue;
+    const lh=VS/dp, fY=lh/2+HH, owh=doorWHa[x], ooh=doorOHa[x], ht=doorHT[x]; if(!ht||owh<=ooh) continue;
     let tb=Math.floor(fY-lh*owh), bb=Math.floor(fY-lh*ooh); if(tb<0)tb=0; if(bb>RH)bb=RH; if(tb>=bb) continue;
     const bx=doorTX[x]|0; let fa=0, aw=0, fogT=0;
     if(lit){ const camX=2*x/RW-1, rdx=dirX+planeX*camX, rdy=dirY+planeY*camX;
@@ -2437,7 +2444,7 @@ function drawSprites(dirX,dirY,planeX,planeY){
   list.sort((a,b)=>b._tz-a._tz);
   for(const e of list){ const m=SPRITES[e.sprite]; let hf=m.hf;
     if(e.type==='portal') hf*=1+0.06*Math.sin(time*4);
-    const tz=e._tz, lineHf=RH/tz, floorY=HH+lineHf/2;
+    const tz=e._tz, lineHf=VS/tz, floorY=HH+lineHf/2;
     const sh=lineHf*hf, sw=sh*(m.w/m.h), sx=HW*(1+e._tx/tz);
     const sX=Math.floor(sx-sw/2), eX=Math.floor(sx+sw/2);
     const sY=Math.floor(floorY-sh), eY=Math.floor(floorY);
@@ -2462,7 +2469,7 @@ function drawSprites(dirX,dirY,planeX,planeY){
       const fl=torchFlicker(time, (e.x*7+e.y*13)|0);
       // a contained halo around the flame — radius capped so standing near a torch
       // doesn't fill the screen with an additive white disk
-      const rad=Math.min(RH*0.34, Math.max(8,(RH/tz)*0.6))*(0.92+0.1*fl);
+      const rad=Math.min(RH*0.34, Math.max(8,(VS/tz)*0.6))*(0.92+0.1*fl);
       if(cxi>=0&&cxi<RW && tz<zbuf[cxi]) glowQ.push({x:sx, y:sY+sh*0.34, r:rad, a:Math.min(0.4,0.62/(tz*0.5+0.6))*fl}); }
   }
 }
