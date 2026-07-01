@@ -650,36 +650,47 @@ function buildSprites(){
     grd.addColorStop(0,"rgba(255,240,160,1)");grd.addColorStop(0.5,"rgba(240,150,40,0.9)");grd.addColorStop(1,"rgba(200,60,20,0)");
     c.fillStyle=grd;c.beginPath();c.ellipse(w*0.5,h*0.24,w*0.3,h*0.22,0,0,7);c.fill();});
 }
-/* Image-based billboard sprites (art assets). This art ships on a soft gradient
-   background, so a fixed-colour key won't cut it: we region-grow a flood fill from
-   the borders — following the smooth gradient pixel-to-pixel and stopping only at the
-   high-contrast subject edge — then crop to the subject and downscale into the same
-   {data,w,h,hf} shape the procedural sprites use. Loaded async; the entity is simply
-   skipped until its sprite is ready. */
+/* Image-based billboard sprites (art assets). Most art now ships on a CHROMA-GREEN
+   screen: the background is a saturated green (G-max(R,B) ~ 150+) while every subject —
+   even dull foliage — sits well below ~80, so a per-pixel green key cleanly cuts it,
+   including interior "holes" the old flood fill left in the hermit. Green spill on the
+   anti-aliased edges is suppressed. (Legacy gradient art falls back to a region-grow.)
+   Then we crop to the subject and downscale into the same {data,w,h,hf} shape the
+   procedural sprites use. Loaded async; the entity is simply skipped until it's ready. */
 function artSprite(im, hf, th){
   const iw=im.naturalWidth, ih=im.naturalHeight;
   const c=document.createElement('canvas'); c.width=iw; c.height=ih;
   const g=c.getContext('2d',{willReadFrequently:true}); g.imageSmoothingEnabled=false; g.drawImage(im,0,0);
   let idd; try{ idd=g.getImageData(0,0,iw,ih); }catch(e){ return {data:new Uint32Array([0]),w:1,h:1,hf}; }
   const d=idd.data, N=iw*ih;
-  // Local detail map (luma gradient). Backgrounds are smooth; the subject is textured,
-  // so we only let the fill cross into LOW-detail pixels — it stops at the subject even
-  // where a dark body is close in colour to a dark gradient corner.
-  const lum=new Float32Array(N);
-  for(let i=0,j=0;i<N;i++,j+=4) lum[i]=(d[j]*77+d[j+1]*150+d[j+2]*29)/256;
-  const detail=new Float32Array(N);
-  for(let y=0;y<ih;y++)for(let x=0;x<iw;x++){ const p=y*iw+x;
-    const gx=x+1<iw?Math.abs(lum[p]-lum[p+1]):0, gy=y+1<ih?Math.abs(lum[p]-lum[p+iw]):0; detail[p]=gx+gy; }
-  const seen=new Uint8Array(N), q=[]; const STEP=1500, DTH=7.0;   // colour + detail gates
-  const seed=(x,y)=>{ const p=y*iw+x; if(!seen[p]){ seen[p]=1; d[(p<<2)+3]=0; q.push(p); } };
-  for(let x=0;x<iw;x++){ seed(x,0); seed(x,ih-1); }
-  for(let y=0;y<ih;y++){ seed(0,y); seed(iw-1,y); }
-  while(q.length){ const p=q.pop(), px=p%iw, py=(p/iw)|0, i=p<<2, r=d[i],gg=d[i+1],b=d[i+2];
-    const T=(nx,ny)=>{ if(nx<0||ny<0||nx>=iw||ny>=ih) return; const np=ny*iw+nx; if(seen[np]) return;
-      if(detail[np]>=DTH) return;                                  // don't cross into the textured subject
-      const j=np<<2, dr=d[j]-r,dg=d[j+1]-gg,db=d[j+2]-b;
-      if(dr*dr+dg*dg+db*db<STEP){ seen[np]=1; d[j+3]=0; q.push(np); } };
-    T(px+1,py); T(px-1,py); T(px,py+1); T(px,py-1); }
+  const cgk=(x,y)=>{const i=(y*iw+x)*4; return d[i+1]-(d[i]>d[i+2]?d[i]:d[i+2]);};   // "greenness" of a corner
+  const greenScreen = (cgk(2,2)+cgk(iw-3,2)+cgk(2,ih-3)+cgk(iw-3,ih-3))*0.25 > 60;
+  if(greenScreen){
+    // Per-pixel chroma key. gk>=HI -> background; LO..HI -> feathered edge; below -> subject.
+    const HI=118, LO=78, SPILL=34;
+    for(let i=0;i<d.length;i+=4){ const r=d[i],gg=d[i+1],b=d[i+2], mx=r>b?r:b, gk=gg-mx;
+      if(gk>=HI){ d[i+3]=0; continue; }
+      if(gk>LO) d[i+3]=(255*(HI-gk)/(HI-LO))|0;          // soft alpha across the fringe
+      if(gk>SPILL) d[i+1]=mx + ((gk-SPILL)>18?18:(gk-SPILL));  // pull the green cast off spill/fringe
+    }
+  } else {
+    // Legacy: region-grow flood fill from the borders, gated on colour + local detail.
+    const lum=new Float32Array(N);
+    for(let i=0,j=0;i<N;i++,j+=4) lum[i]=(d[j]*77+d[j+1]*150+d[j+2]*29)/256;
+    const detail=new Float32Array(N);
+    for(let y=0;y<ih;y++)for(let x=0;x<iw;x++){ const p=y*iw+x;
+      const gx=x+1<iw?Math.abs(lum[p]-lum[p+1]):0, gy=y+1<ih?Math.abs(lum[p]-lum[p+iw]):0; detail[p]=gx+gy; }
+    const seen=new Uint8Array(N), q=[]; const STEP=1500, DTH=7.0;
+    const seed=(x,y)=>{ const p=y*iw+x; if(!seen[p]){ seen[p]=1; d[(p<<2)+3]=0; q.push(p); } };
+    for(let x=0;x<iw;x++){ seed(x,0); seed(x,ih-1); }
+    for(let y=0;y<ih;y++){ seed(0,y); seed(iw-1,y); }
+    while(q.length){ const p=q.pop(), px=p%iw, py=(p/iw)|0, i=p<<2, r=d[i],gg=d[i+1],b=d[i+2];
+      const T=(nx,ny)=>{ if(nx<0||ny<0||nx>=iw||ny>=ih) return; const np=ny*iw+nx; if(seen[np]) return;
+        if(detail[np]>=DTH) return;
+        const j=np<<2, dr=d[j]-r,dg=d[j+1]-gg,db=d[j+2]-b;
+        if(dr*dr+dg*dg+db*db<STEP){ seen[np]=1; d[j+3]=0; q.push(np); } };
+      T(px+1,py); T(px-1,py); T(px,py+1); T(px,py-1); }
+  }
   // crop to the opaque bounding box so the subject fills the sprite (hf is honest)
   let x0=iw,y0=ih,x1=0,y1=0;
   for(let y=0;y<ih;y++){ let row=y*iw; for(let x=0;x<iw;x++){ if(d[((row+x)<<2)+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } } }
@@ -692,7 +703,14 @@ function artSprite(im, hf, th){
   return {data:new Uint32Array(og.getImageData(0,0,tw,tht).data.buffer).slice(), w:tw, h:tht, hf};
 }
 function loadArtSprites(){
-  const defs=[['bee','assets/bee.png',0.86,240],['wolf','assets/wolf.png',0.62,200],['oldman','assets/oldman.png',0.78,220]];
+  const defs=[
+    ['bee','assets/bee.png',0.86,240],['wolf','assets/wolf.png',0.62,200],
+    ['oldman','assets/oldman.png',0.78,220],['revenant','assets/revenant.png',0.98,250],
+    ['chest','assets/chest.png',0.55,190],
+    ['tree','assets/tree.png',2.5,360],['tree2','assets/tree2.png',2.1,340],
+    ['bush','assets/bush.png',0.5,200],['bush2','assets/bush2.png',0.55,200],
+    ['rock','assets/rock.png',0.78,230],['rock2','assets/rock2.png',0.5,210],
+  ];
   for(const [name,src,hf,th] of defs){ const im=new Image();
     im.onload=()=>{ try{ SPRITES[name]=artSprite(im,hf,th); }catch(e){} };
     im.src=src; }
@@ -709,6 +727,8 @@ const ENEMY_TYPES={
             loot:[{item:'potion',chance:0.22}]},
   bee:     {name:"Hive Sentinel",hp:120, dmg:22, def:11, speed:1.7, detect:8, atkRange:1.5, atkCd:1.2, gold:60, xp:44,
             loot:[{item:'knight_sword',chance:0.14},{item:'chain_armor',chance:0.12},{item:'greater_potion',chance:0.22},{item:'tempered_sword',chance:0.05}]},
+  revenant:{name:"Cursed Revenant",hp:150, dmg:27, def:13, speed:2.0, detect:9, atkRange:1.5, atkCd:1.05, gold:80, xp:60,
+            loot:[{item:'tempered_sword',chance:0.12},{item:'blood_sword',chance:0.06},{item:'plate_armor',chance:0.09},{item:'greater_potion',chance:0.28}]},
   goblin:  {name:"Cave Goblin",  hp:55,  dmg:12, def:3,  speed:1.9, detect:7, atkRange:1.3, atkCd:1.1, gold:18, xp:14,
             loot:[{item:'rusty_sword',chance:0.18},{item:'potion',chance:0.18}]},
   skeleton:{name:"Risen Bones",  hp:72,  dmg:16, def:6,  speed:1.5, detect:8, atkRange:1.4, atkCd:1.3, gold:25, xp:22,
@@ -943,6 +963,30 @@ const TEST_MAP=[
 "##################",
 ];
 
+const FOREST_MAP=[
+"MMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"M..........................M",
+"MMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+];
 const ZONES={
   village:{
     name:"Aldermoor Village", subtitle:"OPEN GROUND · DAYLIGHT", type:"open",
@@ -959,6 +1003,11 @@ const ZONES={
       {type:'portal', sprite:'portal', x:11.5, y:4.5,
        target:'dungeon', spawn:{x:2.5,y:2.5,angle:0}, prompt:"Descend into the Catacombs"},
       {type:'decoration', sprite:'torch', x:11.5, y:4.5},
+      {type:'portal', sprite:'portal', x:30.5, y:2.5,
+       target:'forest', spawn:{x:14.5,y:19.5,angle:-1.5708}, prompt:"Walk into the Blackwood"},
+      {type:'decoration', sprite:'tree', x:29.5, y:1.5},
+      {type:'decoration', sprite:'tree2', x:31.5, y:4.5},
+      {type:'decoration', sprite:'bush', x:29.5, y:3.5},
       {type:'npc', sprite:'merchant', name:"Yorin the Merchant", x:19.5, y:5.5, dialogue:'yorin'},
       {type:'npc', sprite:'villager', name:"Old Mara", x:24.5, y:14.5, dialogue:'mara'},
       {type:'npc', sprite:'guard', name:"Captain Aldric", x:18.5, y:25.5, dialogue:'aldric'},
@@ -971,6 +1020,79 @@ const ZONES={
       {type:'decoration', sprite:'torch', x:20.5, y:15.5},
       {type:'decoration', sprite:'torch', x:24.5, y:14.5},
       {type:'decoration', sprite:'torch', x:8.5, y:22.5},
+    ],
+  },
+  forest:{
+    name:"The Blackwood", subtitle:"OLD FOREST · GLOOM", type:"open",
+    map:FOREST_MAP, ceiling:"sky", sky:'realm',
+    floorTex:'grass', roofHeight:1.7,
+    floorColor:rgb(52,64,40), ceilingColor:rgb(120,150,190),
+    fogColor:rgb(88,104,90), fog:0.05,
+    grade:{ sat:0.94, con:1.06, bright:0.88, tint:[0.97,1.03,0.95] },   // cool, overcast wood
+    ambient:0.4,
+    start:{x:14.5, y:19.5, angle:-1.5708},
+    entities:[
+      {type:'portal', sprite:'portal', x:14.5, y:2.5,
+       target:'village', spawn:{x:29.5,y:3.5,angle:1.5708}, prompt:"Back to Aldermoor"},
+      // dense tree line hugging the forest edge (hides the boundary wall), + scattered wood
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:2.5,  y:3.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:2.5,  y:7.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:2.5,  y:12.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:3.5,  y:16.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:25.5, y:4.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:25.5, y:9.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:25.5, y:14.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:24.5, y:18.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:7.5,  y:2.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:12.5, y:3.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:19.5, y:2.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:22.5, y:4.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:8.5,  y:13.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:18.5, y:6.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:6.5,  y:17.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:21.5, y:16.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:16.5, y:12.5},
+      // dense perimeter tree line to screen the boundary wall
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:1.5,  y:2.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:1.5,  y:5.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:1.5,  y:9.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:1.5,  y:14.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:1.5,  y:18.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:26.5, y:2.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:26.5, y:6.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:26.5, y:11.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:26.5, y:16.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:26.5, y:19.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:4.5,  y:1.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:10.5, y:1.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:18.5, y:1.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:23.5, y:1.5},
+      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:6.5,  y:20.5},
+      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:20.5, y:20.5},
+      // boulders (also solid)
+      {type:'decoration', sprite:'rock',  solid:true, rad:0.5, x:10.5, y:11.5},
+      {type:'decoration', sprite:'rock2', solid:true, rad:0.5, x:19.5, y:11.5},
+      {type:'decoration', sprite:'rock',  solid:true, rad:0.5, x:5.5,  y:10.5},
+      {type:'decoration', sprite:'rock2', solid:true, rad:0.5, x:22.5, y:19.5},
+      {type:'decoration', sprite:'rock',  solid:true, rad:0.5, x:15.5, y:17.5},
+      // undergrowth (bushes are passable)
+      {type:'decoration', sprite:'bush',  x:5.5,  y:5.5},
+      {type:'decoration', sprite:'bush2', x:9.5,  y:8.5},
+      {type:'decoration', sprite:'bush',  x:15.5, y:8.5},
+      {type:'decoration', sprite:'bush2', x:20.5, y:8.5},
+      {type:'decoration', sprite:'bush',  x:11.5, y:14.5},
+      {type:'decoration', sprite:'bush2', x:17.5, y:14.5},
+      {type:'decoration', sprite:'bush',  x:7.5,  y:15.5},
+      {type:'decoration', sprite:'bush2', x:23.5, y:12.5},
+      {type:'decoration', sprite:'bush',  x:13.5, y:18.5},
+      {type:'decoration', sprite:'bush2', x:24.5, y:16.5},
+      // the wood is not empty
+      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:11.5, y:7.5},
+      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:20.5, y:13.5},
+      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:6.5,  y:12.5},
+      {type:'enemy', sprite:'revenant', enemy:'revenant', x:16.5, y:9.5},
+      {type:'enemy', sprite:'revenant', enemy:'revenant', x:9.5,  y:17.5},
+      {type:'item', sprite:'chest', item:'treasure', x:18.5, y:18.5},
     ],
   },
   dungeon:{
@@ -1249,8 +1371,12 @@ function headerTex(mx,my){   // a neighbouring non-door wall's texture, so a doo
   const nb=[[1,0],[-1,0],[0,1],[0,-1]];
   for(const d of nb){ const m=wallMatAt(mx+d[0],my+d[1]); if(m&&!m.door) return TEXTURES[m.tex]||TEXTURES.stone; }
   return TEXTURES.stone; }
+// solid decorations (tree trunks, boulders) block movement within a small radius
+function blockedDeco(x,y){ if(!ENTS) return false;
+  for(let i=0;i<ENTS.length;i++){ const e=ENTS[i]; if(!e.solid) continue;
+    const dx=x-e.x, dy=y-e.y, rr=e.rad||0.34; if(dx*dx+dy*dy < rr*rr) return true; } return false; }
 function blocked(x,y){ const r=0.18, fx=Math.floor(x), fy=Math.floor(y);
-  return solidCell(fx,fy)||solidCell(Math.floor(x-r),fy)||solidCell(Math.floor(x+r),fy)||solidCell(fx,Math.floor(y-r))||solidCell(fx,Math.floor(y+r)); }
+  return solidCell(fx,fy)||solidCell(Math.floor(x-r),fy)||solidCell(Math.floor(x+r),fy)||solidCell(fx,Math.floor(y-r))||solidCell(fx,Math.floor(y+r))||blockedDeco(x,y); }
 
 /* ---- load a zone (clones entities on first visit; state persists after) ---- */
 function loadZone(id, spawn){
@@ -2080,7 +2206,7 @@ function refreshHUDDynamic(){
 
 /* ---- collision for enemies (slightly larger radius than the player) ---- */
 function blockedE(x,y){ const r=0.28, fx=Math.floor(x), fy=Math.floor(y);
-  return solidCell(fx,fy)||solidCell(Math.floor(x-r),fy)||solidCell(Math.floor(x+r),fy)||solidCell(fx,Math.floor(y-r))||solidCell(fx,Math.floor(y+r)); }
+  return solidCell(fx,fy)||solidCell(Math.floor(x-r),fy)||solidCell(Math.floor(x+r),fy)||solidCell(fx,Math.floor(y-r))||solidCell(fx,Math.floor(y+r))||blockedDeco(x,y); }
 function lineOfSight(x0,y0,x1,y1){ const dx=x1-x0,dy=y1-y0,dist=Math.hypot(dx,dy),steps=Math.ceil(dist/0.25);
   for(let i=1;i<steps;i++){ const t=i/steps; if(solidCell(Math.floor(x0+dx*t),Math.floor(y0+dy*t))) return false; } return true; }
 
