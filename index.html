@@ -650,11 +650,60 @@ function buildSprites(){
     grd.addColorStop(0,"rgba(255,240,160,1)");grd.addColorStop(0.5,"rgba(240,150,40,0.9)");grd.addColorStop(1,"rgba(200,60,20,0)");
     c.fillStyle=grd;c.beginPath();c.ellipse(w*0.5,h*0.24,w*0.3,h*0.22,0,0,7);c.fill();});
 }
+/* Image-based billboard sprites (art assets). This art ships on a soft gradient
+   background, so a fixed-colour key won't cut it: we region-grow a flood fill from
+   the borders — following the smooth gradient pixel-to-pixel and stopping only at the
+   high-contrast subject edge — then crop to the subject and downscale into the same
+   {data,w,h,hf} shape the procedural sprites use. Loaded async; the entity is simply
+   skipped until its sprite is ready. */
+function artSprite(im, hf, th){
+  const iw=im.naturalWidth, ih=im.naturalHeight;
+  const c=document.createElement('canvas'); c.width=iw; c.height=ih;
+  const g=c.getContext('2d',{willReadFrequently:true}); g.imageSmoothingEnabled=false; g.drawImage(im,0,0);
+  let idd; try{ idd=g.getImageData(0,0,iw,ih); }catch(e){ return {data:new Uint32Array([0]),w:1,h:1,hf}; }
+  const d=idd.data, N=iw*ih;
+  // Local detail map (luma gradient). Backgrounds are smooth; the subject is textured,
+  // so we only let the fill cross into LOW-detail pixels — it stops at the subject even
+  // where a dark body is close in colour to a dark gradient corner.
+  const lum=new Float32Array(N);
+  for(let i=0,j=0;i<N;i++,j+=4) lum[i]=(d[j]*77+d[j+1]*150+d[j+2]*29)/256;
+  const detail=new Float32Array(N);
+  for(let y=0;y<ih;y++)for(let x=0;x<iw;x++){ const p=y*iw+x;
+    const gx=x+1<iw?Math.abs(lum[p]-lum[p+1]):0, gy=y+1<ih?Math.abs(lum[p]-lum[p+iw]):0; detail[p]=gx+gy; }
+  const seen=new Uint8Array(N), q=[]; const STEP=1500, DTH=7.0;   // colour + detail gates
+  const seed=(x,y)=>{ const p=y*iw+x; if(!seen[p]){ seen[p]=1; d[(p<<2)+3]=0; q.push(p); } };
+  for(let x=0;x<iw;x++){ seed(x,0); seed(x,ih-1); }
+  for(let y=0;y<ih;y++){ seed(0,y); seed(iw-1,y); }
+  while(q.length){ const p=q.pop(), px=p%iw, py=(p/iw)|0, i=p<<2, r=d[i],gg=d[i+1],b=d[i+2];
+    const T=(nx,ny)=>{ if(nx<0||ny<0||nx>=iw||ny>=ih) return; const np=ny*iw+nx; if(seen[np]) return;
+      if(detail[np]>=DTH) return;                                  // don't cross into the textured subject
+      const j=np<<2, dr=d[j]-r,dg=d[j+1]-gg,db=d[j+2]-b;
+      if(dr*dr+dg*dg+db*db<STEP){ seen[np]=1; d[j+3]=0; q.push(np); } };
+    T(px+1,py); T(px-1,py); T(px,py+1); T(px,py-1); }
+  // crop to the opaque bounding box so the subject fills the sprite (hf is honest)
+  let x0=iw,y0=ih,x1=0,y1=0;
+  for(let y=0;y<ih;y++){ let row=y*iw; for(let x=0;x<iw;x++){ if(d[((row+x)<<2)+3]>24){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } } }
+  if(x1<x0){ x0=0;y0=0;x1=iw-1;y1=ih-1; }
+  g.putImageData(idd,0,0);
+  const bw=x1-x0+1, bh=y1-y0+1, scale=(th||200)/bh, tw=Math.max(1,Math.round(bw*scale)), tht=Math.max(1,Math.round(bh*scale));
+  const oc=document.createElement('canvas'); oc.width=tw; oc.height=tht;
+  const og=oc.getContext('2d',{willReadFrequently:true}); og.imageSmoothingEnabled=true;
+  og.drawImage(c, x0,y0,bw,bh, 0,0,tw,tht);
+  return {data:new Uint32Array(og.getImageData(0,0,tw,tht).data.buffer).slice(), w:tw, h:tht, hf};
+}
+function loadArtSprites(){
+  const defs=[['bee','assets/bee.png',1.02,240],['wolf','assets/wolf.png',0.72,200],['oldman','assets/oldman.png',0.9,220]];
+  for(const [name,src,hf,th] of defs){ const im=new Image();
+    im.onload=()=>{ try{ SPRITES[name]=artSprite(im,hf,th); }catch(e){} };
+    im.src=src; }
+}
 
 /* ───────────────────────── 4 · ENEMY TYPES ───────────────────────────── */
 const ENEMY_TYPES={
-  wolf:    {name:"Rabid Wolf",   hp:40,  dmg:8,  def:0,  speed:2.7, detect:7, atkRange:1.2, atkCd:0.9, gold:12, xp:8,
-            loot:[{item:'potion',chance:0.20}]},
+  wolf:    {name:"Dire Wolf",    hp:52,  dmg:13, def:1,  speed:2.9, detect:8, atkRange:1.2, atkCd:0.8, gold:16, xp:14,
+            loot:[{item:'potion',chance:0.22}]},
+  bee:     {name:"Hive Sentinel",hp:120, dmg:22, def:11, speed:1.7, detect:8, atkRange:1.5, atkCd:1.2, gold:60, xp:44,
+            loot:[{item:'knight_sword',chance:0.14},{item:'chain_armor',chance:0.12},{item:'greater_potion',chance:0.22},{item:'tempered_sword',chance:0.05}]},
   goblin:  {name:"Cave Goblin",  hp:55,  dmg:12, def:3,  speed:1.9, detect:7, atkRange:1.3, atkCd:1.1, gold:18, xp:14,
             loot:[{item:'rusty_sword',chance:0.18},{item:'potion',chance:0.18}]},
   skeleton:{name:"Risen Bones",  hp:72,  dmg:16, def:6,  speed:1.5, detect:8, atkRange:1.4, atkCd:1.3, gold:25, xp:22,
@@ -777,6 +826,25 @@ const DIALOGUE={
     options:[{text:"(back)", goto:'mara'}]},
   mara_end:{ name:"Old Mara",
     text:"Then go, with an old woman's thanks. The square's gate is waiting.",
+    options:[{text:"Farewell.", goto:null}]},
+
+  // catacombs hermit
+  oldman:{ name:"The Hollow Hermit",
+    text:"Heh... another lantern in the dark. Sit, if you like — the bones don't mind company. I've wandered these halls longer than I can count. The Hive's men still patrol them, sworn to a house long dead.",
+    options:[
+      {text:"Who are the Hive's men?", goto:'oldman_hive'},
+      {text:"How do I survive down here?", goto:'oldman_tip'},
+      {text:"You should come up to the light.", goto:'oldman_stay'},
+      {text:"Leave him be.", goto:null},
+    ]},
+  oldman_hive:{ name:"The Hollow Hermit",
+    text:"The golden bee upon the shield — House Aldermoor's sigil, in a brighter age. Their sworn guards never stood down, even as the flesh rotted from their bones. Cut one down and you'll see the gold still gleams on its breast.",
+    options:[{text:"(back)", goto:'oldman'}]},
+  oldman_tip:{ name:"The Hollow Hermit",
+    text:"Keep your torch lit and your back to the stone. The wolves hunt from the black where your light won't reach — you'll hear them before you see them. Here. An old man's charity; you'll need it more than I.",
+    options:[{text:"Thank you, old one. (heal)", goto:null, action:'bless'}]},
+  oldman_stay:{ name:"The Hollow Hermit",
+    text:"The light? No, no. The light forgot me long ago, and I've made my peace with the dark. Go on, wanderer. Mind the corners.",
     options:[{text:"Farewell.", goto:null}]},
 
   // test-dungeon quartermaster (systems showcase)
@@ -933,6 +1001,12 @@ const ZONES={
       {type:'decoration', sprite:'torch', x:8.5,  y:9.5},
       {type:'decoration', sprite:'torch', x:10.5, y:9.5},
       {type:'decoration', sprite:'torch', x:18.5, y:11.5},
+      // the hermit, near the entrance; dire wolves in the dark; Hive Sentinels on patrol / guarding the vault
+      {type:'npc',   sprite:'oldman', name:"The Hollow Hermit", x:2.5, y:4.5, dialogue:'oldman'},
+      {type:'enemy', sprite:'wolf',   enemy:'wolf', x:6.5,  y:4.5},
+      {type:'enemy', sprite:'wolf',   enemy:'wolf', x:13.5, y:9.5},
+      {type:'enemy', sprite:'bee',    enemy:'bee',  x:16.5, y:2.5},
+      {type:'enemy', sprite:'bee',    enemy:'bee',  x:2.5,  y:10.5}, // vault guard (behind the iron door)
     ],
   },
   test:{
@@ -1746,7 +1820,9 @@ function drawSprites(dirX,dirY,planeX,planeY){
     let fa=0, aw=0, fogT=0;
     if(lit){ let br=playerBright(tz); fa=1-br; if(fa<0)fa=0; else if(fa>0.9)fa=0.9;
       if(e.sprite==='torch'){ fa*=0.18; aw=0.30; }                       // flames stay bright
-      else { aw=Math.min(0.35, torchWarm(e.x,e.y)*0.35); } }             // warm light on enemies
+      else { aw=Math.min(0.7, torchWarm(e.x,e.y)*0.6);                    // characters catch more torchlight...
+             if(fa>0.72)fa=0.72; }                                       // ...and never crush to pure black (they read as a threat)
+    }
     else { fogT=tz*Z.fog; if(fogT>0.92)fogT=0.92; }
     for(let col=sX;col<eX;col++){ if(col<0||col>=RW||tz>=zbuf[col]) continue;
       let tX=((col-sX)/sw*m.w)|0; if(tX<0||tX>=m.w) continue;
@@ -2572,7 +2648,7 @@ function edInit(){ edBuildPalette(); edFillPortals(); edFillEnemies();
   window.addEventListener('resize',()=>{ if($('editor').classList.contains('on')){ edResize(); edFit(); edDraw(); } });
 }
 
-function init(){ buildTextures(); buildSprites(); buildProcSky(); loadSkybox('realm', SKYBOX_PANO); buildWeapon(); loadWeaponSprites();
+function init(){ buildTextures(); buildSprites(); loadArtSprites(); buildProcSky(); loadSkybox('realm', SKYBOX_PANO); buildWeapon(); loadWeaponSprites();
   resize(); addEventListener('resize',resize); addEventListener('load',resize);
   if(window.ResizeObserver) new ResizeObserver(resize).observe(view);
   wireEvents(); wireInv(); wirePause(); wireShop(); buildDebug(); edInit(); updateHUD(); requestAnimationFrame(loop); }
