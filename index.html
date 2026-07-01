@@ -710,6 +710,9 @@ const ITEMS={
                   stats:{def:10, maxhp:25}, desc:"+10 defense, +25 max vigour."},
   plate_armor:   {name:"Plate Armor",  type:'armor', slot:'armor', stack:false, icon:'\u26E8', value:160,
                   stats:{def:18, maxhp:40}, desc:"+18 defense, +40 max vigour."},
+  // light source (offhand)
+  torch:         {name:"Torch", type:'gear', slot:'offhand', stack:false, icon:'\uD83D\uDD25', value:12,
+                  sprite:'assets/torch.png', light:true, desc:"A pitch-soaked brand. Held in the off hand; casts a flickering light."},
   // keys / quest
   rusty_key:     {name:"Rusty Key", type:'key', icon:'\uD83D\uDD11', value:0,
                   desc:"Opens the iron door in the lowest vault."},
@@ -1028,7 +1031,13 @@ const zoneRuntime={};                 // persistent per-zone state (deaths, pick
 const P={x:0,y:0,angle:0,hp:100,max:100,swing:0,atkCd:0,bobT:0,moving:false, xp:0, level:1};
 const inv=new Set(); let gold=0; const flags={};
 let inventory=[];                       // [{id, qty}] — source of truth for items
-let equip={weapon:null, armor:null};    // equipped item ids
+let equip={weapon:null, armor:null, offhand:null};    // equipped item ids
+// torch flicker: personal (carried) light multiplier + per-ground-torch multipliers,
+// recomputed once per frame so the per-pixel light sampling stays a cheap array read.
+let PB_FLICK=1; const torchFlick=[];
+function torchFlicker(t,seed){ let f=0.86+0.10*Math.sin(t*12.5+seed*1.7)+0.05*Math.sin(t*23.3+seed*3.1)+0.035*Math.sin(t*41.0+seed*0.9);
+  return f<0.72?0.72:(f>1.08?1.08:f); }
+function hasTorch(){ return equip.offhand==='torch'; }
 // base character stats; equipment adds on top (see recalcStats)
 const BASE_STATS={maxhp:100, atk:18, def:0, range:1.55, cone:0.5, atkCd:0.45, critChance:0.08, critMult:1.8};
 let PS=Object.assign({},BASE_STATS);    // cached derived stats
@@ -1158,7 +1167,7 @@ function shadeWall(c,sf,t){ let r=(c&255)*sf,g=((c>>8)&255)*sf,b=((c>>16)&255)*s
 // headlamp so the game stays playable without the adaptation lift.
 let LGT=0.4, LA=0.7, LB=0.5; const DARKC=rgb(8,5,3);
 function setLightMode(on){ if(on){ LGT=0.4; LA=0.7; LB=0.5; } else { LGT=3.5; LA=0.10; LB=0.16; } }
-function playerBright(d){ const v=LGT/(d*d*LA + d*LB + 1); return v<1?v:1; }
+function playerBright(d){ const v=LGT*PB_FLICK/(d*d*LA + d*LB + 1); return v<1?v:1; }
 function tvBit(cx,cy,bit){ return (cx>=0&&cy>=0&&cx<LM.w&&cy<LM.h && (cellTorchVis[cy*LM.w+cx]&bit))?1:0; }
 function torchWarm(wx,wy){ let s=0;
   const soft = !!(cellTorchVis && LM);
@@ -1175,7 +1184,8 @@ function torchWarm(wx,wy){ let s=0;
       const v1=tvBit(x0,y0+1,bit)*(1-tx)+tvBit(x0+1,y0+1,bit)*tx;
       vis=v0*(1-ty)+v1*ty; if(vis<=0) continue;
     }
-    const t=torchList[i]; const dx=wx-t.x, dy=wy-t.y; s+=vis*1.15/(1+(dx*dx+dy*dy)*0.5); }
+    const t=torchList[i]; const dx=wx-t.x, dy=wy-t.y; const tf=torchFlick[i]||1;
+    s+=vis*tf*1.15/(1+(dx*dx+dy*dy)*0.5); }
   return s<1.6?s:1.6; }
 /* Precompute, per cell, which torches can actually reach it (line-of-sight), so a
    wall blocks torchlight and the cells behind it fall into shadow. Torches are
@@ -1357,6 +1367,12 @@ function castFrame(){
   const planeX=-dirY*FOV, planeY=dirX*FOV;
   glowQ.length=0;
   const lit=Z.light;
+  // per-frame torch flicker (cheap): carried-torch personal light + each ground torch.
+  // Without a torch in the dark you fall back to the wall torches only.
+  if(hasTorch()) PB_FLICK = fxOn ? torchFlicker(time,0) : 1;
+  else           PB_FLICK = fxOn ? 0.16 : 1;
+  torchFlick.length=torchList.length;
+  for(let i=0;i<torchList.length;i++) torchFlick[i]= lit ? torchFlicker(time, i+1) : 1;
   const enclosed = !!Z.roomHeight;                   // dungeons: a sealed box (ceiling everywhere, no sky)
   const roomH = Z.roomHeight||0;
   const roofH = enclosed ? roomH : (Z.roofHeight||1.7);   // height of the ceiling / roof plane
@@ -1677,8 +1693,9 @@ function drawSprites(dirX,dirY,planeX,planeY){
         if(lit){ c=mix(c,DARKC,fa); if(aw>0) c=addWarm(c,aw); } else c=mixA(c,FOG,fogT);
         buf[y*RW+col]= a>=250 ? (c|0xff000000)>>>0 : over(buf[y*RW+col],c,a); }
     }
-    if(lit && e.sprite==='torch'){ const cxi=Math.round(sx);            // additive glow if visible
-      if(cxi>=0&&cxi<RW && tz<zbuf[cxi]) glowQ.push({x:sx, y:sY+sh*0.34, r:Math.max(8,(RH/tz)*1.05), a:Math.min(0.78,1.25/(tz*0.5+0.6))}); }
+    if(lit && e.sprite==='torch'){ const cxi=Math.round(sx);            // additive glow if visible (flickering)
+      const fl=torchFlicker(time, (e.x*7+e.y*13)|0);
+      if(cxi>=0&&cxi<RW && tz<zbuf[cxi]) glowQ.push({x:sx, y:sY+sh*0.34, r:Math.max(8,(RH/tz)*1.05)*(0.9+0.14*fl), a:Math.min(0.78,1.25/(tz*0.5+0.6))*fl}); }
   }
 }
 
@@ -1702,29 +1719,41 @@ function drawViewmodels(){
       ctx.save(); ctx.translate(RW*0.30+bobX, RH+bobY-lift); ctx.scale(-1,1); ctx.rotate(ang);
       ctx.drawImage(WEAP, -dw*0.5, -dh); ctx.restore(); }
   }
-  // torch in the right hand (only where the zone has torchlight) + warm screen glow
-  if(Z && Z.light) drawTorchVM(bobX,bobY);
+  // equipped torch in the off (right) hand, only in torchlit zones + warm screen glow
+  if(hasTorch() && Z && Z.light) drawTorchVM(bobX,bobY);
 }
 function drawTorchVM(bobX,bobY){
-  const t=time, flick=0.82+0.16*Math.sin(t*22)+0.10*Math.sin(t*7.3);
+  const fl=torchFlicker(time,0);                          // same flicker curve as the carried light
   const bx=RW*0.80+bobX, by=RH+bobY;
+  const sway=Math.sin(time*1.7)*0.02 + (fl-0.9)*0.05;     // subtle handheld wobble, tied to the flicker
   ctx.save(); ctx.globalCompositeOperation='lighter';     // warm bloom over the scene
-  const ga=0.13*flick, gr=ctx.createRadialGradient(bx,RH*0.6,10,bx,RH*0.6,RH*0.98);
+  const ga=0.13*fl, gr=ctx.createRadialGradient(bx,RH*0.58,10,bx,RH*0.58,RH*1.0);
   gr.addColorStop(0,`rgba(255,180,95,${ga})`); gr.addColorStop(0.5,`rgba(255,140,60,${ga*0.5})`); gr.addColorStop(1,'rgba(255,120,40,0)');
   ctx.fillStyle=gr; ctx.fillRect(0,0,RW,RH); ctx.restore();
-  ctx.save(); ctx.translate(bx,by);
-  ctx.fillStyle='#3a281a'; ctx.fillRect(-6,-RH*0.34,12,RH*0.34);   // handle
-  ctx.fillStyle='#241a10'; ctx.fillRect(-6,-RH*0.34,4,RH*0.34);
-  ctx.fillStyle='#5a3a1e'; ctx.fillRect(-10,-RH*0.40,20,RH*0.07);  // wrapped head
-  ctx.globalCompositeOperation='lighter';
-  const fy=-RH*0.40, fh=RH*0.22*flick, fw=22*flick;
-  const grd=ctx.createRadialGradient(0,fy-fh*0.3,2,0,fy-fh*0.3,fw);
-  grd.addColorStop(0,'rgba(255,245,205,0.95)'); grd.addColorStop(0.4,'rgba(255,170,60,0.9)'); grd.addColorStop(1,'rgba(220,60,20,0)');
-  ctx.fillStyle=grd; ctx.beginPath(); ctx.moveTo(0,fy-fh*1.4);
-  ctx.quadraticCurveTo(fw*0.9,fy-fh*0.4,0,fy+fh*0.2);
-  ctx.quadraticCurveTo(-fw*0.9,fy-fh*0.4,0,fy-fh*1.4); ctx.fill();
-  ctx.fillStyle='rgba(255,250,228,0.9)'; ctx.beginPath(); ctx.ellipse(0,fy-fh*0.4,fw*0.28,fh*0.6,0,0,7); ctx.fill();
-  ctx.restore();
+  const im=WEAP_IMG['torch'];
+  if(ready(im)){                                          // image torch (art asset)
+    const ar=im.width/im.height, dh=Math.min(RH*0.72, RW*0.42/ar), dw=dh*ar;
+    ctx.save(); ctx.translate(bx, by+8); ctx.rotate(sway);
+    ctx.drawImage(im, -dw*0.5, -dh, dw, dh);
+    ctx.globalCompositeOperation='lighter';              // additive flame flicker over the sprite's tip
+    const fy=-dh*0.80, fw=dw*0.42*fl;
+    const grd=ctx.createRadialGradient(0,fy,2,0,fy,fw*1.6);
+    grd.addColorStop(0,`rgba(255,244,206,${0.55*fl})`); grd.addColorStop(0.45,`rgba(255,150,52,${0.34*fl})`); grd.addColorStop(1,'rgba(255,110,30,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.ellipse(0,fy,fw,fw*1.5,0,0,7); ctx.fill();
+    ctx.restore();
+  } else {                                                // procedural fallback until the art loads
+    ctx.save(); ctx.translate(bx,by); ctx.rotate(sway);
+    ctx.fillStyle='#3a281a'; ctx.fillRect(-6,-RH*0.34,12,RH*0.34);
+    ctx.fillStyle='#5a3a1e'; ctx.fillRect(-10,-RH*0.40,20,RH*0.07);
+    ctx.globalCompositeOperation='lighter';
+    const fy=-RH*0.40, fh=RH*0.22*fl, fw=22*fl;
+    const grd=ctx.createRadialGradient(0,fy-fh*0.3,2,0,fy-fh*0.3,fw);
+    grd.addColorStop(0,'rgba(255,245,205,0.95)'); grd.addColorStop(0.4,'rgba(255,170,60,0.9)'); grd.addColorStop(1,'rgba(220,60,20,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.moveTo(0,fy-fh*1.4);
+    ctx.quadraticCurveTo(fw*0.9,fy-fh*0.4,0,fy+fh*0.2);
+    ctx.quadraticCurveTo(-fw*0.9,fy-fh*0.4,0,fy-fh*1.4); ctx.fill();
+    ctx.restore();
+  }
 }
 
 /* ---- minimap (also handy for checking level layouts while you build) ---- */
@@ -2004,7 +2033,8 @@ function loop(ts){ requestAnimationFrame(loop);
 let pointerLocked=false;
 function requestLock(){ if(mouseLook && view.requestPointerLock) view.requestPointerLock(); }
 function setPlaying(on){ document.body.classList.toggle('playing', !!on); }
-function start(){ if(!buf) resize(); initAudio(); $('title').style.display='none'; recalcStats(); buildDebug(); loadZone('village'); state='play'; setPlaying(true); updateHUD(); refreshInvUI(); requestLock(); }
+function ensureTorch(){ if(!hasItem('torch')) addItem('torch'); if(!equip.offhand) equip.offhand='torch'; }
+function start(){ if(!buf) resize(); initAudio(); $('title').style.display='none'; ensureTorch(); recalcStats(); buildDebug(); loadZone('village'); state='play'; setPlaying(true); updateHUD(); refreshInvUI(); requestLock(); }
 function wireEvents(){
   const TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints>0) || matchMedia('(pointer:coarse)').matches;
   if(TOUCH){ mouseLook=false; document.body.classList.add('touch'); }
@@ -2117,7 +2147,8 @@ function applySave(s){ if(!s)return false;
   for(const id in zoneRuntime) delete zoneRuntime[id];
   for(const id in (s.zones||{})) zoneRuntime[id]={entities:s.zones[id].entities||[], doors:new Set(s.zones[id].doors||[])};
   inventory.length=0; (s.inventory||[]).forEach(x=>inventory.push(x)); inv.clear(); inventory.forEach(x=>inv.add(x.id));
-  equip=s.equip||{weapon:null,armor:null};
+  equip=Object.assign({weapon:null,armor:null,offhand:null}, s.equip||{});
+  ensureTorch();                                  // every wanderer carries a torch (migrates old saves)
   for(const f in flags) delete flags[f]; Object.assign(flags, s.flags||{});
   gold=s.gold||0; P.level=s.level||1; P.xp=s.xp||0; recalcStats();
   loadZone(s.zid||'village'); P.x=s.px; P.y=s.py; P.angle=s.pa; P.hp=(s.hp!=null?s.hp:P.max);
@@ -2196,13 +2227,13 @@ function refreshInvUI(){ const st=$('invstats');
     `<div class="cs"><span>Defense</span><b>${PS.def}</b></div>`+
     `<div class="cs"><span>Gold</span><b>${gold}</b></div>`;
   const eq=$('inveq');
-  if(eq) eq.innerHTML=['weapon','armor'].map(slot=>{ const id=equip[slot], d=id&&ITEMS[id];
+  if(eq) eq.innerHTML=['weapon','armor','offhand'].map(slot=>{ const id=equip[slot], d=id&&ITEMS[id];
     return `<div class="eqs"><span class="eql">${slot}</span>`+
       (d?`<span class="eqn">${itemIcon(d)} ${d.name}</span><button data-unequip="${slot}">Unequip</button>`
         :`<span class="eqn dim">— empty —</span>`)+`</div>`; }).join('');
   const list=$('invlist');
   if(list){ if(!inventory.length) list.innerHTML='<div class="dim ipad">Your pack is empty.</div>';
-    else list.innerHTML=inventory.map(s=>{ const d=ITEMS[s.id]||{}, eqd=(equip.weapon===s.id||equip.armor===s.id);
+    else list.innerHTML=inventory.map(s=>{ const d=ITEMS[s.id]||{}, eqd=(equip.weapon===s.id||equip.armor===s.id||equip.offhand===s.id);
       const verb=d.slot?(eqd?'Equipped':'Equip'):(d.use?'Use':'');
       return `<div class="irow"><span class="iico">${itemIcon(d)}</span>`+
         `<span class="iname">${d.name||s.id}${s.qty>1?` <em>×${s.qty}</em>`:''}<span class="idesc">${d.desc||d.type||''}</span></span>`+
@@ -2213,7 +2244,7 @@ function wireInv(){ const p=$('inv'); if(!p||p._wired)return; p._wired=true;
   p.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
     if(b.dataset.use) useItem(b.dataset.use);
     else if(b.dataset.unequip) unequip(b.dataset.unequip);
-    else if(b.dataset.drop){ const id=b.dataset.drop; if(equip.weapon===id)equip.weapon=null; if(equip.armor===id)equip.armor=null;
+    else if(b.dataset.drop){ const id=b.dataset.drop; if(equip.weapon===id)equip.weapon=null; if(equip.armor===id)equip.armor=null; if(equip.offhand===id)equip.offhand=null;
       const s=findSlot(id); removeItem(id, s?s.qty:1); recalcStats(); }
     else if(b.dataset.act==='close') toggleInv();
   });
@@ -2250,7 +2281,7 @@ function buyItem(id){ const d=ITEMS[id]; if(!d)return; const price=d.value||0;
   if(gold<price){ toast('Not enough gold'); return; } gold-=price; addItem(id,1); updateHUD(); refreshShop(); toast('Bought '+d.name); }
 function sellItem(id){ const d=ITEMS[id]; if(!d||!hasItem(id))return; const price=Math.floor((d.value||0)/2);
   removeItem(id,1); gold+=price;
-  if(!hasItem(id)){ if(equip.weapon===id)equip.weapon=null; if(equip.armor===id)equip.armor=null; }
+  if(!hasItem(id)){ if(equip.weapon===id)equip.weapon=null; if(equip.armor===id)equip.armor=null; if(equip.offhand===id)equip.offhand=null; }
   recalcStats(); updateHUD(); refreshShop(); toast('Sold '+d.name+' (+'+price+'g)'); }
 function refreshShop(){ const g=$('shopgold'); if(g)g.textContent=gold;
   const buy=$('shopbuy'); if(buy) buy.innerHTML=SHOP_STOCK.map(id=>{ const d=ITEMS[id], price=d.value||0;
