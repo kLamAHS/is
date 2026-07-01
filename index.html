@@ -963,30 +963,10 @@ const TEST_MAP=[
 "##################",
 ];
 
-const FOREST_MAP=[
-"MMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"M..........................M",
-"MMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-];
+// Terrain zone boundary: 30x26 open grid ringed by an (invisible, in voxel mode) wall so the
+// player is contained; the walkable surface is the height field, not this flat map.
+const FOREST_MAP=(()=>{ const W=30,H=26,rows=[]; for(let y=0;y<H;y++){
+  rows.push((y===0||y===H-1) ? 'M'.repeat(W) : 'M'+'.'.repeat(W-2)+'M'); } return rows; })();
 const ZONES={
   village:{
     name:"Aldermoor Village", subtitle:"OPEN GROUND · DAYLIGHT", type:"open",
@@ -1023,76 +1003,24 @@ const ZONES={
     ],
   },
   forest:{
-    name:"The Blackwood", subtitle:"OLD FOREST · GLOOM", type:"open",
+    name:"The Blackwood", subtitle:"MOUNTAIN FOREST · GLOOM", type:"terrain",
     map:FOREST_MAP, ceiling:"sky", sky:'realm',
-    floorTex:'grass', roofHeight:1.7,
-    floorColor:rgb(52,64,40), ceilingColor:rgb(120,150,190),
-    fogColor:rgb(88,104,90), fog:0.05,
-    grade:{ sat:0.94, con:1.06, bright:0.88, tint:[0.97,1.03,0.95] },   // cool, overcast wood
+    heightmap:{ gw:120, gh:104, cell:0.25, hmax:7, seed:7 },   // procedural mountains (uploadable)
+    scatter:true,                                              // fill the slopes with a dense wood on load
+    floorColor:rgb(40,50,32), ceilingColor:rgb(120,150,190),
+    fogColor:rgb(60,72,82), fog:0.03,
+    grade:{ sat:0.86, con:1.06, bright:0.82, tint:[0.96,1.0,1.08] },   // cold, overcast mountains
     ambient:0.4,
-    start:{x:14.5, y:19.5, angle:-1.5708},
+    start:{x:15.0, y:23.0, angle:-1.5708},
     entities:[
-      {type:'portal', sprite:'portal', x:14.5, y:2.5,
+      {type:'portal', sprite:'portal', x:11.0, y:23.5,
        target:'village', spawn:{x:29.5,y:3.5,angle:1.5708}, prompt:"Back to Aldermoor"},
-      // dense tree line hugging the forest edge (hides the boundary wall), + scattered wood
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:2.5,  y:3.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:2.5,  y:7.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:2.5,  y:12.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:3.5,  y:16.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:25.5, y:4.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:25.5, y:9.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:25.5, y:14.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:24.5, y:18.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:7.5,  y:2.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:12.5, y:3.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:19.5, y:2.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:22.5, y:4.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:8.5,  y:13.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:18.5, y:6.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:6.5,  y:17.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:21.5, y:16.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:16.5, y:12.5},
-      // dense perimeter tree line to screen the boundary wall
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:1.5,  y:2.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:1.5,  y:5.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:1.5,  y:9.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:1.5,  y:14.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:1.5,  y:18.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:26.5, y:2.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:26.5, y:6.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:26.5, y:11.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:26.5, y:16.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:26.5, y:19.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:4.5,  y:1.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:10.5, y:1.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:18.5, y:1.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:23.5, y:1.5},
-      {type:'decoration', sprite:'tree',  solid:true, rad:0.42, x:6.5,  y:20.5},
-      {type:'decoration', sprite:'tree2', solid:true, rad:0.42, x:20.5, y:20.5},
-      // boulders (also solid)
-      {type:'decoration', sprite:'rock',  solid:true, rad:0.5, x:10.5, y:11.5},
-      {type:'decoration', sprite:'rock2', solid:true, rad:0.5, x:19.5, y:11.5},
-      {type:'decoration', sprite:'rock',  solid:true, rad:0.5, x:5.5,  y:10.5},
-      {type:'decoration', sprite:'rock2', solid:true, rad:0.5, x:22.5, y:19.5},
-      {type:'decoration', sprite:'rock',  solid:true, rad:0.5, x:15.5, y:17.5},
-      // undergrowth (bushes are passable)
-      {type:'decoration', sprite:'bush',  x:5.5,  y:5.5},
-      {type:'decoration', sprite:'bush2', x:9.5,  y:8.5},
-      {type:'decoration', sprite:'bush',  x:15.5, y:8.5},
-      {type:'decoration', sprite:'bush2', x:20.5, y:8.5},
-      {type:'decoration', sprite:'bush',  x:11.5, y:14.5},
-      {type:'decoration', sprite:'bush2', x:17.5, y:14.5},
-      {type:'decoration', sprite:'bush',  x:7.5,  y:15.5},
-      {type:'decoration', sprite:'bush2', x:23.5, y:12.5},
-      {type:'decoration', sprite:'bush',  x:13.5, y:18.5},
-      {type:'decoration', sprite:'bush2', x:24.5, y:16.5},
-      // the wood is not empty
-      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:11.5, y:7.5},
-      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:20.5, y:13.5},
-      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:6.5,  y:12.5},
-      {type:'enemy', sprite:'revenant', enemy:'revenant', x:16.5, y:9.5},
-      {type:'enemy', sprite:'revenant', enemy:'revenant', x:9.5,  y:17.5},
-      {type:'item', sprite:'chest', item:'treasure', x:18.5, y:18.5},
+      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:12.0, y:17.0},
+      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:19.0, y:15.0},
+      {type:'enemy', sprite:'wolf',     enemy:'wolf',     x:9.0,  y:19.5},
+      {type:'enemy', sprite:'revenant', enemy:'revenant', x:15.0, y:12.0},
+      {type:'enemy', sprite:'revenant', enemy:'revenant', x:21.0, y:18.0},
+      {type:'item', sprite:'chest', item:'treasure', x:18.0, y:20.5},
     ],
   },
   dungeon:{
@@ -1193,6 +1121,8 @@ function resize(){
   img=ctx.createImageData(RW,RH); buf=new Uint32Array(img.data.buffer);
   zbuf=new Float32Array(RW); floorRow=new Uint32Array(RH); ceilRow=new Uint32Array(RH);
   sTop=new Int16Array(RW); eBot=new Int16Array(RW); skyX=new Int32Array(RW);
+  terrainDepth=new Float32Array(RW);              // per-column perp depth of nearest terrain (voxel mode)
+  zTerr=new Float32Array(RW*RH);                  // per-pixel terrain depth, so sprites on slopes occlude correctly
   doorD=new Float32Array(RW); doorTX=new Float32Array(RW); doorWHa=new Float32Array(RW); doorOHa=new Float32Array(RW); doorHT=new Array(RW);
   bloomCv=document.createElement('canvas'); bloomCv.width=Math.max(1,RW>>1); bloomCv.height=Math.max(1,RH>>1);
   bloomCtx=bloomCv.getContext('2d',{alpha:true});
@@ -1213,6 +1143,10 @@ const $=id=>document.getElementById(id);
 // per-zone globals set by loadZone
 let Z=null, ZID=null, LM=null, ENTS=[], DOORS=new Set();
 let FOG=0, FLOOR=0, CEIL=0, ISKY=false;
+// ---- voxel-space heightmap terrain (outdoor "mountain" zones) ----
+let terrainDepth=null, zTerr=null, HFIELD=null;   // terrain depth buffers + the active height field
+const EYE=0.55, MAXCLIMB=0.9;            // eye height above the ground; steepest walkable rise per step
+const clampf=(v,a,b)=>v<a?a:v>b?b:v;
 let GRADE=null, fxOn=true;        // post-process effects: per-zone grade + bloom + vignette
 let bloomCv=null, bloomCtx=null, bloomImg=null, bloomBuf=null;  // offscreen bright-pass buffer for the bloom pass
 let vignetteSoft=null;            // gentle cinematic vignette for unlit (daylight) zones
@@ -1238,7 +1172,7 @@ const glowQ=[];             // additive torch glows queued during the current fr
 const zoneRuntime={};                 // persistent per-zone state (deaths, pickups, doors)
 
 // player + run state
-const P={x:0,y:0,angle:0,hp:100,max:100,swing:0,atkCd:0,bobT:0,moving:false, xp:0, level:1};
+const P={x:0,y:0,angle:0,z:0,pitch:0,hp:100,max:100,swing:0,atkCd:0,bobT:0,moving:false, xp:0, level:1};
 const inv=new Set(); let gold=0; const flags={};
 let inventory=[];                       // [{id, qty}] — source of truth for items
 let equip={weapon:null, armor:null, offhand:null};    // equipped item ids
@@ -1395,7 +1329,16 @@ function loadZone(id, spawn){
   FOG=Z.fogColor; FLOOR=Z.floorColor; CEIL=Z.ceilingColor; ISKY=(Z.ceiling==='sky');
   SKYTEX = ISKY ? (SKYBOXES[Z.sky] || SKYBOXES.proc || null) : null;
   Z._grade = Z.grade;                                   // per-frame buildAdaptLUT folds this with eye adaptation
+  Z.terrain = (Z.type==='terrain');                     // voxel heightmap zone?
+  if(Z.terrain){
+    if(!Z._hf){ const hm=Z.heightmap||{};                // build + cache the height field once
+      Z._hf = genMountains(hm.gw||113, hm.gh||97, hm.cell||0.25, hm.hmax||9, hm.seed||1); }
+    HFIELD=Z._hf;
+  } else HFIELD=null;
   const sp=spawn||Z.start; P.x=sp.x; P.y=sp.y; P.angle=sp.angle;
+  P.pitch=0; P.z = Z.terrain ? (sampleH(HFIELD,P.x,P.y)+EYE) : 0;   // ground the eye on the terrain
+  if(Z.terrain && Z.scatter && !zoneRuntime[id]._scattered){       // grow the wood once, then persist it
+    scatterTerrain(ENTS, (Z.heightmap&&Z.heightmap.seed||1)*2654435761); zoneRuntime[id]._scattered=true; }
   portalLock=true;
   $('zone').textContent=Z.name;
 }
@@ -1695,11 +1638,187 @@ function applyNightVision(){
   }
 }
 
+/* ═══════════════════════ VOXEL-SPACE HEIGHTMAP TERRAIN ═══════════════════════
+   Outdoor "mountain" zones render a walkable height field instead of flat floors.
+   A front-to-back per-column raymarch (perp depth, same units as the raycaster's
+   zbuf) with a rising y-buffer for occlusion; the player's eye rides the terrain
+   and can pitch up/down. Everything downstream (grade, bloom, vignette, sprites,
+   combat) is shared with the raycaster. ── ports the validated Voxel-Space core. */
+// height field = { d:Float32 grid, gw, gh, cell (world units/cell), hmax }
+function sampleH(HF, wx, wy){                        // clamped bilinear
+  let gx=wx/HF.cell, gy=wy/HF.cell;
+  if(gx<0)gx=0; else if(gx>HF.gw-1.001)gx=HF.gw-1.001;
+  if(gy<0)gy=0; else if(gy>HF.gh-1.001)gy=HF.gh-1.001;
+  const x0=gx|0, y0=gy|0, tx=gx-x0, ty=gy-y0, gw=HF.gw, D=HF.d, i=y0*gw+x0;
+  const a=D[i], b=D[i+1], c=D[i+gw], e=D[i+gw+1];
+  const top=a+(b-a)*tx, bot=c+(e-c)*tx; return top+(bot-top)*ty;
+}
+function terrainH(wx,wy){ return HFIELD?sampleH(HFIELD,wx,wy):0; }
+// procedural mountains: radial-falloff ridged fBm -> a bowl of craggy peaks with a low rim
+function genMountains(gw,gh,cell,hmax,seed){
+  const d=new Float32Array(gw*gh);
+  let s=(seed>>>0)||1; const rnd=()=>((s=(s*1664525+1013904223)>>>0)/4294967296);
+  const LAT=64, lat=new Float32Array(LAT*LAT); for(let k=0;k<lat.length;k++) lat[k]=rnd();
+  const sm=t=>t*t*(3-2*t);
+  const vn=(x,y)=>{ const xi=Math.floor(x)&(LAT-1), yi=Math.floor(y)&(LAT-1);
+    const fx=x-Math.floor(x), fy=y-Math.floor(y), u=sm(fx), v=sm(fy);
+    const a=lat[yi*LAT+xi], b=lat[yi*LAT+((xi+1)&63)], c=lat[((yi+1)&63)*LAT+xi], e=lat[((yi+1)&63)*LAT+((xi+1)&63)];
+    const top=a+(b-a)*u, bot=c+(e-c)*u; return top+(bot-top)*v; };
+  let mn=1e9, mx=-1e9;
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){
+    const wx=i*cell, wy=j*cell;
+    let f=0, amp=0.5, freq=0.14, norm=0;
+    for(let o=0;o<5;o++){ let n=vn(wx*freq+o*13.1, wy*freq+o*7.3);
+      n=1-Math.abs(2*n-1); n*=n; f+=n*amp; norm+=amp; amp*=0.5; freq*=2.0; }
+    f/=norm;
+    const cx=(gw-1)*0.5, cy=(gh-1)*0.5, dxr=(i-cx)/cx, dyr=(j-cy)/cy;
+    const edge=Math.max(0,1-(dxr*dxr+dyr*dyr)); f*=0.35+0.65*edge;
+    d[j*gw+i]=f; if(f<mn)mn=f; if(f>mx)mx=f;
+  }
+  const inv=hmax/((mx-mn)||1); for(let k=0;k<d.length;k++) d[k]=(d[k]-mn)*inv;
+  return { d, gw, gh, cell, hmax };
+}
+// grayscale image -> height field spanning the same world extent as the default
+function loadHeightmapFile(file, hmax, done){
+  const im=new Image(); im.onload=()=>{ const gw=im.width, gh=im.height;
+    const cv=document.createElement('canvas'); cv.width=gw; cv.height=gh;
+    const c=cv.getContext('2d',{willReadFrequently:true}); c.drawImage(im,0,0);
+    let px; try{ px=c.getImageData(0,0,gw,gh).data; }catch(e){ return; }
+    const d=new Float32Array(gw*gh), WX=28, cell=WX/(gw-1);
+    for(let k=0,p=0;k<gw*gh;k++,p+=4) d[k]=((px[p]*0.299+px[p+1]*0.587+px[p+2]*0.114)/255)*hmax;
+    done({ d, gw, gh, cell, hmax });
+  }; im.src=URL.createObjectURL(file);
+}
+// Hot-swap the current terrain zone's height field from an uploaded grayscale image (press H,
+// or window.HM.upload()). White = high, black = low; the image is stretched over the play area.
+let _hmInput=null;
+function openHeightmapUpload(){
+  if(!Z||!Z.terrain){ toast('Heightmaps only apply in a terrain zone'); return; }
+  if(!_hmInput){ _hmInput=document.createElement('input'); _hmInput.type='file'; _hmInput.accept='image/*'; _hmInput.id='hmUp';
+    _hmInput.style.display='none'; document.body.appendChild(_hmInput);
+    _hmInput.addEventListener('change',ev=>{ const f=ev.target.files&&ev.target.files[0]; if(!f)return;
+      loadHeightmapFile(f, (Z.heightmap&&Z.heightmap.hmax)||7, hf=>{
+        Z._hf=hf; HFIELD=hf; P.z=sampleH(HFIELD,P.x,P.y)+EYE; toast('Heightmap loaded'); }); _hmInput.value=''; }); }
+  _hmInput.click();
+}
+// dev/console hooks: HM.upload() picker; HM.regen(seed) new procedural mountains; HM.field() the grid
+window.HM={ upload:openHeightmapUpload,
+  regen:(seed)=>{ if(!Z||!Z.terrain)return; const hm=Z.heightmap||{}; Z._hf=genMountains(hm.gw||120,hm.gh||104,hm.cell||0.25,hm.hmax||7,seed||((Math.random()*1e9)|0)); HFIELD=Z._hf; P.z=sampleH(HFIELD,P.x,P.y)+EYE; },
+  field:()=>HFIELD };
+// dark mountain palette: deep forest green -> rock -> snow; steep faces bare rock
+const T_GRASS_LO=rgb(34,48,26), T_GRASS_HI=rgb(56,74,40), T_ROCK=rgb(66,62,54), T_ROCK_HI=rgb(92,86,78), T_SNOW=rgb(200,206,216);
+function terrainColor(t, slope){
+  let base;
+  if(t<0.30)      base=mix(T_GRASS_LO,T_GRASS_HI,t/0.30);
+  else if(t<0.60) base=mix(T_GRASS_HI,T_ROCK,(t-0.30)/0.30);
+  else if(t<0.82) base=mix(T_ROCK,T_ROCK_HI,(t-0.60)/0.22);
+  else            base=mix(T_ROCK_HI,T_SNOW,(t-0.82)/0.18);
+  if(slope>0.9)   base=mix(base,T_ROCK,Math.min(1,(slope-0.9)*0.7));
+  return base;
+}
+const T_NEAR=0.35, T_FAR=90, T_DSTEP0=0.06, T_LODK=0.011;
+function castTerrain(dirX,dirY,planeX,planeY){
+  const HF=HFIELD, HMAX=HF.hmax, PZ=P.z;
+  const HORIZON = HH + (P.pitch||0)*RH;              // pitched eye-level row
+  const useSky=!!SKYTEX, fog=Z.fog||0.028;
+  if(useSky){ for(let x=0;x<RW;x++){ const camX=2*x/RW-1, rx=dirX+planeX*camX, ry=dirY+planeY*camX;
+      let ra=Math.atan2(ry,rx)/(Math.PI*2); ra=((ra%1)+1)%1; skyX[x]=(ra*SKYTEX.w)|0; } }
+  for(let x=0;x<RW;x++){
+    const camX=2*x/RW-1, rdx=dirX+planeX*camX, rdy=dirY+planeY*camX;   // perp-depth ray (not normalized)
+    let ytop=RH; let d=T_NEAR, dstep=T_DSTEP0; let firstHit=true;
+    while(d<T_FAR && ytop>0){
+      const wx=P.x+rdx*d, wy=P.y+rdy*d, hz=sampleH(HF,wx,wy);
+      let sy=(HORIZON + (PZ-hz)*RH/d)|0;
+      if(sy<ytop){                                    // rises above everything nearer -> visible
+        if(sy<0)sy=0;
+        if(firstHit){ terrainDepth[x]=d; zbuf[x]=d; eBot[x]=RH; firstHit=false; }
+        const hx=sampleH(HF,wx+0.12,wy), hy=sampleH(HF,wx,wy+0.12);
+        const slope=Math.abs(hx-hz)+Math.abs(hy-hz);
+        let col=terrainColor(hz/HMAX, slope);
+        let ft=d*fog; if(ft>0.92)ft=0.92; col=shadeWall(col,1.0,ft);
+        for(let y=sy;y<ytop;y++){ buf[y*RW+x]=col; zTerr[y*RW+x]=d; }   // per-pixel depth for sprite occlusion
+        ytop=sy;
+      }
+      d+=dstep; dstep=T_DSTEP0+d*T_LODK;              // LOD: coarser with distance
+    }
+    if(firstHit){ terrainDepth[x]=T_FAR; zbuf[x]=T_FAR; eBot[x]=RH; }
+    if(ytop>0){                                       // sky above the crest (dimmed to a cold overcast dusk)
+      if(useSky){ const sd=Z.skyDim||0.5; for(let y=0;y<ytop;y++){ let sv=(((y-(HORIZON-HH))/RH)*SKYTEX.h)|0;
+          if(sv<0)sv=0; else if(sv>SKYTEX.h-1)sv=SKYTEX.h-1; const c=SKYTEX.data[sv*SKYTEX.w+skyX[x]];
+          const r=(c&255)*sd, g=((c>>8)&255)*sd*1.02, b=((c>>16)&255)*sd*1.2;    // dim + cool
+          buf[y*RW+x]=(0xff000000|((b>255?255:b|0)<<16)|((g|0)<<8)|(r|0))>>>0; zTerr[y*RW+x]=T_FAR; } }
+      else { for(let y=0;y<ytop;y++){ buf[y*RW+x]=FOG; zTerr[y*RW+x]=T_FAR; } }
+    }
+  }
+}
+function drawSpritesTerrain(dirX,dirY,planeX,planeY){
+  const invDet=1/(planeX*dirY-dirX*planeY);
+  const HORIZON = HH + (P.pitch||0)*RH;
+  const list=[];
+  for(const e of ENTS){ if(!e.sprite||!SPRITES[e.sprite]) continue;
+    const dx=e.x-P.x, dy=e.y-P.y; const tz=invDet*(-planeY*dx+planeX*dy);
+    if(tz<=0.15) continue; const tx=invDet*(dirY*dx-dirX*dy);
+    e._tz=tz; e._tx=tx; e._bz=sampleH(HFIELD,e.x,e.y); list.push(e); }
+  list.sort((a,b)=>b._tz-a._tz);
+  for(const e of list){ const m=SPRITES[e.sprite]; let hf=m.hf;
+    if(e.type==='portal') hf*=1+0.06*Math.sin(time*4);
+    const tz=e._tz, lineHf=RH/tz;
+    const floorY=HORIZON + (P.z - e._bz)*RH/tz;       // feet planted ON the terrain
+    const sh=lineHf*hf, sw=sh*(m.w/m.h), sx=HW*(1+e._tx/tz);
+    const sX=Math.floor(sx-sw/2), eX=Math.floor(sx+sw/2), sY=Math.floor(floorY-sh), eY=Math.floor(floorY);
+    const hurt=e.hurt>0; let fogT=tz*(Z.fog||0.028); if(fogT>0.92)fogT=0.92;
+    for(let col=sX;col<eX;col++){ if(col<0||col>=RW) continue;
+      let tX=((col-sX)/sw*m.w)|0; if(tX<0||tX>=m.w) continue;
+      for(let y=sY;y<eY;y++){ if(y<0||y>=RH) continue;
+        if(tz>=zTerr[y*RW+col]) continue;              // per-pixel: terrain nearer than this sprite pixel hides it
+        let tY=((y-sY)/sh*m.h)|0; if(tY<0||tY>=m.h) continue;
+        let src=m.data[tY*m.w+tX]; const a=(src>>>24)&255; if(a<8) continue;
+        let c=src; if(hurt)c=mixA(c,WHITE,0.55); c=mixA(c,FOG,fogT);
+        buf[y*RW+col]= a>=250 ? (c|0xff000000)>>>0 : over(buf[y*RW+col],c,a); }
+    }
+  }
+}
+// terrain movement gate: honour walls/decos, and block only absurdly steep climbs (descent always allowed)
+function blockedT(nx,ny){ if(blocked(nx,ny)) return true;
+  return (sampleH(HFIELD,nx,ny) - sampleH(HFIELD,P.x,P.y)) > MAXCLIMB; }
+// Populate a terrain zone with a dense wood: trees/bushes on the low-mid slopes (below the snowline),
+// boulders anywhere; seeded so a zone's forest is stable across revisits. Pushed into ENTS once.
+function scatterTerrain(ents, seed){
+  const hf=HFIELD; if(!hf) return;
+  let s=(seed>>>0)||1; const rnd=()=>((s=(s*1664525+1013904223)>>>0)/4294967296);
+  const W=hf.gw*hf.cell, H=hf.gh*hf.cell, sx=P.x, sy=P.y;
+  const add=(n,pick,rad,lo,hi)=>{ let placed=0,tries=0;
+    while(placed<n && tries<n*30){ tries++;
+      const x=1.4+rnd()*(W-2.8), y=1.4+rnd()*(H-2.8), t=sampleH(hf,x,y)/hf.hmax;
+      if(t<lo||t>hi) continue;
+      if((x-sx)*(x-sx)+(y-sy)*(y-sy) < 2.2) continue;               // keep a small clearing at the spawn
+      let clash=false; for(const e of ents){ if(e.solid){ const dx=x-e.x,dy=y-e.y; if(dx*dx+dy*dy<0.5){clash=true;break;} } }
+      if(clash) continue;
+      const e={type:'decoration', sprite:pick[(rnd()*pick.length)|0], x:+x.toFixed(2), y:+y.toFixed(2)};
+      if(rad){ e.solid=true; e.rad=rad; } ents.push(e); placed++;
+    }
+  };
+  add(200, ['tree','tree2'], 0.38, 0.02, 0.72);   // dense conifers blanket the valley + low-mid slopes
+  add(55,  ['bush','bush2'], 0,    0.02, 0.62);   // undergrowth
+  add(18,  ['rock','rock2'], 0.5,  0.08, 0.96);   // boulders up to the peaks
+}
+
 /* ---- THE RAYCASTER: one column per screen x ---- */
 function castFrame(){
   setLightMode(fxOn);                                // faint headlamp with night vision, normal without
   const dirX=Math.cos(P.angle), dirY=Math.sin(P.angle);
   const planeX=-dirY*FOV, planeY=dirX*FOV;
+  if(Z.terrain){                                     // ── voxel heightmap path (outdoor mountain zones) ──
+    glowQ.length=0;
+    castTerrain(dirX,dirY,planeX,planeY);
+    drawSprites(dirX,dirY,planeX,planeY);            // forks to drawSpritesTerrain internally
+    if(fxOn){ updateAdapt(); buildToneLUT(); applyNightVision(); } else { GRADE=null; postDark=0; postFlick=1; }
+    ctx.putImageData(img,0,0);
+    if(fxOn) drawBloom();
+    if(fxOn && vignetteSoft){ ctx.fillStyle=vignetteSoft; ctx.fillRect(0,0,RW,RH); }
+    drawViewmodels();
+    return;
+  }
   glowQ.length=0;
   const lit=Z.light;
   // per-frame torch flicker (cheap): carried-torch personal light + each ground torch.
@@ -1999,6 +2118,7 @@ function drawTorchGlows(){
 
 /* ---- billboard sprites (camera-facing, depth-tested, alpha-blended) ---- */
 function drawSprites(dirX,dirY,planeX,planeY){
+  if(Z.terrain) return drawSpritesTerrain(dirX,dirY,planeX,planeY);   // terrain zones plant sprites on the height field
   const lit=Z.light;
   const invDet=1/(planeX*dirY-dirX*planeY); const list=[];
   for(const e of ENTS){ if(!e.sprite||!SPRITES[e.sprite]) continue;
@@ -2095,9 +2215,30 @@ function drawTorchVM(bobX,bobY){
   }
 }
 
+/* terrain minimap: a shaded top-down of the height field + entities + the player */
+function drawTerrainMinimap(W,H){
+  const HF=HFIELD, worldW=HF.gw*HF.cell, worldH=HF.gh*HF.cell;
+  const cs=Math.min(W/worldW, H/worldH), ox=(W-cs*worldW)/2, oy=(H-cs*worldH)/2;
+  const step=Math.max(1,(HF.gw/64)|0);
+  for(let j=0;j<HF.gh;j+=step)for(let i=0;i<HF.gw;i+=step){
+    const t=HF.d[j*HF.gw+i]/HF.hmax; let r,g,b;
+    if(t<0.55){ r=28+t*40; g=48+t*50; b=26+t*20; } else if(t<0.82){ r=70+t*30; g=70+t*20; b=64+t*20; } else { r=190; g=196; b=210; }
+    mctx.fillStyle=`rgb(${r|0},${g|0},${b|0})`; mctx.fillRect(ox+i*HF.cell*cs, oy+j*HF.cell*cs, cs*HF.cell*step+0.8, cs*HF.cell*step+0.8);
+  }
+  for(const e of ENTS){ if(!e.sprite) continue; let col, rr=Math.max(1.4,cs*0.32);
+    if(e.type==='enemy') col='#e0553f'; else if(e.type==='portal'){ col='#6fd6ff'; rr=Math.max(2,cs*0.4*(1+0.18*Math.sin(time*4))); }
+    else if(e.type==='item') col='#ffd84a'; else continue;   // skip the many trees/rocks
+    mctx.fillStyle=col; mctx.beginPath(); mctx.arc(ox+e.x*cs,oy+e.y*cs,rr,0,7); mctx.fill(); }
+  const pcx=ox+P.x*cs, pcy=oy+P.y*cs;
+  mctx.save(); mctx.translate(pcx,pcy); mctx.rotate(P.angle);
+  mctx.fillStyle='#fff'; mctx.strokeStyle='rgba(0,0,0,0.55)'; mctx.lineWidth=1;
+  mctx.beginPath(); mctx.moveTo(cs*0.9,0); mctx.lineTo(-cs*0.5,-cs*0.5); mctx.lineTo(-cs*0.2,0); mctx.lineTo(-cs*0.5,cs*0.5); mctx.closePath();
+  mctx.fill(); mctx.stroke(); mctx.restore();
+}
 /* ---- minimap (also handy for checking level layouts while you build) ---- */
 function drawMinimap(){
   const W=mini.width, H=mini.height; mctx.clearRect(0,0,W,H);
+  if(Z.terrain && HFIELD){ drawTerrainMinimap(W,H); return; }
   const cs=Math.min(W/LM.w, H/LM.h);
   const ox=(W-cs*LM.w)/2, oy=(H-cs*LM.h)/2;
   for(let y=0;y<LM.h;y++)for(let x=0;x<LM.w;x++){
@@ -2227,8 +2368,10 @@ function update(dt){
   P.moving=(Math.abs(mv)>0.02||Math.abs(sv)>0.02);
   const rx=Math.cos(P.angle+Math.PI/2), ry=Math.sin(P.angle+Math.PI/2);
   const vx=(dirX*mv*MOVE + rx*sv*STRAFE)*dt, vy=(dirY*mv*MOVE + ry*sv*STRAFE)*dt;
-  if(noclip||!blocked(P.x+vx,P.y)) P.x+=vx;
-  if(noclip||!blocked(P.x,P.y+vy)) P.y+=vy;
+  const B = Z.terrain ? blockedT : blocked;            // terrain zones also block absurdly steep climbs
+  if(noclip||!B(P.x+vx,P.y)) P.x+=vx;
+  if(noclip||!B(P.x,P.y+vy)) P.y+=vy;
+  if(Z.terrain){ const gh=sampleH(HFIELD,P.x,P.y)+EYE; P.z += (gh-P.z)*Math.min(1,dt*18); }  // eye rides the terrain
   if(P.moving) P.bobT+=dt*10;
   // entities
   for(const e of ENTS){ if(e.type==='enemy') updateEnemy(e,dt); }
@@ -2401,6 +2544,7 @@ function wireEvents(){
     if(k==='`'||e.code==='Backquote'){ e.preventDefault(); toggleDebug(); return; }
     if(k==='i'){ e.preventDefault(); toggleInv(); return; }
     if(k==='m'){ e.preventDefault(); openEditor(); return; }
+    if(k==='h' && Z&&Z.terrain){ e.preventDefault(); openHeightmapUpload(); return; }   // upload a heightmap
     if(e.key==='F5'){ e.preventDefault(); quickSave(); return; }
     if(e.key==='F9'){ e.preventDefault(); quickLoad(); return; }
     keys.add(k);
@@ -2415,7 +2559,8 @@ function wireEvents(){
   view.addEventListener('mousedown',e=>{ if(TOUCH||state!=='play'||anyPanel())return; e.preventDefault();
     mDown=true; mMoved=false; if(!pointerLocked) requestLock(); });
   window.addEventListener('mousemove',e=>{ if(state!=='play'||anyPanel())return;
-    if(pointerLocked||mDown){ P.angle+=e.movementX*lookSens; if(Math.abs(e.movementX)>1.5) mMoved=true; } });
+    if(pointerLocked||mDown){ P.angle+=e.movementX*lookSens; if(Math.abs(e.movementX)>1.5) mMoved=true;
+      if(Z&&Z.terrain) P.pitch=clampf(P.pitch - e.movementY*lookSens, -0.42, 0.42); } });   // vertical look on terrain
   window.addEventListener('mouseup',e=>{ if(TOUCH)return;
     if(state==='play'&&!mMoved&&!anyPanel()) playerAttack();
     mDown=false; });
@@ -2460,11 +2605,12 @@ function wireEvents(){
   tapBtn($('tbMenu'), togglePause);
 
   // drag anywhere on the view to look around (touch); ignore touches that start on a control
-  let lookId=null, lookX=0;
+  let lookId=null, lookX=0, lookY=0;
   view.addEventListener('pointerdown',e=>{ if(e.pointerType==='mouse')return;
-    if(lookId===null){ lookId=e.pointerId; lookX=e.clientX; try{view.setPointerCapture(e.pointerId)}catch(_){} } });
+    if(lookId===null){ lookId=e.pointerId; lookX=e.clientX; lookY=e.clientY; try{view.setPointerCapture(e.pointerId)}catch(_){} } });
   view.addEventListener('pointermove',e=>{ if(e.pointerId!==lookId)return; e.preventDefault();
-    const dx=e.clientX-lookX; lookX=e.clientX; if(state==='play') P.angle+=dx*0.005; });
+    const dx=e.clientX-lookX; lookX=e.clientX; if(state==='play') P.angle+=dx*0.005;
+    const dy=e.clientY-lookY; lookY=e.clientY; if(state==='play'&&Z&&Z.terrain) P.pitch=clampf(P.pitch - dy*0.004, -0.42, 0.42); });   // drag up/down to pitch on terrain
   const endLook=e=>{ if(e.pointerId===lookId) lookId=null; };
   view.addEventListener('pointerup',endLook); view.addEventListener('pointercancel',endLook); view.addEventListener('lostpointercapture',endLook);
 }
