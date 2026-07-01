@@ -692,10 +692,15 @@ function artSprite(im, hf, th){
   return {data:new Uint32Array(og.getImageData(0,0,tw,tht).data.buffer).slice(), w:tw, h:tht, hf};
 }
 function loadArtSprites(){
-  const defs=[['bee','assets/bee.png',1.02,240],['wolf','assets/wolf.png',0.72,200],['oldman','assets/oldman.png',0.9,220]];
+  const defs=[['bee','assets/bee.png',0.86,240],['wolf','assets/wolf.png',0.62,200],['oldman','assets/oldman.png',0.78,220]];
   for(const [name,src,hf,th] of defs){ const im=new Image();
     im.onload=()=>{ try{ SPRITES[name]=artSprite(im,hf,th); }catch(e){} };
     im.src=src; }
+  // shared placeholder art for the friendly townsfolk NPCs (merchant, villager, guard) —
+  // the hermit keeps his own art; enemies keep theirs.
+  const npc=new Image();
+  npc.onload=()=>{ try{ const s=artSprite(npc,0.82,220); SPRITES.npc=SPRITES.merchant=SPRITES.villager=SPRITES.guard=s; }catch(e){} };
+  npc.src='assets/npc.png';
 }
 
 /* ───────────────────────── 4 · ENEMY TYPES ───────────────────────────── */
@@ -2181,6 +2186,16 @@ function start(){ if(!buf) resize(); initAudio(); $('title').style.display='none
 function wireEvents(){
   const TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints>0) || matchMedia('(pointer:coarse)').matches;
   if(TOUCH){ mouseLook=false; document.body.classList.add('touch'); }
+
+  // iOS Safari ignores user-scalable=no, so rapid attack taps register as a
+  // double-tap-to-zoom and the view gets stuck zoomed in. Swallow the second tap of
+  // any quick pair, plus pinch gestures, so the scene never zooms.
+  let _lastTap=0;
+  document.addEventListener('touchend',e=>{ const now=performance.now();
+    if(now-_lastTap<=350){ e.preventDefault(); }        // 2nd tap of a double-tap -> no zoom
+    _lastTap=now; }, {passive:false});
+  document.addEventListener('dblclick',e=>e.preventDefault());
+  ['gesturestart','gesturechange','gestureend'].forEach(g=>document.addEventListener(g,e=>e.preventDefault()));
 
   window.addEventListener('keydown',e=>{ const k=e.key.toLowerCase();
     if(state==='editor'){ if(k==='escape'){ e.preventDefault(); exitEditor(); } else if(k===' '){ ED.spacePan=true; } return; }
