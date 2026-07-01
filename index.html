@@ -541,7 +541,20 @@ function buildTextures(){
     let c=rgb(108,84,56); c=mix(c,0,noise(x,y,21)*0.32); const r=noise(x*0.7,y*0.7,22);
     if(r>0.72) c=mix(c,rgb(140,116,84),(r-0.72)*2.2); if(noise(x,y,23)>0.9) c=mix(c,rgb(70,54,36),0.5);
     px(b,x,y,c);}});
+  // Mip chain: pre-blurred copies (levels 0..3, radius 0/1/2/4). Distant / grazing
+  // wall columns span many texels per screen pixel; sampling one texel then aliases
+  // the fine mortar lines into ugly vertical banding. We pick a blur level by the
+  // per-column texel footprint so far walls read as smooth stone, near ones stay crisp.
+  for(const k in TEXTURES) TEXTURES[k].mips=buildMips(TEXTURES[k].data);
 }
+function buildMips(src){ const mips=[src]; let prev=src;
+  for(let lvl=1;lvl<4;lvl++){ prev=blurTex(prev); mips.push(prev); } return mips; }
+function blurTex(src){ const N=TEX, out=new Uint32Array(N*N);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){ let r=0,g=0,b=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const c=src[(((y+dy)&(N-1))*N)+((x+dx)&(N-1))]; r+=c&255; g+=(c>>8)&255; b+=(c>>16)&255; }
+    out[y*N+x]=(0xff000000|(((b/9)|0)<<16)|(((g/9)|0)<<8)|((r/9)|0))>>>0; }
+  return out; }
 
 /* ───────────────────────── 3 · SPRITES (billboards) ─────────────────────
    Humanoids share ONE drawer (drawHumanoid) keyed by palette/props, so a new
@@ -1146,11 +1159,24 @@ function shadeWall(c,sf,t){ let r=(c&255)*sf,g=((c>>8)&255)*sf,b=((c>>16)&255)*s
 let LGT=0.4, LA=0.7, LB=0.5; const DARKC=rgb(8,5,3);
 function setLightMode(on){ if(on){ LGT=0.4; LA=0.7; LB=0.5; } else { LGT=3.5; LA=0.10; LB=0.16; } }
 function playerBright(d){ const v=LGT/(d*d*LA + d*LB + 1); return v<1?v:1; }
+function tvBit(cx,cy,bit){ return (cx>=0&&cy>=0&&cx<LM.w&&cy<LM.h && (cellTorchVis[cy*LM.w+cx]&bit))?1:0; }
 function torchWarm(wx,wy){ let s=0;
-  let vis=0xffffffff;                                   // default: all visible (until the shadow map is built)
-  if(cellTorchVis && LM){ const cx=wx|0, cy=wy|0; if(cx>=0&&cy>=0&&cx<LM.w&&cy<LM.h) vis=cellTorchVis[cy*LM.w+cx]; }
-  for(let i=0;i<torchList.length;i++){ if(i<32 && !(vis&(1<<i))) continue;   // torch is in shadow here -> no light
-    const t=torchList[i]; const dx=wx-t.x, dy=wy-t.y; s+=1.15/(1+(dx*dx+dy*dy)*0.5); } return s<1.6?s:1.6; }
+  const soft = !!(cellTorchVis && LM);
+  // Bilinearly interpolate each torch's line-of-sight visibility across the four
+  // surrounding cell centres. A hard per-cell (binary) test produced vertical
+  // banding on grazing walls, where adjacent screen columns land in neighbouring
+  // cells and the shadow bit flips on/off; the interpolation softens that edge.
+  let x0=0,y0=0,tx=0,ty=0;
+  if(soft){ const fx=wx-0.5, fy=wy-0.5; x0=Math.floor(fx); y0=Math.floor(fy); tx=fx-x0; ty=fy-y0; }
+  for(let i=0;i<torchList.length;i++){
+    let vis=1;
+    if(soft && i<32){ const bit=1<<i;
+      const v0=tvBit(x0,y0,bit)*(1-tx)+tvBit(x0+1,y0,bit)*tx;
+      const v1=tvBit(x0,y0+1,bit)*(1-tx)+tvBit(x0+1,y0+1,bit)*tx;
+      vis=v0*(1-ty)+v1*ty; if(vis<=0) continue;
+    }
+    const t=torchList[i]; const dx=wx-t.x, dy=wy-t.y; s+=vis*1.15/(1+(dx*dx+dy*dy)*0.5); }
+  return s<1.6?s:1.6; }
 /* Precompute, per cell, which torches can actually reach it (line-of-sight), so a
    wall blocks torchlight and the cells behind it fall into shadow. Torches are
    static, so this is built once per zone load — per-pixel cost is one mask test. */
@@ -1396,6 +1422,13 @@ function castFrame(){
         let wallX=(side===0)?(P.y+perp*rdy):(P.x+perp*rdx); wallX-=Math.floor(wallX);
         let texX=(wallX*TEX)|0; if((side===0&&rdx>0)||(side===1&&rdy<0)) texX=TEX-texX-1;
         const base=texX, stepT=TEX/lineHf; let texPos=(s-topY)*stepT;
+        // pick a mip level from this column's horizontal texel footprint (anti-alias distant/grazing walls).
+        // footprint ~ TEX*perp*FOV*(2/RW)/|ray.normal|; the 1/|ray.normal| term blows up on grazing walls,
+        // which is exactly where a single-texel sample aliases the mortar into vertical banding.
+        let texData=tex.data;
+        if(tex.mips){ const graze=side===0?(rdx<0?-rdx:rdx):(rdy<0?-rdy:rdy);
+          const fp=TEX*perp*FOV*(2/RW)/(graze<0.02?0.02:graze);
+          let lvl=0; if(fp>=1.6)lvl=1; if(fp>=3.2)lvl=2; if(fp>=6.4)lvl=3; texData=tex.mips[lvl]; }
         const sf=side===1?0.7:1.0;
         let fa=0, aw=0, fogT=0;
         if(lit){ let br=playerBright(perp); if(side===1)br*=0.74; fa=1-br; if(fa<0)fa=0; else if(fa>0.93)fa=0.93;
@@ -1405,7 +1438,7 @@ function castFrame(){
           if(isDoor){ const worldH=(floorY-y)/lineHf;
             if(worldH<=openH){ let vt=(((openH-worldH)/openH)*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=tex.data[vt*TEX+base]; }
             else { let vt=(((wh-worldH)/(wh-openH))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=htex.data[vt*TEX+base]; } }
-          else { const ty=(texPos)&(TEX-1); texel=tex.data[ty*TEX+base]; }
+          else { const ty=(texPos)&(TEX-1); texel=texData[ty*TEX+base]; }
           texPos+=stepT;
           buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,sf,fogT); }
         if(s<lastTop) lastTop=s;                             // remember the highest top actually painted
