@@ -431,6 +431,8 @@ const MAT_WALL=[
   {key:'church',     tex:'sandstone',   h:2.3,  name:'Chapel wall',  col:'#b0894f'}, // 17
   {key:'tower',      tex:'sandstone',   h:4.4,  name:'Chapel tower', col:'#a07c42'}, // 18
   {key:'gatetower',  tex:'stone',       h:2.2,  name:'Gate tower',   col:'#6b625a'}, // 19
+  {key:'plasterWin', tex:'plasterwin',  h:1.6,  name:'Plaster+win',  col:'#cfc3a8'}, // 20
+  {key:'timberWin',  tex:'timberwin',   h:1.6,  name:'Timber+win',   col:'#c0ad8a'}, // 21
 ];
 const MAT_FLOOR=[
   null,                                                       // 0 = zone default ground
@@ -453,7 +455,7 @@ const CHAR_LAYER={
   'D':{wall:6}, 'L':{wall:7},
   'P':{wall:8}, 'F':{wall:9}, 'r':{wall:10}, 'R':{wall:11}, 'f':{wall:12},
   't':{wall:13}, 'K':{wall:14}, 'k':{wall:15}, 'w':{wall:16}, 'C':{wall:17},
-  'c':{wall:18}, 'G':{wall:19},
+  'c':{wall:18}, 'G':{wall:19}, 'p':{wall:20}, 'q':{wall:21},
   'o':{wall:0, flr:3, rof:1},          // roofed interior: plank floor + timber roof
   '=':{wall:0, flr:1},                 // cobbled street / square
   '-':{wall:0, flr:5},                 // dirt path
@@ -551,14 +553,15 @@ function buildTextures(){
       const dxx=x-((y*0.55)|0);                                             // diagonal brace
       if(dxx>=18&&dxx<22) px(b,x,y,mix(beam,0,g));
       if(y>58||y<4) px(b,x,y,mix(rgb(88,62,34),0,g)); }});
-  TEXTURES.thatch=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){    // combed straw in overlapping courses
-    const course=Math.floor(y/9), sway=Math.sin(x*0.35+course*2.1)*2.2;
-    let t=182-course*9+((x+((course*13)|0))%3)*10;                          // vertical straw striation
-    let c=rgb(t*0.86,t*0.62,t*0.28);
-    const cy2=y%9; if(cy2<2) c=mix(c,0,0.42);                               // course shadow line
-    if(cy2>6&&noise(x,y,35)>0.5) c=mix(c,rgb(96,66,22),0.4);                // ragged course edge
-    c=mix(c,0,noise(x+sway,y,36)*0.22);
-    if(noise(x,y,37)>0.93) c=mix(c,rgb(210,180,110),0.5);                   // loose straws catching light
+  TEXTURES.thatch=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){    // combed straw: fine vertical strands
+    const strand=noise(x*3.1,0,35)*0.5+noise(x*3.1,Math.floor(y/22),44)*0.5; // per-strand brightness, coherent down the slope
+    let t=148+strand*64+noise(x,y,36)*18;                                   // warm straw
+    let c=rgb(t,t*0.72,t*0.34);
+    const cy2=y%22;
+    if(cy2<2) c=mix(c,0,0.38); else if(cy2<4) c=mix(c,0,0.16);              // stitched course line, soft shadow
+    if(cy2>18&&noise(x*2,y,37)>0.62) c=mix(c,rgb(92,64,26),0.45);           // ragged tails over the course below
+    if(noise(x,y,38)>0.955) c=mix(c,rgb(224,196,124),0.55);                 // stray bright straws
+    if(noise(x*0.35,y*0.35,39)>0.74) c=mix(c,rgb(108,88,44),0.25);          // weathered patches
     px(b,x,y,c);}});
   TEXTURES.slate=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){     // church slate: dark courses, cool sheen
     const row=Math.floor(y/10), off=(row%2)*8, bx=(x+off)%16;
@@ -573,6 +576,18 @@ function buildTextures(){
     if(!post && !((y>14&&y<26)||(y>40&&y<52))) c=rgb(104,84,52);            // rails read as bands
     c=mix(c,0,noise(x,y,40)*0.3); if(noise(x*0.5,y*0.5,41)>0.8) c=mix(c,rgb(70,80,60),0.3);  // moss
     px(b,x,y,c);}});
+  // window variants: the base wall with a leaded casement, timber lintel + sill
+  const carveWindow=(b)=>{ const wx0=20,wx1=44,wy0=14,wy1=40;
+    for(let y=wy0;y<=wy1;y++)for(let x=wx0;x<=wx1;x++){
+      if(y<wy0+3||y>wy1-3){ px(b,x,y,mix(rgb(88,62,34),0,noise(x,y,42)*0.2)); continue; }  // lintel + sill
+      if(x<wx0+2||x>wx1-2){ px(b,x,y,mix(rgb(74,52,28),0,noise(x,y,43)*0.2)); continue; }  // jambs
+      // leaded panes: dark glass with a faint cool sheen + lead cames
+      const mx=(x-wx0)%7, my=(y-wy0)%8;
+      let g=rgb(26,32,44); g=mix(g,rgb(74,92,116),noise(x*1.7,y*1.7,45)*0.5);
+      if(mx<1||my<1) g=rgb(52,50,48);
+      px(b,x,y,g); } };
+  TEXTURES.plasterwin=make(b=>{ const P2=TEXTURES.plaster.data; for(let i=0;i<b.length;i++) b[i]=P2[i]; carveWindow(b); });
+  TEXTURES.timberwin=make(b=>{ const F2=TEXTURES.timberframe.data; for(let i=0;i<b.length;i++) b[i]=F2[i]; carveWindow(b); });
   // ── floor & ceiling textures (used by floor/ceiling casting) ──
   TEXTURES.flagstone=make(b=>{for(let y=0;y<TEX;y++)for(let x=0;x<TEX;x++){
     const cx=Math.floor(x/21), cyy=Math.floor(y/21); let g=84+((cx*5+cyy*7)%18); let c=rgb(g,g-6,g-12);
@@ -1002,31 +1017,39 @@ const DIALOGUE_ACTIONS={
    light:{} → torchlight: player headlamp falloff + warm pools around torch props
    Each entity is plain data; sprite/enemy/item/dialogue are keys into the
    tables above. Colours are packed with rgb(). start = spawn pose. */
-/* Aldermoor: a proper medieval town, generated cell-by-cell.
-   Cottages are solid "scenery" houses whose thatch cells STEP UP behind the
-   plaster walls (eave course, then ridge) so every roofline reads as a gable
-   from the street; their doors open into a one-cell dark vestibule. The
-   tavern, the shop and the chapel are enterable (roofed interiors). */
-const VILLAGE_MAP=(()=>{
+/* Aldermoor: a proper medieval town, generated cell-by-cell. Every building is a
+   real enterable room (plank floor, timber ceiling) behind walls with leaded
+   windows, and registers a PITCHED ROOF QUAD (drawn by drawRoofs as true sloped
+   planes with overhanging eaves and gable ends) — no more stepped roof blocks. */
+const VILLAGE=(()=>{
   const W=40, H=30, g=Array.from({length:H},()=>Array(W).fill('.'));
+  const roofs=[];
   const set=(x,y,ch)=>{ if(x>=0&&x<W&&y>=0&&y<H) g[y][x]=ch; };
   const rect=(x0,y0,x1,y1,ch)=>{ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++) set(x,y,ch); };
   const frame=(x0,y0,x1,y1,ch)=>{ for(let x=x0;x<=x1;x++){set(x,y0,ch);set(x,y1,ch);}
                                   for(let y=y0;y<=y1;y++){set(x0,y,ch);set(x1,y,ch);} };
   const paint=(x0,y0,x1,y1,ch)=>{ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)   // floors: never overwrite buildings
     if(g[y][x]==='.') g[y][x]=ch; };
-  // solid cottage: walls, then a pitched thatch roof (eave ring 'r' -> ridge 'R' along the long axis),
-  // then a door with a dark roofed vestibule behind it
-  const cottage=(x0,y0,x1,y1,wall,dx,dy,vx,vy)=>{
-    frame(x0,y0,x1,y1,wall);
-    const alongX=(x1-x0)>=(y1-y0);
-    for(let y=y0+1;y<y1;y++)for(let x=x0+1;x<x1;x++){
-      const dS=alongX ? Math.min(y-y0-1,y1-1-y) : Math.min(x-x0-1,x1-1-x);
-      set(x,y, dS===0?'r':'R'); }
-    set(dx,dy,'D'); set(vx,vy,'o');
+  const addRoof=(x0,y0,x1,y1, wallH, pitch, tex, gtex)=>{   // cell rect -> world roof quad w/ overhang
+    const ov=0.38, wx0=x0, wx1=x1+1, wy0=y0, wy1=y1+1;
+    const ax=(wx1-wx0)>=(wy1-wy0)?'x':'y';
+    const cc=ax==='x'?(wy0+wy1)/2:(wx0+wx1)/2;
+    const half=ax==='x'?(wy1-wy0)/2:(wx1-wx0)/2;
+    roofs.push({ x0:wx0-ov, y0:wy0-ov, x1:wx1+ov, y1:wy1+ov,
+      ax, cc, k:pitch, hr:wallH+0.08+pitch*half, wallH,
+      g0:ax==='x'?wx0:wy0, g1:ax==='x'?wx1:wy1,
+      gc0:ax==='x'?wy0:wx0, gc1:ax==='x'?wy1:wx1,
+      tex, gtex, sf:0.97 });
   };
-  const hall=(x0,y0,x1,y1,wall,doors)=>{ frame(x0,y0,x1,y1,wall);   // enterable: roofed plank interior
-    rect(x0+1,y0+1,x1-1,y1-1,'o'); for(const [dx,dy] of doors) set(dx,dy,'D'); };
+  // an enterable house: walls with leaded windows on the long sides, plank+timber room, door(s), a real roof
+  const house=(x0,y0,x1,y1, wall, winCh, doors, rtex)=>{
+    frame(x0,y0,x1,y1,wall);
+    for(let x=x0+2;x<x1-1;x+=2){ set(x,y0,winCh); set(x,y1,winCh); }   // windows: north+south walls
+    for(let y=y0+2;y<y1-1;y+=2){ set(x0,y,winCh); set(x1,y,winCh); }   // windows: west+east walls
+    rect(x0+1,y0+1,x1-1,y1-1,'o');
+    for(const [dx,dy] of doors) set(dx,dy,'D');
+    addRoof(x0,y0,x1,y1, 1.6, 0.7, rtex, wall==='P'?'plaster':'timberframe');
+  };
 
   frame(0,0,W-1,H-1,'#');                       // low town wall, open sky above it
   set(18,H-1,'G'); set(22,H-1,'G');             // south gatehouse towers flank the road
@@ -1036,26 +1059,25 @@ const VILLAGE_MAP=(()=>{
   paint(2,14,37,15,'=');                        // cross street
   paint(13,9,27,19,'=');                        // market square
   paint(34,1,37,7,',');                         // postern grove (grass)
-  // cottages (scenery, gabled)
-  cottage(2,2,8,7,   'P', 5,7, 5,6);            // NW cottage, door to the cross lane
-  cottage(10,2,16,6, 'F', 13,6, 13,5);          // north row timber house
-  cottage(30,9,37,13,'P', 30,11, 31,11);        // east cottage, door to the square
-  cottage(2,9,8,13,  'P', 8,11, 7,11);          // west cottage
-  cottage(24,21,31,26,'P', 27,21, 27,22);       // SE cottage on the south lane
-  cottage(33,17,38,22,'F', 33,19, 34,19);       // far-east timber house
-  // enterable buildings
-  hall(23,2,28,7, 'F', [[25,7]]);               // Yorin's trade hall, door on the square's north edge
-  hall(3,17,10,24,'F', [[6,17]]);               // the tavern, door to the cross street
-  // the chapel: sandstone, a 2x2 tower at the west front, walkable nave, and a slate
-  // roof mass stepping up over the chancel so it towers over the square's south side
+  // thatched cottages (all enterable now)
+  house(2,2,8,7,   'P','p', [[5,7]],  'thatch');    // NW cottage, door to the cross lane
+  house(10,2,16,6, 'F','q', [[13,6]], 'thatch');    // north row timber house
+  house(30,9,37,13,'P','p', [[30,11]],'thatch');    // east cottage, door to the square
+  house(2,9,8,13,  'P','p', [[8,11]], 'thatch');    // west cottage
+  house(24,21,31,26,'P','p',[[27,21]],'thatch');    // SE cottage on the south lane
+  house(33,17,38,22,'F','q',[[33,19]],'thatch');    // far-east timber house
+  house(23,2,28,7, 'F','q', [[25,7]], 'thatch');    // Yorin's trade hall
+  house(3,17,10,24,'F','q', [[6,17]], 'thatch');    // the tavern
+  // the chapel: sandstone walls, bell tower, walkable nave, slate roof over the whole nave
   frame(11,20,18,26,'C'); rect(12,21,17,25,'o');
-  rect(11,20,12,21,'c');                        // bell tower corner
-  rect(12,24,17,24,'K'); rect(12,25,17,25,'k'); // chancel: slate courses climbing to the ridge
+  rect(11,20,12,21,'c');                        // bell tower corner (pokes through the slate)
   set(15,20,'D');                               // chapel door onto the square
-  // market furniture
-  set(20,12,'w');                               // the town well, mid-square
-  rect(14,10,16,10,'t'); rect(23,10,25,10,'t'); // stall counters, north row
-  rect(14,18,16,18,'t'); rect(23,18,25,18,'t'); // south row
+  addRoof(11,20,18,26, 2.3, 0.5, 'slate', 'sandstone');
+  // market furniture: the well + stall counters under little pitched canopies
+  set(20,12,'w');
+  const stall=(x0,x1,y)=>{ rect(x0,y,x1,y,'t'); addRoof(x0,y,x1,y, 1.05, 0.55, 'thatch', 'wood'); };
+  stall(14,16,10); stall(23,25,10);             // north row
+  stall(14,16,18); stall(23,25,18);             // south row
   // garden pens (short rails get real top caps; bushes dress them)
   frame(33,24,38,28,'f'); set(35,24,'.');       // SE paddock with a gap
   frame(3,26,10,28,'f'); set(6,26,'.');         // tavern garden
@@ -1063,8 +1085,9 @@ const VILLAGE_MAP=(()=>{
   paint(5,8,5,13,'-'); paint(13,7,13,8,'-'); paint(9,11,12,11,'-'); paint(28,11,29,11,'-');
   paint(25,8,25,8,'-'); paint(6,16,6,16,'-'); paint(11,16,18,16,'-');
   paint(27,20,27,20,'-'); paint(32,19,32,19,'-');
-  return g.map(r=>r.join(''));
+  return { map:g.map(r=>r.join('')), roofs };
 })();
+const VILLAGE_MAP=VILLAGE.map;
 const DUNGEON_MAP=[
 "SSSSSSSSSSSSSSSSSSSS",
 "S........S.........S",
@@ -1105,8 +1128,8 @@ const FOREST_MAP=(()=>{ const W=30,H=26,rows=[]; for(let y=0;y<H;y++){
 const ZONES={
   village:{
     name:"Aldermoor", subtitle:"MARKET TOWN · DAYLIGHT", type:"open",
-    map:VILLAGE_MAP, ceiling:"sky", sky:'realm',          // embedded cubemap skybox
-    floorTex:'grass', roofHeight:1.7,                     // grass ground; streets/square painted cobble
+    map:VILLAGE_MAP, roofs:VILLAGE.roofs, ceiling:"sky", sky:'realm',   // pitched-roof quads + skybox
+    floorTex:'grass', roofHeight:1.6,                     // grass ground; ceilings flush with the 1.6 house walls
     floorColor:rgb(76,96,60), ceilingColor:rgb(120,150,190),
     fogColor:rgb(156,176,202), fog:0.012,
     grade:{ sat:1.10, con:1.05, bright:1.03, tint:[1.06,1.0,0.90] },   // warm sunlit daylight
@@ -1306,6 +1329,8 @@ let FOG=0, FLOOR=0, CEIL=0, ISKY=false;
 let terrainDepth=null, zTerr=null, HFIELD=null;   // terrain depth buffers + the active height field
 const EYE=0.55, MAXCLIMB=0.9;            // eye height above the ground; steepest walkable rise per step
 const clampf=(v,a,b)=>v<a?a:v>b?b:v;
+let PIXD=false;   // per-pixel depth (zTerr) maintained this zone? Only where something consumes it
+                  // (pitched roofs, see-over fences) — the dungeon skips the stores entirely.
 let GRADE=null, fxOn=true;        // post-process effects: per-zone grade + bloom + vignette
 let bloomCv=null, bloomCtx=null, bloomImg=null, bloomBuf=null;  // offscreen bright-pass buffer for the bloom pass
 let vignetteSoft=null;            // gentle cinematic vignette for unlit (daylight) zones
@@ -1535,6 +1560,10 @@ function loadZone(id, spawn){
   buildTorchVis();                                     // precompute torch shadows for this zone
   FOG=Z.fogColor; FLOOR=Z.floorColor; CEIL=Z.ceilingColor; ISKY=(Z.ceiling==='sky');
   SKYTEX = ISKY ? (SKYBOXES[Z.sky] || SKYBOXES.proc || null) : null;
+  Z._roofs = Z.roofs || null;                          // pitched-roof quads (drawRoofs)
+  PIXD = !Z.terrain && !!(Z._roofs && Z._roofs.length);
+  if(!PIXD && !Z.terrain && LM){ for(let i=0;i<LM.wall.length;i++){ const m=MAT_WALL[LM.wall[i]];
+    if(m && m.h<0.5){ PIXD=true; break; } } }          // short rails: sprites must see over them
   Z._grade = Z.grade;                                   // per-frame buildAdaptLUT folds this with eye adaptation
   Z.terrain = (Z.type==='terrain');                     // voxel heightmap zone?
   if(Z.terrain){
@@ -2284,6 +2313,8 @@ function castFrame(){
     return;
   }
   glowQ.length=0;
+  const pixd=PIXD;
+  if(pixd) zTerr.fill(1e4);                          // per-pixel depth for roofs + sprite occlusion
   const lit=Z.light;
   // per-frame torch flicker (cheap): carried-torch personal light + each ground torch.
   // Without a torch in the dark you fall back to the wall torches only.
@@ -2373,7 +2404,7 @@ function castFrame(){
             else { let vt=(((wh-worldH)/(wh-openH))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1; texel=htex.data[vt*TEX+base]; } }
           else { const ty=(texPos)&(TEX-1); texel=texData[ty*TEX+base]; }
           texPos+=stepT;
-          buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,sf,fogT); }
+          buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,sf,fogT); if(pixd)zTerr[y*RW+x]=perp; }
         if(s<lastTop) lastTop=s;                             // remember the highest top actually painted
       }
 
@@ -2450,11 +2481,11 @@ function castFrame(){
               faw=torchWarm(fwx,fwy)*0.58; if(faw>0.82)faw=0.82; }
             else { ffogT=fdist*Z.fog; if(ffogT>0.92)ffogT=0.92; }
             col= fft ? (lit?shadeTorch(fft.data[fv*TEX+fu],ffa,faw):shadeWall(fft.data[fv*TEX+fu],1.0,ffogT)) : floorRow[y];
-            buf[y*RW+x]=col;                                       // paint the floor texel...
+            buf[y*RW+x]=col; if(pixd)zTerr[y*RW+x]=fdist;          // paint the floor texel...
             if(solidCell(ffi,ffj)){ junction=y; break; }          // ...the floor cell itself is a wall base: hand off
             continue;
           }
-          buf[y*RW+x]=col;
+          buf[y*RW+x]=col; if(pixd)zTerr[y*RW+x]=dist;
         }
         // taller walls behind only show ABOVE the junction; cap owns rows [junction, topY)
         clip=junction;
@@ -2490,7 +2521,7 @@ function castFrame(){
       if(y>=eBot[x]){ const i=fx|0,j=fy|0,fm=fMat(i,j);
         const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); const ft=fm?TEXTURES[MAT_FLOOR[fm].tex]:fZone;
         let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.58; if(aw>0.82)aw=0.82; }
-        buf[y*RW+x]= ft ? (lit?shadeTorch(ft.data[v*TEX+u],fa,aw):shadeWall(ft.data[v*TEX+u],1.0,fogT)) : floorRow[y]; }
+        buf[y*RW+x]= ft ? (lit?shadeTorch(ft.data[v*TEX+u],fa,aw):shadeWall(ft.data[v*TEX+u],1.0,fogT)) : floorRow[y]; if(pixd)zTerr[y*RW+x]=dist; }
       fx+=sFX; fy+=sFY;
     }
   }
@@ -2507,9 +2538,9 @@ function castFrame(){
     for(let x=0;x<RW;x++){
       if(cy<sTop[x]){ const i=fx|0,j=fy|0,rm=rMat(i,j);
         if(enclosed){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); let aw=0; if(lit){ aw=torchWarm(fx,fy)*0.58; if(aw>0.82)aw=0.82; }
-          buf[cy*RW+x]= cZone ? (lit?shadeTorch(cZone.data[v*TEX+u],fa,aw):shadeWall(cZone.data[v*TEX+u],1.0,fogT)) : ceilRow[cy]; }
+          buf[cy*RW+x]= cZone ? (lit?shadeTorch(cZone.data[v*TEX+u],fa,aw):shadeWall(cZone.data[v*TEX+u],1.0,fogT)) : ceilRow[cy]; if(pixd)zTerr[cy*RW+x]=dist; }
         else if(rm){ const u=((fx-i)*TEX)&(TEX-1), v=((fy-j)*TEX)&(TEX-1); const ct=TEXTURES[MAT_ROOF[rm].tex];
-          buf[cy*RW+x]= ct ? shadeWall(ct.data[v*TEX+u],1.0,fogT) : ceilRow[cy]; }     // roofed cell (e.g. timber over interiors)
+          buf[cy*RW+x]= ct ? shadeWall(ct.data[v*TEX+u],1.0,fogT) : ceilRow[cy]; if(pixd)zTerr[cy*RW+x]=dist; }     // roofed cell (e.g. timber over interiors)
         else if(useSky){ buf[cy*RW+x]=SKYTEX.data[skyV*SKYTEX.w+skyX[x]]; }
         else buf[cy*RW+x]=ceilRow[cy];
       }
@@ -2529,8 +2560,9 @@ function castFrame(){
     for(let y=tb;y<bb;y++){ const worldH=(fY-y)/lh;
       let vt=(((owh-worldH)/(owh-ooh))*TEX)|0; if(vt<0)vt=0; else if(vt>TEX-1)vt=TEX-1;
       const texel=ht.data[vt*TEX+bx];
-      buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,0.9,fogT); }
+      buf[y*RW+x]= lit? shadeTorch(texel,fa,aw) : shadeWall(texel,0.9,fogT); if(pixd)zTerr[y*RW+x]=dp; }
   }
+  drawRoofs(dirX,dirY,planeX,planeY);                // pitched roofs over the buildings
   drawSprites(dirX,dirY,planeX,planeY);
   // post FX: measure the raw frame, advance eye adaptation, then grade+adapt it
   if(fxOn){ updateAdapt(); buildToneLUT(); applyNightVision(); } else { GRADE=null; postDark=0; postFlick=1; }
@@ -2580,10 +2612,91 @@ function drawTorchGlows(){
   ctx.globalCompositeOperation='source-over';
 }
 
+/* ---- pitched roofs: real sloped planes over building footprints -------------
+   A cell-grid raycaster can't slope its walls, so roofs are first-class quads:
+   each building registers {rect(+overhang), ridge axis/line, eave->ridge pitch}.
+   Per column we clip the ray to the footprint slab, solve ray vs the VIEWER-side
+   slope analytically per row, and draw depth-tested against zTerr (which every
+   wall/floor/ceiling pixel now carries) — so roofs sit over their own walls,
+   hide behind nearer buildings, occlude sprites, and overhang their eaves. Gable
+   ends draw as wall-textured triangles between the end wall's top and the ridge. */
+const ROOF_TSC=9;                                    // roof texels per world unit
+function drawRoofs(dirX,dirY,planeX,planeY){
+  const roofs=Z._roofs; if(!roofs||!roofs.length) return;
+  const fogZ=Z.fog||0.012;
+  for(const R of roofs){                             // per-frame prep: texture + player-inside cull
+    R._t=TEXTURES[R.tex].data; R._g=TEXTURES[R.gtex].data;
+    R._skip=(P.x>R.x0&&P.x<R.x1&&P.y>R.y0&&P.y<R.y1);
+  }
+  for(let x=0;x<RW;x++){
+    const camX=2*x/RW-1, rdx=dirX+planeX*camX, rdy=dirY+planeY*camX;
+    for(let ri=0;ri<roofs.length;ri++){ const R=roofs[ri];
+      if(R._skip) continue;
+      // clip ray to the roof rect (2D slab)
+      let t0=0.02, t1=60, miss=false;
+      if(rdx>1e-8){ const a=(R.x0-P.x)/rdx, b=(R.x1-P.x)/rdx; if(a>t0)t0=a; if(b<t1)t1=b; }
+      else if(rdx<-1e-8){ const a=(R.x1-P.x)/rdx, b=(R.x0-P.x)/rdx; if(a>t0)t0=a; if(b<t1)t1=b; }
+      else if(P.x<R.x0||P.x>R.x1) miss=true;
+      if(rdy>1e-8){ const a=(R.y0-P.y)/rdy, b=(R.y1-P.y)/rdy; if(a>t0)t0=a; if(b<t1)t1=b; }
+      else if(rdy<-1e-8){ const a=(R.y1-P.y)/rdy, b=(R.y0-P.y)/rdy; if(a>t0)t0=a; if(b<t1)t1=b; }
+      else if(P.y<R.y0||P.y>R.y1) miss=true;
+      const axX=R.ax==='x';
+      if(!miss && t1>t0+1e-6){
+        // the slope on the VIEWER's side of the ridge (the far slope is back-facing from below)
+        const Pc=axX?P.y:P.x, rc=axX?rdy:rdx;
+        const sgn=Pc<R.cc?-1:1;
+        let ta=t0, tb=t1;
+        const c0=sgn*(Pc-R.cc), c1=sgn*rc;           // signed ridge distance: c(t)=c0+c1*t (valid >=0)
+        if(c1>1e-9){ const tm=-c0/c1; if(tm>ta)ta=tm; }
+        else if(c1<-1e-9){ const tm=-c0/c1; if(tm<tb)tb=tm; }
+        else if(c0<0) tb=ta-1;
+        if(tb>ta+1e-6){
+          const A=R.hr-R.k*c0, B=-R.k*c1;            // plane height along the ray: z(t)=A+B*t
+          const ya=HH+(0.5-(A+B*ta))*VS/ta, yb=HH+(0.5-(A+B*tb))*VS/tb;
+          let yT=Math.ceil(ya<yb?ya:yb), yB=Math.floor(ya>yb?ya:yb);
+          if(yT<0)yT=0; if(yB>=RH)yB=RH-1;
+          const uP=axX?P.x:P.y, uR=axX?rdx:rdy;
+          for(let y=yT;y<=yB;y++){
+            const den=(HH-y)/VS - B; if(den<1e-9&&den>-1e-9) continue;
+            const t=(A-0.5)/den;
+            if(t<ta-1e-4||t>tb+1e-4||t<=0.02) continue;
+            const i=y*RW+x; if(t>=zTerr[i]) continue;
+            const u=(((uP+uR*t)*ROOF_TSC+4096)|0)&63;
+            const v=(((c0+c1*t)*ROOF_TSC+4096)|0)&63;
+            let fogT=t*fogZ; if(fogT>0.92)fogT=0.92;
+            buf[i]=shadeWall(R._t[(v<<6)|u], R.sf, fogT); zTerr[i]=t;
+          }
+        }
+      }
+      // gable-end triangles (vertical, wear the building's wall texture)
+      const Pu=axX?P.x:P.y, ru=axX?rdx:rdy;
+      if(ru>1e-8||ru<-1e-8){
+        for(let e2=0;e2<2;e2++){
+          const gu=e2?R.g1:R.g0;
+          if(e2? Pu<=gu : Pu>=gu) continue;          // only visible from outside that end
+          const t=(gu-Pu)/ru; if(t<=0.05||t>=60) continue;
+          const cw=axX?(P.y+rdy*t):(P.x+rdx*t);
+          if(cw<R.gc0||cw>R.gc1) continue;
+          const zTop=R.hr-R.k*(cw>R.cc?cw-R.cc:R.cc-cw);
+          if(zTop<=R.wallH) continue;
+          let yT=Math.ceil(HH+(0.5-zTop)*VS/t), yB=Math.floor(HH+(0.5-R.wallH)*VS/t);
+          if(yT<0)yT=0; if(yB>=RH)yB=RH-1;
+          const gu2=((cw*32)|0)&63;
+          let fogT=t*fogZ; if(fogT>0.92)fogT=0.92;
+          for(let y=yT;y<=yB;y++){ const i=y*RW+x; if(t>=zTerr[i]) continue;
+            const z=0.5+(HH-y)/VS*t;
+            const vv=(((R.hr-z)*26)|0)&63;
+            buf[i]=shadeWall(R._g[(vv<<6)|gu2], 0.9, fogT); zTerr[i]=t; }
+        }
+      }
+    }
+  }
+}
+
 /* ---- billboard sprites (camera-facing, depth-tested, alpha-blended) ---- */
 function drawSprites(dirX,dirY,planeX,planeY){
   if(Z.terrain) return drawSpritesTerrain(dirX,dirY,planeX,planeY);   // terrain zones plant sprites on the height field
-  const lit=Z.light;
+  const lit=Z.light, pixd=PIXD;
   const invDet=1/(planeX*dirY-dirX*planeY); const list=[];
   for(const e of ENTS){ if(!e.sprite||!SPRITES[e.sprite]) continue;
     const dx=e.x-P.x, dy=e.y-P.y; const tz=invDet*(-planeY*dx+planeX*dy);
@@ -2604,9 +2717,10 @@ function drawSprites(dirX,dirY,planeX,planeY){
              if(fa>0.72)fa=0.72; }                                       // ...and never crush to pure black (they read as a threat)
     }
     else { fogT=tz*Z.fog; if(fogT>0.92)fogT=0.92; }
-    for(let col=sX;col<eX;col++){ if(col<0||col>=RW||tz>=zbuf[col]) continue;
+    for(let col=sX;col<eX;col++){ if(col<0||col>=RW || (!pixd&&tz>=zbuf[col])) continue;
       let tX=((col-sX)/sw*m.w)|0; if(tX<0||tX>=m.w) continue;
       for(let y=sY;y<eY;y++){ if(y<0||y>=RH) continue;
+        if(pixd && tz>=zTerr[y*RW+col]) continue;      // per-pixel: see over fences, hide behind roofs
         let tY=((y-sY)/sh*m.h)|0; if(tY<0||tY>=m.h) continue;
         let src=m.data[tY*m.w+tX]; const a=(src>>>24)&255; if(a<8) continue;
         let c=src; if(hurt)c=mixA(c,WHITE,0.55);
